@@ -357,6 +357,13 @@
     }
     .seg-btn.active { background: var(--accent); color: #fff; }
 
+    .payout-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .payout-card .chore-pln { color: var(--accent2); }
+    .payout-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .payout-item:last-child { border-bottom: none; }
+    .payout-item .pi-amount { font-weight: 700; font-family: var(--mono); }
+    .payout-item .pi-pts { font-family: var(--mono); color: var(--text2); }
+
     .chore-summary { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .chore-month { font-size: 16px; font-weight: 700; text-transform: capitalize; }
     .chore-pln { font-size: 26px; font-weight: 700; font-family: var(--mono); color: var(--accent2); font-variant-numeric: tabular-nums; }
@@ -726,6 +733,15 @@
         <h2 style="margin-bottom:6px">Obowiązki domowe</h2>
         <p class="text2" style="margin-bottom:18px">Osobny rejestr — zarobek za prace domowe (1 pkt = 0,45 zł).</p>
 
+        <div class="card payout-card">
+          <div>
+            <div class="text2">Do wypłaty (nierozliczone)</div>
+            <div class="chore-pln" id="chore-outstanding">0,00 zł</div>
+            <div class="text2"><span id="chore-outstanding-pts">0</span> pkt</div>
+          </div>
+          <button class="btn-success" id="chore-settle-btn" onclick="settleChores()">Rozlicz wypłatę</button>
+        </div>
+
         <div class="segmented" id="chore-tabs">
           <button class="seg-btn active" data-tab="current" onclick="selectChoreTab('current')">Bieżący miesiąc</button>
           <button class="seg-btn" data-tab="prev" onclick="selectChoreTab('prev')">Poprzedni miesiąc</button>
@@ -748,6 +764,11 @@
           </div>
           <div class="cal-grid" id="chore-cal"></div>
           <div class="day-detail" id="chore-day-detail" style="display:none"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;margin-bottom:14px">Historia wypłat</h3>
+          <div id="chore-payout-list"><p class="text2">Brak wypłat.</p></div>
         </div>
 
         <button class="fab" id="chore-fab" onclick="openChoreSheet()" aria-label="Dodaj obowiązek" style="display:none">+</button>
@@ -1602,7 +1623,8 @@
     ];
     const choreById = (id) => CHORES.find(c => c.id === id) || { name: 'Obowiązek', points: 0 };
 
-    let choreEntries = [];        // wpisy z bieżącego + poprzedniego miesiąca
+    let choreEntries = [];        // wszystkie nierozliczone wpisy
+    let chorePayouts = [];        // historia wypłat (durable)
     let choreTab = 'current';     // 'current' | 'prev'
     let choreSelectedDay = null;  // dateISO rozwiniętego dnia
     let chorePicking = false;
@@ -1627,17 +1649,15 @@
     }
 
     async function loadChores() {
-      const { cur, prev } = monthKeys();
-      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'chores'));
-      choreEntries = [];
-      const stale = [];
-      snap.forEach(d => {
-        const e = { id: d.id, ...d.data() };
-        if (e.monthKey === cur || e.monthKey === prev) choreEntries.push(e);
-        else stale.push(d.id); // starsze niż dwa miesiące → retencja
-      });
-      // Idempotentny cleanup (przechowujemy tylko 2 miesiące).
-      for (const id of stale) { try { await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', id)); } catch (_) {} }
+      // Wpisy NIE są kasowane retencją — to realna kasa do wypłaty. Czyszczenie
+      // następuje dopiero przy rozliczeniu (settleChores → archiwum w chorePayouts).
+      const [eSnap, pSnap] = await Promise.all([
+        getDocs(collection(db, 'users', currentUser.uid, 'chores')),
+        getDocs(collection(db, 'users', currentUser.uid, 'chorePayouts')),
+      ]);
+      choreEntries = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      chorePayouts = pSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       syncChoreTabs();
       renderChores();
     }
@@ -1662,7 +1682,68 @@
 
       renderCalendar(mk, monthEntries);
       renderDayDetail(monthEntries);
+      renderOutstanding();
+      renderPayouts();
     }
+
+    // Globalne saldo „do wypłaty" = wszystkie nierozliczone wpisy.
+    function renderOutstanding() {
+      const pts = choreEntries.reduce((s, e) => s + (e.points || 0), 0);
+      animateCount(document.getElementById('chore-outstanding-pts'), pts);
+      animateCount(document.getElementById('chore-outstanding'), pts, v => (v * CHORE_PLN_RATE).toFixed(2).replace('.', ',') + ' zł');
+      document.getElementById('chore-settle-btn').disabled = pts === 0;
+    }
+
+    function renderPayouts() {
+      const el = document.getElementById('chore-payout-list');
+      if (chorePayouts.length === 0) { el.innerHTML = '<p class="text2">Brak wypłat.</p>'; return; }
+      el.innerHTML = chorePayouts.map(p => {
+        const d = p.createdAt?.toDate ? p.createdAt.toDate() : new Date(p.createdAt);
+        const ds = d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        const period = (p.fromISO && p.toISO)
+          ? ` · za ${p.fromISO.slice(8)}.${p.fromISO.slice(5, 7)}–${p.toISO.slice(8)}.${p.toISO.slice(5, 7)}`
+          : '';
+        return `<div class="payout-item">
+          <div>
+            <div class="pi-amount">${(p.amountPln || 0).toFixed(2).replace('.', ',')} zł</div>
+            <div class="text2">${ds}${period}</div>
+          </div>
+          <div class="pi-pts">${p.points} pkt</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Rozliczenie: archiwizuj wszystkie nierozliczone wpisy do chorePayouts i usuń je.
+    window.settleChores = async () => {
+      const pts = choreEntries.reduce((s, e) => s + (e.points || 0), 0);
+      if (pts === 0) return;
+      const amount = pts * CHORE_PLN_RATE;
+      const amountStr = amount.toFixed(2).replace('.', ',');
+      if (!confirm(`Rozliczyć ${amountStr} zł (${pts} pkt)? Wpisy trafią do historii wypłat i znikną z kalendarza.`)) return;
+
+      const btn = document.getElementById('chore-settle-btn');
+      btn.disabled = true;
+      try {
+        const dates = choreEntries.map(e => e.dateISO).sort();
+        await addDoc(collection(db, 'users', currentUser.uid, 'chorePayouts'), {
+          points: pts, amountPln: amount,
+          fromISO: dates[0], toISO: dates[dates.length - 1],
+          createdAt: new Date()
+        });
+        for (const e of choreEntries) {
+          try { await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', e.id)); } catch (_) {}
+        }
+        choreSelectedDay = null;
+        await loadChores();
+        confettiBurst();
+        pulseEl(document.querySelector('#page-chores .payout-card'));
+        toast(`Rozliczono ${amountStr} zł 🎉`);
+      } catch (e) {
+        console.error(e);
+        toast('Błąd rozliczenia.', 'error');
+        btn.disabled = false;
+      }
+    };
 
     function renderCalendar(mk, monthEntries) {
       const [y, m] = mk.split('-').map(Number);
