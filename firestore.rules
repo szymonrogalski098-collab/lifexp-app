@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// LifeXP — produkcyjne reguły Firestore
+// Wgranie: Firebase Console → Firestore Database → zakładka "Rules" → wklej → Publish.
+// Model: właściciel ma pełny dostęp do swoich danych; rodzic (po emailu) ma read-only.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Rodzic = zalogowany użytkownik, którego email == parentEmail dziecka.
+    // Dla zapytań listujących (parent.html) reguła sprawdza każdy zwracany dokument,
+    // więc zapytanie MUSI mieć where('parentEmail','==', <email rodzica>).
+    function isParentOfDoc() {
+      return isSignedIn() && resource.data.parentEmail == request.auth.token.email;
+    }
+
+    // Dla podkolekcji: dociągamy dokument rodzica (users/{uid}) i porównujemy email.
+    function isParentOf(uid) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(uid)).data.parentEmail == request.auth.token.email;
+    }
+
+    match /users/{uid} {
+      allow read:   if isOwner(uid) || isParentOfDoc();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if isOwner(uid);
+
+      // Wszystkie podkolekcje: activities, dailyLog, gamingSessions, purchases
+      match /{document=**} {
+        allow read:  if isOwner(uid) || isParentOf(uid);
+        allow write: if isOwner(uid);
+      }
+    }
+  }
+}

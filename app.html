@@ -111,6 +111,78 @@
       margin-bottom: 20px;
     }
 
+    /* Streak badge */
+    .streak-badge {
+      position: absolute;
+      top: 18px; right: 20px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 1;
+    }
+
+    /* Level card */
+    .level-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .level-badge {
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), #4a42d0);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      font-family: var(--mono);
+      padding: 10px 14px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .level-info { flex: 1; }
+    .level-bar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .level-title { font-size: 14px; font-weight: 600; }
+    .level-bar-wrap { background: var(--bg3); border-radius: 6px; height: 8px; overflow: hidden; }
+    .level-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      border-radius: 6px;
+      transition: width .5s ease;
+    }
+
+    /* Pager */
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .pager button { padding: 8px 14px; font-size: 13px; }
+    .pager button:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Delete button on activity rows */
+    .activity-del {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    .activity-del:hover { border-color: var(--warn); color: var(--warn); }
+
     .stat-card {
       background: var(--bg2);
       border: 1px solid var(--border);
@@ -299,6 +371,9 @@
       <div class="nav-item" onclick="showPage('generator')">
         <span class="icon">🎲</span> Co teraz?
       </div>
+      <div class="nav-item" onclick="showPage('history')">
+        <span class="icon">📜</span> Historia
+      </div>
       <div class="nav-item" onclick="showPage('stats')">
         <span class="icon">📊</span> Statystyki
       </div>
@@ -323,9 +398,23 @@
       <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div class="balance-card">
+          <div class="streak-badge" id="dash-streak" style="display:none">🔥 <span id="dash-streak-num">0</span> dni z rzędu</div>
           <div class="balance-label">Dostępne środki</div>
           <div class="balance-amount" id="dash-pln">0,00 zł</div>
           <div class="balance-pts" id="dash-pts">0 punktów</div>
+        </div>
+
+        <div class="level-card">
+          <div class="level-badge" id="dash-level">Poziom 1</div>
+          <div class="level-info">
+            <div class="level-bar-head">
+              <span class="level-title" id="dash-level-title">Nowicjusz</span>
+              <span class="text2" id="dash-level-xp">0 / 500 XP</span>
+            </div>
+            <div class="level-bar-wrap">
+              <div class="level-bar" id="dash-level-bar" style="width:0%"></div>
+            </div>
+          </div>
         </div>
 
         <div class="stats-grid">
@@ -493,6 +582,21 @@
         </div>
       </div>
 
+      <!-- HISTORY -->
+      <div class="page" id="page-history">
+        <h2 style="margin-bottom:20px">Pełna historia aktywności</h2>
+        <div class="card">
+          <div id="history-list">
+            <p class="text2">Ładowanie…</p>
+          </div>
+          <div class="pager" id="history-pager" style="display:none">
+            <button class="btn-secondary" id="history-prev" onclick="historyPrev()">← Poprzednia</button>
+            <span class="text2" id="history-page-info">Strona 1</span>
+            <button class="btn-secondary" id="history-next" onclick="historyNext()">Następna →</button>
+          </div>
+        </div>
+      </div>
+
       <!-- STATS -->
       <div class="page" id="page-stats">
         <h2 style="margin-bottom:20px">Statystyki</h2>
@@ -560,6 +664,12 @@
         </div>
 
         <div class="card settings-section">
+          <h3>Narzędzia testowe</h3>
+          <p class="text2" style="margin-bottom:14px">Zeruje licznik punktów zdobytych dzisiaj (dla testowania dziennego limitu). Nie zmienia salda ani statystyk łącznych.</p>
+          <button class="btn-secondary" onclick="resetToday()">Resetuj dzisiejszy limit</button>
+        </div>
+
+        <div class="card settings-section">
           <h3>Lista gier</h3>
           <div id="games-list" style="margin-bottom:12px"></div>
           <div style="display:flex;gap:8px">
@@ -583,7 +693,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, setDoc, updateDoc,
+      getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
       collection, addDoc, query, where, orderBy, limit, getDocs, increment
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -663,10 +773,11 @@
       if (id === 'stats') loadStats();
       if (id === 'shop') loadPurchases();
       if (id === 'log-gaming') updateGameSelect();
+      if (id === 'history') loadHistory();
     };
 
     function navLabel(id) {
-      const m = { dashboard: 'Dashboard', 'log-activity': 'aktywność', 'log-gaming': 'granie', shop: 'Wydatki', generator: 'teraz', stats: 'Statystyki', settings: 'Ustawienia' };
+      const m = { dashboard: 'Dashboard', 'log-activity': 'aktywność', 'log-gaming': 'granie', shop: 'Wydatki', generator: 'teraz', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia' };
       return m[id] || '';
     }
 
@@ -732,8 +843,58 @@
       const gamingMin = gamingSnap.exists() ? (gamingSnap.data().gamingMinutes || 0) : 0;
       document.getElementById('dash-gaming-today').textContent = formatMinutes(gamingMin);
 
-      // Recent activities
+      // Level (XP based on all-time earned points)
+      renderLevel(profile.points?.earnedAllTime || 0);
+
+      // Streak + recent activities
+      await renderStreak();
       await loadRecentActivities();
+
+      // Weekly auto-report (client-side, fires once on Sundays)
+      maybeAutoReport();
+    }
+
+    // ── Level system ──────────────────────────────────────
+    const XP_PER_LEVEL = 500;
+    const LEVEL_TITLES = ['Nowicjusz', 'Uczeń', 'Praktyk', 'Specjalista', 'Ekspert', 'Mistrz', 'Wirtuoz', 'Legenda'];
+
+    function renderLevel(xp) {
+      const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+      const intoLevel = xp % XP_PER_LEVEL;
+      const title = LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)];
+      document.getElementById('dash-level').textContent = 'Poziom ' + level;
+      document.getElementById('dash-level-title').textContent = title;
+      document.getElementById('dash-level-xp').textContent = `${intoLevel} / ${XP_PER_LEVEL} XP`;
+      document.getElementById('dash-level-bar').style.width = (intoLevel / XP_PER_LEVEL * 100) + '%';
+    }
+
+    // ── Streak ────────────────────────────────────────────
+    async function renderStreak() {
+      const badge = document.getElementById('dash-streak');
+      try {
+        const snap = await getDocs(collection(db, 'users', currentUser.uid, 'dailyLog'));
+        const activeDays = new Set();
+        snap.forEach(d => { if ((d.data().pointsEarned || 0) > 0) activeDays.add(d.id); });
+
+        const dayKey = (date) => date.toISOString().split('T')[0];
+        let streak = 0;
+        const cursor = new Date();
+        // If nothing earned today yet, the streak can still be alive from yesterday.
+        if (!activeDays.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+        while (activeDays.has(dayKey(cursor))) {
+          streak++;
+          cursor.setDate(cursor.getDate() - 1);
+        }
+
+        if (streak > 0) {
+          document.getElementById('dash-streak-num').textContent = streak;
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (e) {
+        badge.style.display = 'none';
+      }
     }
 
     async function loadRecentActivities() {
@@ -750,21 +911,134 @@
         return;
       }
 
-      el.innerHTML = snap.docs.map(d => {
-        const a = d.data();
-        const act = ACTIVITIES.find(x => x.value === a.type) || { label: a.type, color: '#6c63ff' };
-        const date = new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp);
-        const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
-        return `<div class="activity-item">
-          <div class="activity-icon" style="background:${act.color}22">${act.label.split(' ')[0]}</div>
-          <div class="activity-info">
-            <div class="activity-name">${act.label.replace(/^[^ ]+ /, '')}</div>
-            <div class="activity-meta">${formatMinutes(a.duration)} · ${dateStr}${a.desc ? ' · ' + a.desc : ''}</div>
-          </div>
-          <div class="activity-pts">+${a.points} pkt</div>
-        </div>`;
-      }).join('');
+      el.innerHTML = snap.docs.map(d => activityRowHTML(d.id, d.data())).join('');
     }
+
+    function activityRowHTML(id, a) {
+      const act = ACTIVITIES.find(x => x.value === a.type) || { label: a.type, color: '#6c63ff' };
+      const date = new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp);
+      const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+      const desc = a.desc ? ' · ' + escapeHtml(a.desc) : '';
+      return `<div class="activity-item">
+        <div class="activity-icon" style="background:${act.color}22">${act.label.split(' ')[0]}</div>
+        <div class="activity-info">
+          <div class="activity-name">${act.label.replace(/^[^ ]+ /, '')}</div>
+          <div class="activity-meta">${formatMinutes(a.duration)} · ${dateStr}${desc}</div>
+        </div>
+        <div class="activity-pts">+${a.points} pkt</div>
+        <button class="activity-del" onclick="deleteActivity('${id}')" title="Usuń">✕</button>
+      </div>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // Delete an activity and roll back its points from totals + that day's log.
+    window.deleteActivity = async (id) => {
+      if (!confirm('Usunąć tę aktywność? Punkty zostaną odjęte.')) return;
+      try {
+        const ref = doc(db, 'users', currentUser.uid, 'activities', id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const a = snap.data();
+        const pts = a.points || 0;
+        const ts = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+        const dayKey = ts.toISOString().split('T')[0];
+
+        await deleteDoc(ref);
+
+        // Roll back the day's earned points (clamped at 0).
+        const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', dayKey);
+        const daySnap = await getDoc(dayRef);
+        if (daySnap.exists()) {
+          const cur = daySnap.data().pointsEarned || 0;
+          await updateDoc(dayRef, { pointsEarned: Math.max(0, cur - pts) });
+        }
+
+        // Roll back lifetime + balance totals (clamped at 0).
+        const newTotal = Math.max(0, (userProfile.points.total || 0) - pts);
+        const newEarned = Math.max(0, (userProfile.points.earnedAllTime || 0) - pts);
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          'points.total': newTotal,
+          'points.earnedAllTime': newEarned
+        });
+
+        await loadProfile();
+        await loadDashboard();
+        if (document.getElementById('page-history').classList.contains('active')) await loadHistory();
+        toast(`Usunięto aktywność. -${pts} pkt`);
+      } catch (e) {
+        console.error(e);
+        toast('Błąd usuwania.', 'error');
+      }
+    };
+
+    // ── History (full, paginated client-side) ─────────────
+    let historyDocs = [];
+    let historyPage = 0;
+    const HISTORY_PAGE_SIZE = 15;
+
+    async function loadHistory() {
+      const el = document.getElementById('history-list');
+      el.innerHTML = '<p class="text2">Ładowanie…</p>';
+      const q = query(
+        collection(db, 'users', currentUser.uid, 'activities'),
+        orderBy('timestamp', 'desc')
+      );
+      const snap = await getDocs(q);
+      historyDocs = snap.docs;
+      historyPage = 0;
+      renderHistoryPage();
+    }
+
+    function renderHistoryPage() {
+      const el = document.getElementById('history-list');
+      const pager = document.getElementById('history-pager');
+
+      if (historyDocs.length === 0) {
+        el.innerHTML = '<p class="text2">Brak aktywności. Zacznij zarabiać punkty!</p>';
+        pager.style.display = 'none';
+        return;
+      }
+
+      const totalPages = Math.ceil(historyDocs.length / HISTORY_PAGE_SIZE);
+      historyPage = Math.min(historyPage, totalPages - 1);
+      const start = historyPage * HISTORY_PAGE_SIZE;
+      const slice = historyDocs.slice(start, start + HISTORY_PAGE_SIZE);
+
+      el.innerHTML = slice.map(d => activityRowHTML(d.id, d.data())).join('');
+
+      pager.style.display = totalPages > 1 ? 'flex' : 'none';
+      document.getElementById('history-page-info').textContent =
+        `Strona ${historyPage + 1} / ${totalPages} · ${historyDocs.length} aktywności`;
+      document.getElementById('history-prev').disabled = historyPage === 0;
+      document.getElementById('history-next').disabled = historyPage >= totalPages - 1;
+    }
+
+    window.historyPrev = () => { if (historyPage > 0) { historyPage--; renderHistoryPage(); } };
+    window.historyNext = () => {
+      if ((historyPage + 1) * HISTORY_PAGE_SIZE < historyDocs.length) { historyPage++; renderHistoryPage(); }
+    };
+
+    // ── Daily reset (test tool) ───────────────────────────
+    window.resetToday = async () => {
+      if (!confirm('Wyzerować dzisiejszy licznik punktów? Saldo i statystyki łączne pozostaną bez zmian.')) return;
+      try {
+        const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', todayStr());
+        const daySnap = await getDoc(dayRef);
+        if (daySnap.exists()) {
+          await updateDoc(dayRef, { pointsEarned: 0 });
+        } else {
+          await setDoc(dayRef, { pointsEarned: 0, gamingMinutes: 0 });
+        }
+        await loadDashboard();
+        toast('Dzisiejszy licznik punktów wyzerowany.');
+      } catch (e) {
+        console.error(e);
+        toast('Błąd resetu.', 'error');
+      }
+    };
 
     // ── Log Activity ──────────────────────────────────────
     window.updatePointsPreview = () => {
@@ -1106,11 +1380,25 @@
     };
 
     // ── Email Report ──────────────────────────────────────
-    window.sendReport = async () => {
-      const toEmail = document.getElementById('report-email').value.trim()
-        || userProfile?.parentEmail;
+    // Client-side weekly auto-report: fires once on Sundays when the app is open.
+    // (No paid Cloud Functions needed. For true server-side scheduling, point
+    //  cron-job.org at a tiny serverless endpoint — see firestore.rules notes.)
+    async function maybeAutoReport() {
+      if (new Date().getDay() !== 0) return;            // 0 = niedziela
+      if (!userProfile?.parentEmail) return;            // tylko jeśli jest email rodzica
+      if (userProfile.lastReportSent === todayStr()) return; // już wysłany dziś
+      await sendReport(true);
+    }
 
-      if (!toEmail) return toast('Wpisz adres email lub dodaj email rodzica w Ustawieniach.', 'error');
+    window.sendReport = async (auto = false) => {
+      const toEmail = auto
+        ? userProfile?.parentEmail
+        : (document.getElementById('report-email').value.trim() || userProfile?.parentEmail);
+
+      if (!toEmail) {
+        if (auto) return;
+        return toast('Wpisz adres email lub dodaj email rodzica w Ustawieniach.', 'error');
+      }
 
       const btn = document.querySelector('#page-settings .btn-primary[onclick="sendReport()"]');
       if (btn) btn.disabled = true;
@@ -1157,10 +1445,14 @@
           purchases: weekSpent.toFixed(2),
         });
 
-        toast('Raport wysłany!');
+        // Mark as sent this week so the auto-report fires only once.
+        await updateDoc(doc(db, 'users', currentUser.uid), { lastReportSent: todayStr() });
+        userProfile.lastReportSent = todayStr();
+
+        toast(auto ? 'Wysłano automatyczny raport tygodniowy.' : 'Raport wysłany!');
       } catch (e) {
         console.error(e);
-        toast('Błąd wysyłki emaila.', 'error');
+        if (!auto) toast('Błąd wysyłki emaila.', 'error');
       }
 
       if (btn) btn.disabled = false;
