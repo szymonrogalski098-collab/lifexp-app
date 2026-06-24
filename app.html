@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LifeXP</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .app-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 24px 12px;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      padding: 0 8px;
+      margin-bottom: 28px;
+    }
+    .sidebar-logo span { color: var(--accent); }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text2);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all .15s;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover { background: var(--bg3); color: var(--text); }
+    .nav-item.active { background: var(--accent); color: #fff; }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+    .user-avatar {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px;
+    }
+    .user-name { font-size: 13px; font-weight: 500; }
+
+    /* Main content */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      padding: 28px;
+      max-width: 900px;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Dashboard */
+    .balance-card {
+      background: linear-gradient(135deg, var(--accent) 0%, #4a42d0 100%);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .balance-card::after {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.08);
+    }
+    .balance-label { font-size: 13px; color: rgba(255,255,255,.7); font-weight: 500; }
+    .balance-amount { font-size: 48px; font-weight: 700; font-family: var(--mono); margin: 4px 0; }
+    .balance-pts { font-size: 14px; color: rgba(255,255,255,.7); }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .stat-label { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 4px; }
+    .stat-value { font-size: 24px; font-weight: 700; font-family: var(--mono); }
+    .stat-value.green { color: var(--accent2); }
+    .stat-value.purple { color: var(--accent); }
+    .stat-value.gold { color: var(--gold); }
+
+    .daily-progress {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .progress-header h3 { font-size: 15px; }
+    .progress-bar-wrap {
+      background: var(--bg3);
+      border-radius: 6px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 6px;
+      transition: width .4s ease;
+    }
+
+    .recent-section h3 { font-size: 15px; margin-bottom: 14px; }
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .activity-info { flex: 1; }
+    .activity-name { font-size: 14px; font-weight: 500; }
+    .activity-meta { font-size: 12px; color: var(--text2); }
+    .activity-pts { font-size: 14px; font-weight: 700; color: var(--accent2); font-family: var(--mono); }
+
+    /* Action buttons */
+    .action-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .action-row button { flex: 1; padding: 14px; font-size: 14px; }
+
+    /* Form styles */
+    .form-row { display: flex; gap: 12px; margin-bottom: 14px; }
+    .form-row .form-group { flex: 1; margin-bottom: 0; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+
+    .points-preview {
+      background: var(--bg3);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .points-preview span { font-family: var(--mono); color: var(--accent2); font-weight: 700; font-size: 18px; }
+
+    /* Purchase list */
+    .purchase-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .purchase-item:last-child { border-bottom: none; }
+
+    /* Generator */
+    .generator-card {
+      text-align: center;
+      padding: 48px 28px;
+    }
+    .gen-result {
+      background: var(--bg3);
+      border: 2px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin: 24px 0;
+      display: none;
+    }
+    .gen-activity-name { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .gen-activity-pts { font-size: 14px; color: var(--text2); }
+
+    .time-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+    .time-btn {
+      padding: 10px 20px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text2);
+      font-size: 13px;
+    }
+    .time-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Stats page */
+    .chart-wrap {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      background: var(--accent);
+      min-height: 2px;
+      transition: height .4s ease;
+    }
+    .bar-label { font-size: 10px; color: var(--text2); }
+    .bar-val { font-size: 10px; color: var(--text2); font-family: var(--mono); }
+
+    /* Settings */
+    .settings-section { margin-bottom: 28px; }
+    .settings-section h3 { font-size: 15px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+    .settings-row label { font-size: 14px; color: var(--text2); }
+
+    .activity-preset-list { display: flex; flex-direction: column; gap: 8px; }
+    .preset-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .preset-item .preset-info { font-size: 14px; }
+    .preset-item .preset-pts { font-size: 13px; color: var(--accent2); font-family: var(--mono); }
+
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 16px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">Life<span>XP</span></div>
+
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <span class="icon">🏠</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('log-activity')">
+        <span class="icon">✅</span> Zaloguj aktywność
+      </div>
+      <div class="nav-item" onclick="showPage('log-gaming')">
+        <span class="icon">🎮</span> Zaloguj granie
+      </div>
+      <div class="nav-item" onclick="showPage('shop')">
+        <span class="icon">🛒</span> Wydatki
+      </div>
+      <div class="nav-item" onclick="showPage('generator')">
+        <span class="icon">🎲</span> Co teraz?
+      </div>
+      <div class="nav-item" onclick="showPage('stats')">
+        <span class="icon">📊</span> Statystyki
+      </div>
+      <div class="nav-item" onclick="showPage('settings')">
+        <span class="icon">⚙️</span> Ustawienia
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="user-chip">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-name" id="user-name">Ładowanie...</div>
+        </div>
+        <div class="nav-item" onclick="logout()" style="margin-top:4px">
+          <span class="icon">🚪</span> Wyloguj
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="balance-card">
+          <div class="balance-label">Dostępne środki</div>
+          <div class="balance-amount" id="dash-pln">0,00 zł</div>
+          <div class="balance-pts" id="dash-pts">0 punktów</div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Dziś zarobione</div>
+            <div class="stat-value green" id="dash-today-pts">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Czas grania dziś</div>
+            <div class="stat-value purple" id="dash-gaming-today">0h 0m</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Wydano łącznie</div>
+            <div class="stat-value gold" id="dash-spent">0,00 zł</div>
+          </div>
+        </div>
+
+        <div class="daily-progress card">
+          <div class="progress-header">
+            <h3>Dzienny limit punktów</h3>
+            <span class="text2" id="dash-limit-text">0 / 150 pkt</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" id="dash-progress-bar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-success" onclick="showPage('log-activity')">+ Zaloguj aktywność</button>
+          <button class="btn-secondary" onclick="showPage('log-gaming')">🎮 Zaloguj granie</button>
+          <button class="btn-secondary" onclick="showPage('generator')">🎲 Co teraz?</button>
+        </div>
+
+        <div class="card">
+          <div class="recent-section">
+            <h3>Ostatnie aktywności</h3>
+            <div id="recent-list">
+              <p class="text2">Brak aktywności. Zacznij zarabiać punkty!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOG ACTIVITY -->
+      <div class="page" id="page-log-activity">
+        <h2 style="margin-bottom:20px">Zaloguj aktywność</h2>
+        <div class="card">
+          <div class="form-group">
+            <label>Rodzaj aktywności</label>
+            <select id="act-type" onchange="updatePointsPreview()">
+              <option value="">— wybierz —</option>
+              <option value="learning" data-pts="40">📚 Nauka (JS, Unity, C#) — 40 pkt/h</option>
+              <option value="project" data-pts="35">💻 Praca nad projektem — 35 pkt/h</option>
+              <option value="reading" data-pts="25">📖 Czytanie / kurs — 25 pkt/h</option>
+              <option value="exercise" data-pts="30">🏃 Ćwiczenia fizyczne — 30 pkt/h</option>
+              <option value="school" data-pts="20">🏫 Zadania szkolne — 20 pkt/h</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Czas (minuty)</label>
+              <input type="number" id="act-minutes" min="5" max="480" placeholder="np. 60" oninput="updatePointsPreview()">
+            </div>
+            <div class="form-group">
+              <label>Opis (opcjonalne)</label>
+              <input type="text" id="act-desc" placeholder="np. rozdział 3 z JS">
+            </div>
+          </div>
+
+          <div class="points-preview" id="pts-preview">
+            Zarobisz: <span id="pts-preview-val">0</span> pkt
+            <span class="text2" id="pts-cap-warn" style="margin-left:8px;display:none">(limit dzienny — zostanie obcięte)</span>
+          </div>
+
+          <button class="btn-success btn-full" onclick="logActivity()" style="width:100%">Zapisz aktywność</button>
+        </div>
+      </div>
+
+      <!-- LOG GAMING -->
+      <div class="page" id="page-log-gaming">
+        <h2 style="margin-bottom:20px">Zaloguj sesję grania</h2>
+        <div class="card">
+          <div class="form-group">
+            <label>Gra</label>
+            <select id="game-select">
+              <option value="">— wybierz —</option>
+              <option value="Minecraft">Minecraft</option>
+              <option value="Geometry Dash">Geometry Dash</option>
+              <option value="Inna">Inna gra...</option>
+            </select>
+          </div>
+
+          <div id="game-custom-wrap" style="display:none" class="form-group">
+            <label>Nazwa gry</label>
+            <input type="text" id="game-custom" placeholder="np. Valorant">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Czas (minuty)</label>
+              <input type="number" id="game-minutes" min="1" placeholder="np. 90">
+            </div>
+            <div class="form-group">
+              <label>Data</label>
+              <input type="date" id="game-date">
+            </div>
+          </div>
+
+          <button class="btn-primary btn-full" onclick="logGaming()" style="width:100%">Zapisz sesję</button>
+        </div>
+      </div>
+
+      <!-- SHOP -->
+      <div class="page" id="page-shop">
+        <h2 style="margin-bottom:20px">Wydatki</h2>
+        <div class="card" style="margin-bottom:16px">
+          <h3 style="margin-bottom:16px">Zarejestruj zakup</h3>
+          <div class="form-group">
+            <label>Opis zakupu</label>
+            <input type="text" id="shop-desc" placeholder="np. gra na Steamie">
+          </div>
+          <div class="form-group">
+            <label>Kwota (PLN)</label>
+            <input type="number" id="shop-amount" min="0.01" step="0.01" placeholder="np. 49.99" oninput="updateShopPreview()">
+          </div>
+          <div class="points-preview" id="shop-preview" style="display:block;border-color:var(--warn)">
+            Koszt: <span id="shop-pts-val" style="color:var(--warn)">0</span> pkt
+          </div>
+          <p class="text2" id="shop-error" style="color:var(--warn);display:none">Nie masz wystarczających punktów!</p>
+          <button class="btn-danger btn-full" onclick="logPurchase()" style="width:100%">Zarejestruj zakup</button>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:14px">Historia zakupów</h3>
+          <div id="purchase-list">
+            <p class="text2">Brak zakupów.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- GENERATOR -->
+      <div class="page" id="page-generator">
+        <div class="card generator-card">
+          <h2>Co teraz?</h2>
+          <p class="text2" style="margin-top:8px">Wybierz ile masz czasu, a wylosuję coś produktywnego.</p>
+
+          <div class="time-btns">
+            <button class="time-btn" onclick="selectTime(15, this)">15 min</button>
+            <button class="time-btn" onclick="selectTime(30, this)">30 min</button>
+            <button class="time-btn" onclick="selectTime(60, this)">1h</button>
+            <button class="time-btn" onclick="selectTime(90, this)">1,5h</button>
+            <button class="time-btn" onclick="selectTime(120, this)">2h+</button>
+          </div>
+
+          <div class="gen-result" id="gen-result">
+            <div class="gen-activity-name" id="gen-name">—</div>
+            <div class="gen-activity-pts" id="gen-pts">— pkt/h</div>
+          </div>
+
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
+            <button class="btn-secondary" onclick="generate()" id="gen-btn" disabled>🎲 Losuj</button>
+            <button class="btn-success" onclick="goLogGenerated()" id="gen-do-btn" style="display:none">✅ Zrób to!</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="page" id="page-stats">
+        <h2 style="margin-bottom:20px">Statystyki</h2>
+
+        <div class="chart-wrap">
+          <h3 style="margin-bottom:16px;font-size:15px">Punkty — ostatnie 7 dni</h3>
+          <div class="bar-chart" id="pts-chart"></div>
+        </div>
+
+        <div class="chart-wrap">
+          <h3 style="margin-bottom:16px;font-size:15px">Czas grania — ostatnie 7 dni (minuty)</h3>
+          <div class="bar-chart" id="gaming-chart"></div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Łącznie zarobione</div>
+            <div class="stat-value green" id="stats-earned">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Łącznie wydane (pkt)</div>
+            <div class="stat-value gold" id="stats-spent">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Czas grania łącznie</div>
+            <div class="stat-value purple" id="stats-gaming">0h</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <h2 style="margin-bottom:20px">Ustawienia</h2>
+
+        <div class="card settings-section">
+          <h3>Profil</h3>
+          <div class="form-group">
+            <label>Imię</label>
+            <input type="text" id="set-name" placeholder="Twoje imię">
+          </div>
+          <div class="form-group">
+            <label>Email rodzica (raporty tygodniowe)</label>
+            <input type="email" id="set-parent-email" placeholder="rodzic@email.com">
+          </div>
+          <button class="btn-primary" onclick="saveSettings()">Zapisz</button>
+        </div>
+
+        <div class="card settings-section">
+          <h3>Limity</h3>
+          <div class="settings-row">
+            <label>Dzienny limit punktów</label>
+            <input type="number" id="set-daily-limit" value="150" min="50" max="500" style="width:80px;text-align:center">
+          </div>
+          <button class="btn-secondary" style="margin-top:12px" onclick="saveSettings()">Zapisz limit</button>
+        </div>
+
+        <div class="card settings-section">
+          <h3>Lista gier</h3>
+          <div id="games-list" style="margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="new-game-input" placeholder="Dodaj grę..." style="flex:1">
+            <button class="btn-primary" onclick="addGame()" style="padding:10px 16px">Dodaj</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="firebase-config.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc,
+      collection, addDoc, query, where, orderBy, limit, getDocs, increment
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let userProfile = null;
+    let selectedGenTime = null;
+    let generatedActivity = null;
+
+    const DAILY_LIMIT_DEFAULT = 150;
+    const POINTS_PER_PLN = 10;
+
+    const ACTIVITIES = [
+      { value: 'learning', label: '📚 Nauka (JS, Unity, C#)', pts: 40, color: '#6c63ff' },
+      { value: 'project', label: '💻 Praca nad projektem', pts: 35, color: '#4ecca3' },
+      { value: 'reading', label: '📖 Czytanie / kurs', pts: 25, color: '#ffd700' },
+      { value: 'exercise', label: '🏃 Ćwiczenia fizyczne', pts: 30, color: '#ff6b6b' },
+      { value: 'school', label: '🏫 Zadania szkolne', pts: 20, color: '#8a8fa8' },
+    ];
+
+    // ── Auth ──────────────────────────────────────────────
+    onAuthStateChanged(auth, async user => {
+      if (!user) { window.location.href = 'index.html'; return; }
+      currentUser = user;
+      await loadProfile();
+      await loadDashboard();
+    });
+
+    async function loadProfile() {
+      const snap = await getDoc(doc(db, 'users', currentUser.uid));
+      userProfile = snap.data();
+
+      const initials = (userProfile.name || 'U')[0].toUpperCase();
+      document.getElementById('user-avatar').textContent = initials;
+      document.getElementById('user-name').textContent = userProfile.name || 'Użytkownik';
+
+      // Prefill settings
+      document.getElementById('set-name').value = userProfile.name || '';
+      document.getElementById('set-parent-email').value = userProfile.parentEmail || '';
+      document.getElementById('set-daily-limit').value = userProfile.dailyLimit || DAILY_LIMIT_DEFAULT;
+
+      renderGamesList();
+    }
+
+    // ── Navigation ────────────────────────────────────────
+    window.showPage = (id) => {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + id).classList.add('active');
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(n => { if (n.textContent.trim().includes(navLabel(id))) n.classList.add('active'); });
+
+      if (id === 'stats') loadStats();
+      if (id === 'shop') loadPurchases();
+      if (id === 'log-gaming') updateGameSelect();
+    };
+
+    function navLabel(id) {
+      const m = { dashboard: 'Dashboard', 'log-activity': 'aktywność', 'log-gaming': 'granie', shop: 'Wydatki', generator: 'teraz', stats: 'Statystyki', settings: 'Ustawienia' };
+      return m[id] || '';
+    }
+
+    window.logout = async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    };
+
+    // ── Toast ─────────────────────────────────────────────
+    function toast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `show ${type}`;
+      setTimeout(() => el.className = '', 3000);
+    }
+
+    // ── Helpers ───────────────────────────────────────────
+    function todayStr() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function formatPLN(pts) {
+      return (pts / POINTS_PER_PLN).toFixed(2).replace('.', ',') + ' zł';
+    }
+
+    function formatMinutes(min) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    }
+
+    async function getTodayPts() {
+      const snap = await getDoc(doc(db, 'users', currentUser.uid, 'dailyLog', todayStr()));
+      return snap.exists() ? (snap.data().pointsEarned || 0) : 0;
+    }
+
+    async function getDailyLimit() {
+      return userProfile?.dailyLimit || DAILY_LIMIT_DEFAULT;
+    }
+
+    // ── Dashboard ─────────────────────────────────────────
+    async function loadDashboard() {
+      const profile = userProfile;
+      if (!profile) return;
+
+      const totalPts = profile.points?.total || 0;
+      document.getElementById('dash-pln').textContent = formatPLN(totalPts);
+      document.getElementById('dash-pts').textContent = totalPts + ' punktów';
+      document.getElementById('stats-earned').textContent = profile.points?.earnedAllTime || 0;
+      document.getElementById('stats-spent').textContent = profile.points?.spentAllTime || 0;
+      document.getElementById('dash-spent').textContent = formatPLN(profile.points?.spentAllTime || 0);
+
+      // Today pts
+      const todayPts = await getTodayPts();
+      const dailyLimit = await getDailyLimit();
+      document.getElementById('dash-today-pts').textContent = todayPts;
+      document.getElementById('dash-limit-text').textContent = `${todayPts} / ${dailyLimit} pkt`;
+      const pct = Math.min(100, (todayPts / dailyLimit) * 100);
+      document.getElementById('dash-progress-bar').style.width = pct + '%';
+
+      // Today gaming
+      const gamingSnap = await getDoc(doc(db, 'users', currentUser.uid, 'dailyLog', todayStr()));
+      const gamingMin = gamingSnap.exists() ? (gamingSnap.data().gamingMinutes || 0) : 0;
+      document.getElementById('dash-gaming-today').textContent = formatMinutes(gamingMin);
+
+      // Recent activities
+      await loadRecentActivities();
+    }
+
+    async function loadRecentActivities() {
+      const q = query(
+        collection(db, 'users', currentUser.uid, 'activities'),
+        orderBy('timestamp', 'desc'),
+        limit(5)
+      );
+      const snap = await getDocs(q);
+      const el = document.getElementById('recent-list');
+
+      if (snap.empty) {
+        el.innerHTML = '<p class="text2">Brak aktywności. Zacznij zarabiać punkty!</p>';
+        return;
+      }
+
+      el.innerHTML = snap.docs.map(d => {
+        const a = d.data();
+        const act = ACTIVITIES.find(x => x.value === a.type) || { label: a.type, color: '#6c63ff' };
+        const date = new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp);
+        const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+        return `<div class="activity-item">
+          <div class="activity-icon" style="background:${act.color}22">${act.label.split(' ')[0]}</div>
+          <div class="activity-info">
+            <div class="activity-name">${act.label.replace(/^[^ ]+ /, '')}</div>
+            <div class="activity-meta">${formatMinutes(a.duration)} · ${dateStr}${a.desc ? ' · ' + a.desc : ''}</div>
+          </div>
+          <div class="activity-pts">+${a.points} pkt</div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Log Activity ──────────────────────────────────────
+    window.updatePointsPreview = () => {
+      const type = document.getElementById('act-type');
+      const min = parseInt(document.getElementById('act-minutes').value) || 0;
+      const opt = type.options[type.selectedIndex];
+      const ptsPerH = parseInt(opt?.dataset.pts || 0);
+      const preview = document.getElementById('pts-preview');
+
+      if (!ptsPerH || min < 5) { preview.style.display = 'none'; return; }
+
+      const earned = Math.round((min / 60) * ptsPerH);
+      document.getElementById('pts-preview-val').textContent = earned;
+      preview.style.display = 'block';
+
+      getTodayPts().then(async todayPts => {
+        const limit = await getDailyLimit();
+        const capWarn = document.getElementById('pts-cap-warn');
+        capWarn.style.display = (todayPts + earned > limit) ? 'inline' : 'none';
+      });
+    };
+
+    window.logActivity = async () => {
+      const type = document.getElementById('act-type').value;
+      const min = parseInt(document.getElementById('act-minutes').value);
+      const desc = document.getElementById('act-desc').value.trim();
+
+      if (!type) return toast('Wybierz rodzaj aktywności.', 'error');
+      if (!min || min < 5) return toast('Minimum 5 minut.', 'error');
+
+      const opt = document.querySelector(`#act-type option[value="${type}"]`);
+      const ptsPerH = parseInt(opt?.dataset.pts || 0);
+      let earned = Math.round((min / 60) * ptsPerH);
+
+      // Cap to daily limit
+      const todayPts = await getTodayPts();
+      const dailyLimit = await getDailyLimit();
+      const remaining = dailyLimit - todayPts;
+      const actualEarned = Math.min(earned, Math.max(0, remaining));
+
+      if (actualEarned === 0) {
+        return toast('Osiągnąłeś dzienny limit punktów!', 'error');
+      }
+
+      const btn = document.querySelector('#page-log-activity button');
+      btn.disabled = true;
+
+      try {
+        // Add activity record
+        await addDoc(collection(db, 'users', currentUser.uid, 'activities'), {
+          type, duration: min, points: actualEarned, desc,
+          timestamp: new Date()
+        });
+
+        // Update daily log
+        const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', todayStr());
+        const daySnap = await getDoc(dayRef);
+        if (daySnap.exists()) {
+          await updateDoc(dayRef, { pointsEarned: increment(actualEarned) });
+        } else {
+          await setDoc(dayRef, { pointsEarned: actualEarned, gamingMinutes: 0 });
+        }
+
+        // Update total points
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          'points.total': increment(actualEarned),
+          'points.earnedAllTime': increment(actualEarned)
+        });
+
+        await loadProfile();
+        await loadDashboard();
+        toast(`+${actualEarned} pkt zarobione! 🎉`);
+        document.getElementById('act-type').value = '';
+        document.getElementById('act-minutes').value = '';
+        document.getElementById('act-desc').value = '';
+        document.getElementById('pts-preview').style.display = 'none';
+        showPage('dashboard');
+      } catch (e) {
+        toast('Błąd zapisu. Spróbuj ponownie.', 'error');
+        console.error(e);
+      }
+      btn.disabled = false;
+    };
+
+    // ── Log Gaming ────────────────────────────────────────
+    window.updateGameSelect = () => {
+      const sel = document.getElementById('game-select');
+      const games = userProfile?.games || [];
+      const defaults = ['Minecraft', 'Geometry Dash', 'Inna'];
+      const all = [...new Set([...defaults, ...games])];
+
+      sel.innerHTML = '<option value="">— wybierz —</option>' +
+        all.map(g => `<option value="${g}">${g}</option>`).join('');
+
+      // Set today's date as default
+      document.getElementById('game-date').value = todayStr();
+    };
+
+    document.getElementById('game-select').addEventListener('change', function () {
+      document.getElementById('game-custom-wrap').style.display = this.value === 'Inna' ? 'block' : 'none';
+    });
+
+    window.logGaming = async () => {
+      let game = document.getElementById('game-select').value;
+      if (game === 'Inna') game = document.getElementById('game-custom').value.trim();
+      const min = parseInt(document.getElementById('game-minutes').value);
+      const date = document.getElementById('game-date').value || todayStr();
+
+      if (!game) return toast('Wybierz lub wpisz grę.', 'error');
+      if (!min || min < 1) return toast('Wpisz czas sesji.', 'error');
+
+      const btn = document.querySelector('#page-log-gaming button');
+      btn.disabled = true;
+
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'gamingSessions'), {
+          game, duration: min, date, timestamp: new Date()
+        });
+
+        const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', date);
+        const daySnap = await getDoc(dayRef);
+        if (daySnap.exists()) {
+          await updateDoc(dayRef, { gamingMinutes: increment(min) });
+        } else {
+          await setDoc(dayRef, { pointsEarned: 0, gamingMinutes: min });
+        }
+
+        await loadDashboard();
+        toast(`Zapisano ${formatMinutes(min)} grania w ${game}.`);
+        document.getElementById('game-select').value = '';
+        document.getElementById('game-minutes').value = '';
+        showPage('dashboard');
+      } catch (e) {
+        toast('Błąd zapisu.', 'error');
+        console.error(e);
+      }
+      btn.disabled = false;
+    };
+
+    // ── Shop ──────────────────────────────────────────────
+    window.updateShopPreview = () => {
+      const amount = parseFloat(document.getElementById('shop-amount').value) || 0;
+      const pts = Math.ceil(amount * POINTS_PER_PLN);
+      document.getElementById('shop-pts-val').textContent = pts;
+
+      const total = userProfile?.points?.total || 0;
+      document.getElementById('shop-error').style.display = pts > total ? 'block' : 'none';
+    };
+
+    window.logPurchase = async () => {
+      const desc = document.getElementById('shop-desc').value.trim();
+      const amount = parseFloat(document.getElementById('shop-amount').value);
+
+      if (!desc) return toast('Wpisz opis zakupu.', 'error');
+      if (!amount || amount <= 0) return toast('Wpisz kwotę.', 'error');
+
+      const pts = Math.ceil(amount * POINTS_PER_PLN);
+      const total = userProfile?.points?.total || 0;
+
+      if (pts > total) return toast('Nie masz wystarczających punktów!', 'error');
+
+      const btn = document.querySelector('#page-shop .btn-danger');
+      btn.disabled = true;
+
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'purchases'), {
+          description: desc, amount, pointsCost: pts, timestamp: new Date()
+        });
+
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          'points.total': increment(-pts),
+          'points.spentAllTime': increment(pts)
+        });
+
+        await loadProfile();
+        await loadDashboard();
+        await loadPurchases();
+        toast(`Zakup zarejestrowany. -${pts} pkt`);
+        document.getElementById('shop-desc').value = '';
+        document.getElementById('shop-amount').value = '';
+        document.getElementById('shop-pts-val').textContent = '0';
+      } catch (e) {
+        toast('Błąd zapisu.', 'error');
+        console.error(e);
+      }
+      btn.disabled = false;
+    };
+
+    async function loadPurchases() {
+      const q = query(
+        collection(db, 'users', currentUser.uid, 'purchases'),
+        orderBy('timestamp', 'desc'),
+        limit(20)
+      );
+      const snap = await getDocs(q);
+      const el = document.getElementById('purchase-list');
+
+      if (snap.empty) { el.innerHTML = '<p class="text2">Brak zakupów.</p>'; return; }
+
+      el.innerHTML = snap.docs.map(d => {
+        const p = d.data();
+        const date = new Date(p.timestamp?.toDate ? p.timestamp.toDate() : p.timestamp);
+        const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `<div class="purchase-item">
+          <div>
+            <div style="font-size:14px;font-weight:500">${p.description}</div>
+            <div class="text2">${dateStr}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:var(--warn)">-${p.pointsCost} pkt</div>
+            <div class="text2">${p.amount.toFixed(2).replace('.', ',')} zł</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Generator ─────────────────────────────────────────
+    window.selectTime = (min, el) => {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedGenTime = min;
+      document.getElementById('gen-btn').disabled = false;
+    };
+
+    window.generate = () => {
+      const available = ACTIVITIES.filter(a => {
+        if (!selectedGenTime) return true;
+        return true; // all activities work for any time
+      });
+      generatedActivity = available[Math.floor(Math.random() * available.length)];
+
+      document.getElementById('gen-name').textContent = generatedActivity.label;
+      document.getElementById('gen-pts').textContent = `${generatedActivity.pts} pkt/h`;
+      document.getElementById('gen-result').style.display = 'block';
+      document.getElementById('gen-do-btn').style.display = 'inline-block';
+    };
+
+    window.goLogGenerated = () => {
+      if (!generatedActivity) return;
+      showPage('log-activity');
+      document.getElementById('act-type').value = generatedActivity.value;
+      if (selectedGenTime) {
+        document.getElementById('act-minutes').value = selectedGenTime;
+      }
+      updatePointsPreview();
+    };
+
+    // ── Stats ─────────────────────────────────────────────
+    async function loadStats() {
+      const profile = userProfile;
+      document.getElementById('stats-earned').textContent = profile?.points?.earnedAllTime || 0;
+      document.getElementById('stats-spent').textContent = profile?.points?.spentAllTime || 0;
+
+      // Last 7 days
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push(d.toISOString().split('T')[0]);
+      }
+
+      const ptsData = [], gamingData = [];
+      for (const day of days) {
+        const snap = await getDoc(doc(db, 'users', currentUser.uid, 'dailyLog', day));
+        ptsData.push(snap.exists() ? (snap.data().pointsEarned || 0) : 0);
+        gamingData.push(snap.exists() ? (snap.data().gamingMinutes || 0) : 0);
+      }
+
+      const totalGamingMin = gamingData.reduce((a, b) => a + b, 0);
+      document.getElementById('stats-gaming').textContent = formatMinutes(totalGamingMin);
+
+      renderBarChart('pts-chart', ptsData, days.map(d => d.slice(5)), 'var(--accent)');
+      renderBarChart('gaming-chart', gamingData, days.map(d => d.slice(5)), 'var(--accent2)');
+    }
+
+    function renderBarChart(id, data, labels, color) {
+      const el = document.getElementById(id);
+      const max = Math.max(...data, 1);
+      el.innerHTML = data.map((v, i) => `
+        <div class="bar-col">
+          <div class="bar-val">${v}</div>
+          <div class="bar" style="height:${(v / max) * 100}px;background:${color}"></div>
+          <div class="bar-label">${labels[i]}</div>
+        </div>
+      `).join('');
+    }
+
+    // ── Settings ──────────────────────────────────────────
+    window.saveSettings = async () => {
+      const name = document.getElementById('set-name').value.trim();
+      const parentEmail = document.getElementById('set-parent-email').value.trim();
+      const dailyLimit = parseInt(document.getElementById('set-daily-limit').value) || DAILY_LIMIT_DEFAULT;
+
+      await updateDoc(doc(db, 'users', currentUser.uid), { name, parentEmail, dailyLimit });
+      await loadProfile();
+      toast('Zapisano ustawienia.');
+    };
+
+    function renderGamesList() {
+      const games = userProfile?.games || [];
+      const el = document.getElementById('games-list');
+      if (games.length === 0) { el.innerHTML = '<p class="text2" style="margin-bottom:8px">Brak gier. Dodaj poniżej.</p>'; return; }
+      el.innerHTML = games.map((g, i) => `
+        <div class="preset-item" style="margin-bottom:6px">
+          <span class="preset-info">🎮 ${g}</span>
+          <button class="btn-secondary" onclick="removeGame(${i})" style="padding:4px 10px;font-size:12px">Usuń</button>
+        </div>
+      `).join('');
+    }
+
+    window.addGame = async () => {
+      const input = document.getElementById('new-game-input');
+      const name = input.value.trim();
+      if (!name) return;
+      const games = [...(userProfile?.games || []), name];
+      await updateDoc(doc(db, 'users', currentUser.uid), { games });
+      await loadProfile();
+      input.value = '';
+      toast(`Dodano grę: ${name}`);
+    };
+
+    window.removeGame = async (i) => {
+      const games = [...(userProfile?.games || [])];
+      games.splice(i, 1);
+      await updateDoc(doc(db, 'users', currentUser.uid), { games });
+      await loadProfile();
+    };
+  </script>
+</body>
+</html>
