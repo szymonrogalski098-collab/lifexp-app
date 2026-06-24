@@ -187,7 +187,9 @@
           email: user.email,
           parentEmail: extraData.parentEmail || '',
           createdAt: new Date().toISOString(),
-          points: { total: 0, earnedAllTime: 0, spentAllTime: 0 }
+          points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
+          // Google/verified accounts are trusted; email+password must enter a code.
+          emailVerified: user.emailVerified === true
         });
       }
     }

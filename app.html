@@ -722,6 +722,19 @@
       if (!user) { window.location.href = 'index.html'; return; }
       currentUser = user;
       await loadProfile();
+
+      // Email verification gate
+      if (!userProfile.emailVerified) {
+        if (currentUser.emailVerified) {
+          // Verified by Firebase (Google) — trust it, no code needed.
+          await updateDoc(doc(db, 'users', currentUser.uid), { emailVerified: true });
+          userProfile.emailVerified = true;
+        } else {
+          window.location.href = 'verify.html';
+          return;
+        }
+      }
+
       await loadDashboard();
     });
 
@@ -738,7 +751,8 @@
           email: currentUser.email || '',
           parentEmail: '',
           createdAt: new Date().toISOString(),
-          points: { total: 0, earnedAllTime: 0, spentAllTime: 0 }
+          points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
+          emailVerified: currentUser.emailVerified === true
         });
         snap = await getDoc(ref);
       }

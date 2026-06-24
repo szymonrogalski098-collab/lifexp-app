@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LifeXP — Weryfikacja email</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .verify-wrap { width: 100%; max-width: 420px; padding: 16px; }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo h1 { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+    .logo h1 span { color: var(--accent); }
+    .logo p { color: var(--text2); font-size: 14px; margin-top: 4px; }
+
+    .verify-icon { font-size: 40px; text-align: center; margin-bottom: 12px; }
+    .verify-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+    .verify-sub { font-size: 14px; color: var(--text2); text-align: center; margin-bottom: 24px; }
+    .verify-sub b { color: var(--text); }
+
+    .code-input {
+      width: 100%;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 28px;
+      letter-spacing: 10px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .btn-full { width: 100%; }
+    .resend-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+    .resend-row button {
+      background: transparent; border: none; color: var(--accent);
+      font-size: 13px; padding: 4px 0;
+    }
+    .resend-row button:disabled { color: var(--text2); }
+    .msg { font-size: 13px; margin-top: 14px; text-align: center; display: none; }
+    .msg.info { color: var(--accent2); display: block; }
+    .msg.error { color: var(--warn); display: block; }
+  </style>
+</head>
+<body>
+  <div class="verify-wrap">
+    <div class="logo">
+      <h1>Life<span>XP</span></h1>
+    </div>
+    <div class="card">
+      <div class="verify-icon">📧</div>
+      <div class="verify-title">Zweryfikuj swój email</div>
+      <div class="verify-sub">Wysłaliśmy 6-cyfrowy kod na<br><b id="email-target">…</b></div>
+
+      <input type="text" id="code-input" class="code-input" inputmode="numeric" maxlength="6"
+             autocomplete="one-time-code" placeholder="••••••">
+      <button class="btn-primary btn-full" onclick="confirmCode()">Potwierdź</button>
+
+      <div class="resend-row">
+        <button onclick="logout()">← Wyloguj</button>
+        <button id="resend-btn" onclick="resendCode()">Wyślij ponownie</button>
+      </div>
+
+      <p class="msg" id="msg"></p>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>emailjs.init('1vFk29QDNKopU0RnJ');</script>
+  <script src="firebase-config.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // EmailJS — reuse the existing service; create a NEW template with {{code}}.
+    const SERVICE_ID = 'service_417sg11';
+    const VERIFY_TEMPLATE_ID = 'template_verify'; // <-- utwórz w EmailJS i wstaw ID tutaj
+    const CODE_TTL_MS = 10 * 60 * 1000; // 10 minut
+    const MAX_ATTEMPTS = 5;
+    const RESEND_COOLDOWN_MS = 30 * 1000;
+
+    let currentUser = null, profile = null;
+    let currentCode = null, codeExpires = 0, attempts = 0;
+
+    function msg(text, type) {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + type;
+    }
+
+    // Cryptographically random 6-digit code, kept only in memory.
+    function genCode() {
+      const a = new Uint32Array(1);
+      crypto.getRandomValues(a);
+      return String(a[0] % 1000000).padStart(6, '0');
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = 'index.html'; return; }
+      currentUser = user;
+
+      const ref = doc(db, 'users', user.uid);
+      let snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          name: user.displayName || 'Użytkownik',
+          email: user.email || '',
+          parentEmail: '',
+          createdAt: new Date().toISOString(),
+          points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
+          emailVerified: user.emailVerified === true
+        });
+        snap = await getDoc(ref);
+      }
+      profile = snap.data();
+
+      // Already verified (or trusted by Firebase) → straight to the app.
+      if (profile.emailVerified || user.emailVerified) {
+        if (!profile.emailVerified) await updateDoc(ref, { emailVerified: true });
+        window.location.href = 'app.html';
+        return;
+      }
+
+      document.getElementById('email-target').textContent = user.email || '(brak adresu email)';
+      await sendCode();
+    });
+
+    async function sendCode() {
+      currentCode = genCode();
+      codeExpires = Date.now() + CODE_TTL_MS;
+      attempts = 0;
+      try {
+        await emailjs.send(SERVICE_ID, VERIFY_TEMPLATE_ID, {
+          to_email: currentUser.email,
+          user_name: profile?.name || 'Użytkownik',
+          code: currentCode
+        });
+        msg('Kod wysłany. Sprawdź skrzynkę (także spam).', 'info');
+      } catch (e) {
+        console.error(e);
+        msg('Nie udało się wysłać kodu. Kliknij „Wyślij ponownie".', 'error');
+      }
+    }
+
+    window.confirmCode = async () => {
+      const val = document.getElementById('code-input').value.trim();
+      if (!/^\d{6}$/.test(val)) return msg('Wpisz 6-cyfrowy kod.', 'error');
+      if (!currentCode || Date.now() > codeExpires) return msg('Kod wygasł. Wyślij nowy.', 'error');
+      if (val !== currentCode) {
+        attempts++;
+        if (attempts >= MAX_ATTEMPTS) {
+          currentCode = null;
+          return msg('Za dużo prób. Wyślij nowy kod.', 'error');
+        }
+        return msg(`Nieprawidłowy kod. Pozostało prób: ${MAX_ATTEMPTS - attempts}.`, 'error');
+      }
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), { emailVerified: true });
+        window.location.href = 'app.html';
+      } catch (e) {
+        console.error(e);
+        msg('Błąd zapisu. Spróbuj ponownie.', 'error');
+      }
+    };
+
+    window.resendCode = async () => {
+      const btn = document.getElementById('resend-btn');
+      btn.disabled = true;
+      await sendCode();
+      let left = RESEND_COOLDOWN_MS / 1000;
+      btn.textContent = `Wyślij ponownie (${left}s)`;
+      const t = setInterval(() => {
+        left--;
+        if (left <= 0) { clearInterval(t); btn.disabled = false; btn.textContent = 'Wyślij ponownie'; }
+        else btn.textContent = `Wyślij ponownie (${left}s)`;
+      }, 1000);
+    };
+
+    window.logout = async () => { await signOut(auth); window.location.href = 'index.html'; };
+
+    // Enter key submits.
+    document.getElementById('code-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmCode();
+    });
+  </script>
+</body>
+</html>
