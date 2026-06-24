@@ -81,7 +81,7 @@
     }
 
     .page { display: none; }
-    .page.active { display: block; }
+    .page.active { display: block; animation: fadeUp .28s ease both; }
 
     /* Dashboard */
     .balance-card {
@@ -398,7 +398,7 @@
       <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div class="balance-card">
-          <div class="streak-badge" id="dash-streak" style="display:none">🔥 <span id="dash-streak-num">0</span> dni z rzędu</div>
+          <div class="streak-badge" id="dash-streak" style="display:none"><span class="flame">🔥</span> <span id="dash-streak-num">0</span> dni z rzędu</div>
           <div class="balance-label">Dostępne środki</div>
           <div class="balance-amount" id="dash-pln">0,00 zł</div>
           <div class="balance-pts" id="dash-pts">0 punktów</div>
@@ -684,6 +684,17 @@
 
   <div id="toast"></div>
 
+  <!-- Level-up celebration -->
+  <div class="modal-overlay" id="levelup-modal">
+    <div class="modal" style="text-align:center">
+      <div style="font-size:52px;margin-bottom:8px">🎉</div>
+      <h3 style="margin-bottom:6px">Nowy poziom!</h3>
+      <p class="text2" style="margin-bottom:10px">Awansowałeś na</p>
+      <div id="levelup-text" style="font-size:22px;font-weight:700;color:var(--accent);margin-bottom:22px">Poziom 2</div>
+      <button class="btn-primary" onclick="closeLevelup()" style="min-width:140px">Super! 🚀</button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
     emailjs.init('1vFk29QDNKopU0RnJ');
@@ -823,6 +834,55 @@
       return h > 0 ? `${h}h ${m}m` : `${m}m`;
     }
 
+    // ── Animation helpers ─────────────────────────────────
+    const prefersReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Count-up: animates an element's number from its previous value to `to`.
+    function animateCount(el, to, format) {
+      const fmt = format || (v => String(Math.round(v)));
+      const from = Number(el.dataset.val || 0);
+      el.dataset.val = to;
+      if (prefersReduced() || from === to) { el.textContent = fmt(to); return; }
+      const start = performance.now();
+      const dur = 600;
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / dur);
+        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+        el.textContent = fmt(from + (to - from) * eased);
+        if (t < 1) requestAnimationFrame(step);
+        else el.textContent = fmt(to);
+      };
+      requestAnimationFrame(step);
+    }
+
+    // Lightweight DOM confetti burst from the upper-center of the viewport.
+    function confettiBurst() {
+      if (prefersReduced()) return;
+      const colors = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b'];
+      for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-piece';
+        p.style.left = (window.innerWidth / 2 + (Math.random() - 0.5) * 140) + 'px';
+        p.style.top = (window.innerHeight * 0.32) + 'px';
+        p.style.background = colors[i % colors.length];
+        p.style.setProperty('--dx', ((Math.random() - 0.5) * 380) + 'px');
+        p.style.setProperty('--dy', (220 + Math.random() * 260) + 'px');
+        p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+        p.style.setProperty('--dur', (0.9 + Math.random() * 0.6) + 's');
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 1700);
+      }
+    }
+
+    function pulseEl(el) { if (!el || prefersReduced()) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+
+    window.closeLevelup = () => document.getElementById('levelup-modal').classList.remove('open');
+    function showLevelup(level, title) {
+      document.getElementById('levelup-text').textContent = `Poziom ${level} — ${title}`;
+      document.getElementById('levelup-modal').classList.add('open');
+      confettiBurst();
+    }
+
     async function getTodayPts() {
       const snap = await getDoc(doc(db, 'users', currentUser.uid, 'dailyLog', todayStr()));
       return snap.exists() ? (snap.data().pointsEarned || 0) : 0;
@@ -838,16 +898,16 @@
       if (!profile) return;
 
       const totalPts = profile.points?.total || 0;
-      document.getElementById('dash-pln').textContent = formatPLN(totalPts);
-      document.getElementById('dash-pts').textContent = totalPts + ' punktów';
-      document.getElementById('stats-earned').textContent = profile.points?.earnedAllTime || 0;
-      document.getElementById('stats-spent').textContent = profile.points?.spentAllTime || 0;
-      document.getElementById('dash-spent').textContent = formatPLN(profile.points?.spentAllTime || 0);
+      animateCount(document.getElementById('dash-pln'), totalPts, formatPLN);
+      animateCount(document.getElementById('dash-pts'), totalPts, v => Math.round(v) + ' punktów');
+      animateCount(document.getElementById('stats-earned'), profile.points?.earnedAllTime || 0);
+      animateCount(document.getElementById('stats-spent'), profile.points?.spentAllTime || 0);
+      animateCount(document.getElementById('dash-spent'), profile.points?.spentAllTime || 0, formatPLN);
 
       // Today pts
       const todayPts = await getTodayPts();
       const dailyLimit = await getDailyLimit();
-      document.getElementById('dash-today-pts').textContent = todayPts;
+      animateCount(document.getElementById('dash-today-pts'), todayPts);
       document.getElementById('dash-limit-text').textContent = `${todayPts} / ${dailyLimit} pkt`;
       const pct = Math.min(100, (todayPts / dailyLimit) * 100);
       document.getElementById('dash-progress-bar').style.width = pct + '%';
@@ -1112,6 +1172,10 @@
       const btn = document.querySelector('#page-log-activity button');
       btn.disabled = true;
 
+      // Level before earning, to detect a level-up afterwards.
+      const beforeEarned = userProfile.points?.earnedAllTime || 0;
+      const beforeLevel = Math.floor(beforeEarned / XP_PER_LEVEL) + 1;
+
       try {
         // Add activity record
         await addDoc(collection(db, 'users', currentUser.uid, 'activities'), {
@@ -1135,13 +1199,24 @@
         });
 
         await loadProfile();
-        await loadDashboard();
-        toast(`+${actualEarned} pkt zarobione! 🎉`);
         document.getElementById('act-type').value = '';
         document.getElementById('act-minutes').value = '';
         document.getElementById('act-desc').value = '';
         document.getElementById('pts-preview').style.display = 'none';
         showPage('dashboard');
+        await loadDashboard();
+        toast(`+${actualEarned} pkt zarobione! 🎉`);
+
+        // Reward feedback: pulse the balance, then celebrate a level-up or confetti.
+        pulseEl(document.querySelector('.balance-card'));
+        const afterEarned = userProfile.points?.earnedAllTime || 0;
+        const afterLevel = Math.floor(afterEarned / XP_PER_LEVEL) + 1;
+        if (afterLevel > beforeLevel) {
+          const title = LEVEL_TITLES[Math.min(afterLevel - 1, LEVEL_TITLES.length - 1)];
+          setTimeout(() => showLevelup(afterLevel, title), 350);
+        } else {
+          confettiBurst();
+        }
       } catch (e) {
         toast('Błąd zapisu. Spróbuj ponownie.', 'error');
         console.error(e);
@@ -1343,13 +1418,21 @@
     function renderBarChart(id, data, labels, color) {
       const el = document.getElementById(id);
       const max = Math.max(...data, 1);
-      el.innerHTML = data.map((v, i) => `
-        <div class="bar-col">
+      const reduce = prefersReduced();
+      el.innerHTML = data.map((v, i) => {
+        const h = (v / max) * 100;
+        const style = reduce
+          ? `height:${h}px;background:${color}`
+          : `height:0px;transition-delay:${i * 60}ms;background:${color}`;
+        return `<div class="bar-col">
           <div class="bar-val">${v}</div>
-          <div class="bar" style="height:${(v / max) * 100}px;background:${color}"></div>
+          <div class="bar" style="${style}" data-h="${h}"></div>
           <div class="bar-label">${labels[i]}</div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
+      // Grow bars from zero on the next frame so the CSS height transition plays.
+      if (!reduce) requestAnimationFrame(() =>
+        el.querySelectorAll('.bar').forEach(b => { b.style.height = b.dataset.h + 'px'; }));
     }
 
     // ── Settings ──────────────────────────────────────────

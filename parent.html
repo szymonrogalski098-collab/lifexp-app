@@ -39,7 +39,7 @@
 
     .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
     .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 2px; }
+    .bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 2px; transition: height .5s ease; }
     .bar-label { font-size: 10px; color: var(--text2); }
     .bar-val { font-size: 10px; color: var(--text2); font-family: var(--mono); }
 
@@ -136,6 +136,7 @@
     const formatPLN = (pts) => (pts / POINTS_PER_PLN).toFixed(2).replace('.', ',') + ' zł';
     const formatMinutes = (min) => { const h = Math.floor(min / 60), m = min % 60; return h > 0 ? `${h}h ${m}m` : `${m}m`; };
     const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const prefersReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function toast(msg, type = 'success') {
       const el = document.getElementById('toast');
@@ -247,15 +248,24 @@
           <h3 class="sec">Ostatnie zakupy</h3>
           ${purSnap.empty ? '<p class="text2">Brak zakupów.</p>' : purSnap.docs.map(d => purchaseRow(d.data())).join('')}
         </div>`;
+
+      // Grow bars from zero so the height transition plays.
+      if (!prefersReduced()) requestAnimationFrame(() =>
+        content.querySelectorAll('.bar').forEach(b => { b.style.height = b.dataset.h + 'px'; }));
     };
 
     function barChart(data, labels, color) {
       const max = Math.max(...data, 1);
-      return data.map((v, i) => `<div class="bar-col">
-        <div class="bar-val">${v}</div>
-        <div class="bar" style="height:${(v / max) * 100}px;background:${color}"></div>
-        <div class="bar-label">${labels[i]}</div>
-      </div>`).join('');
+      const reduce = prefersReduced();
+      return data.map((v, i) => {
+        const h = (v / max) * 100;
+        const style = reduce ? `height:${h}px;background:${color}` : `height:0px;transition-delay:${i * 60}ms;background:${color}`;
+        return `<div class="bar-col">
+          <div class="bar-val">${v}</div>
+          <div class="bar" style="${style}" data-h="${h}"></div>
+          <div class="bar-label">${labels[i]}</div>
+        </div>`;
+      }).join('');
     }
 
     function activityRow(a) {
