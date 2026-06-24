@@ -616,8 +616,29 @@
     });
 
     async function loadProfile() {
-      const snap = await getDoc(doc(db, 'users', currentUser.uid));
-      userProfile = snap.data();
+      const ref = doc(db, 'users', currentUser.uid);
+      let snap = await getDoc(ref);
+
+      // Self-heal: the profile doc may be missing if a Google login redirected
+      // here before index.html finished writing it. Create it from the auth
+      // user so the UI never hangs on "Ładowanie...".
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          name: currentUser.displayName || 'Użytkownik',
+          email: currentUser.email || '',
+          parentEmail: '',
+          createdAt: new Date().toISOString(),
+          points: { total: 0, earnedAllTime: 0, spentAllTime: 0 }
+        });
+        snap = await getDoc(ref);
+      }
+
+      userProfile = snap.data() || {};
+      // Guarantee the points map exists so stats never read undefined.
+      userProfile.points = Object.assign(
+        { total: 0, earnedAllTime: 0, spentAllTime: 0 },
+        userProfile.points || {}
+      );
 
       const initials = (userProfile.name || 'U')[0].toUpperCase();
       document.getElementById('user-avatar').textContent = initials;
@@ -761,8 +782,20 @@
 
       getTodayPts().then(async todayPts => {
         const limit = await getDailyLimit();
+        const remaining = Math.max(0, limit - todayPts);
+        const actualEarned = Math.min(earned, remaining);
+
+        // Show the amount that will actually be credited (capped), not the raw value.
+        document.getElementById('pts-preview-val').textContent = actualEarned;
+
+        // Warn only when the limit is already reached and nothing more can be earned.
         const capWarn = document.getElementById('pts-cap-warn');
-        capWarn.style.display = (todayPts + earned > limit) ? 'inline' : 'none';
+        if (todayPts >= limit) {
+          capWarn.textContent = '(limit dzienny osiągnięty — 0 pkt)';
+          capWarn.style.display = 'inline';
+        } else {
+          capWarn.style.display = 'none';
+        }
       });
     };
 
