@@ -1591,11 +1591,14 @@
     // Stała lista obowiązków. Stabilne `id` — historyczne wpisy zachowują nazwę,
     // nawet gdy lista się zmieni. TODO: pełna lista w przygotowaniu — dopisz tutaj.
     const CHORES = [
-      { id: 'vacuum_ground',    name: 'Odkurzenie całego parteru',       points: 40 },
-      { id: 'trash_segregated', name: 'Opróżnienie kosza segregowanego', points: 20 },
-      { id: 'room_quick',       name: 'Pobieżne sprzątnięcie pokoju',     points: 40 },
-      { id: 'room_deep',        name: 'Gruntowne sprzątnięcie pokoju',    points: 60 },
-      { id: 'vacuum_stairs',    name: 'Odkurzenie schodów',               points: 5  },
+      { id: 'entryway',         name: 'Odkurzanie wiatrołapu (buty, kurtki, czapki)',  points: 10 },
+      { id: 'vacuum_stairs',    name: 'Odkurzanie schodów',                            points: 5  },
+      { id: 'wash_stairs',      name: 'Zmycie schodów na mokro',                       points: 30 },
+      { id: 'vacuum_ground',    name: 'Kompleksowe odkurzenie całego parteru',         points: 40 },
+      { id: 'room_quick',       name: 'Pobieżne sprzątnięcie pokoju',                  points: 30 },
+      { id: 'room_deep',        name: 'Gruntowne sprzątnięcie pokoju',                 points: 60 },
+      { id: 'trash_segregated', name: 'Opróżnienie głównego kosza segregowanego',      points: 40 },
+      { id: 'dishwasher',       name: 'Opróżnienie zmywarki',                          points: 15 },
     ];
     const choreById = (id) => CHORES.find(c => c.id === id) || { name: 'Obowiązek', points: 0 };
 
