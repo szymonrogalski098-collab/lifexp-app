@@ -1459,14 +1459,17 @@
           purchases: weekSpent.toFixed(2),
         });
 
-        // Mark as sent this week so the auto-report fires only once.
-        await updateDoc(doc(db, 'users', currentUser.uid), { lastReportSent: todayStr() });
-        userProfile.lastReportSent = todayStr();
+        // Bookkeeping is non-fatal: the email already went out, so a failed
+        // write here must NOT be reported as an email error.
+        try {
+          await updateDoc(doc(db, 'users', currentUser.uid), { lastReportSent: todayStr() });
+          userProfile.lastReportSent = todayStr();
+        } catch (e) { console.warn('lastReportSent update failed', e); }
 
         toast(auto ? 'Wysłano automatyczny raport tygodniowy.' : 'Raport wysłany!');
       } catch (e) {
-        console.error(e);
-        if (!auto) toast('Błąd wysyłki emaila.', 'error');
+        console.error('EmailJS report error:', e);
+        if (!auto) toast('Błąd wysyłki: ' + (e?.text || e?.message || 'sprawdź konsolę'), 'error');
       }
 
       if (btn) btn.disabled = false;
