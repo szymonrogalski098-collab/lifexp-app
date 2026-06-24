@@ -343,10 +343,101 @@
     .preset-item .preset-info { font-size: 14px; }
     .preset-item .preset-pts { font-size: 13px; color: var(--accent2); font-family: var(--mono); }
 
+    /* ── Obowiązki domowe ── */
+    .segmented {
+      display: flex; gap: 4px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 4px; margin-bottom: 16px;
+    }
+    .seg-btn {
+      flex: 1; padding: 9px; border-radius: 8px;
+      background: transparent; color: var(--text2);
+      font-size: 14px; font-weight: 600;
+      transition: background .25s cubic-bezier(0.4,0,0.2,1), color .25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .seg-btn.active { background: var(--accent); color: #fff; }
+
+    .chore-summary { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .chore-month { font-size: 16px; font-weight: 700; text-transform: capitalize; }
+    .chore-pln { font-size: 26px; font-weight: 700; font-family: var(--mono); color: var(--accent2); font-variant-numeric: tabular-nums; }
+    #chore-pts { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 8px; }
+    .cal-weekdays span { text-align: center; font-size: 11px; color: var(--text2); font-weight: 600; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .cal-cell {
+      aspect-ratio: 1; border-radius: 10px;
+      background: var(--bg3); border: 1px solid transparent;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+      font-size: 13px; color: var(--text2);
+      transition: transform .15s ease, border-color .15s ease, background .2s ease;
+    }
+    .cal-cell.blank { background: transparent; }
+    .cal-cell.has { background: var(--accent); color: #fff; cursor: pointer; animation: fadeUp .3s ease both; }
+    .cal-cell.has .cal-pts { font-size: 10px; font-family: var(--mono); opacity: .85; }
+    .cal-cell.has:hover { transform: translateY(-2px); }
+    .cal-cell.today { border-color: var(--accent2); }
+    .cal-cell.selected { outline: 2px solid var(--accent2); outline-offset: -2px; }
+
+    .day-detail { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); animation: fadeUp .25s ease both; }
+    .day-detail h4 { font-size: 14px; margin-bottom: 10px; }
+    .chore-entry { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .chore-entry:last-child { border-bottom: none; }
+    .chore-entry .ce-name { font-size: 14px; }
+    .chore-entry .ce-pts { font-family: var(--mono); color: var(--accent2); font-weight: 700; margin-left: auto; }
+
+    .fab {
+      position: fixed; right: 24px; bottom: 24px;
+      width: 60px; height: 60px; border-radius: 50%;
+      background: var(--accent2); color: #0e0f13;
+      font-size: 30px; line-height: 1; font-weight: 400;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 24px rgba(78,204,163,.4); z-index: 900;
+      transition: transform .2s cubic-bezier(0.34,1.56,0.64,1), box-shadow .2s ease;
+    }
+    .fab:hover { transform: scale(1.08); box-shadow: 0 10px 30px rgba(78,204,163,.5); opacity: 1; }
+    .fab:active { transform: scale(.94); }
+
+    /* Bottom-sheet */
+    .sheet-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1100;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+    .sheet {
+      width: 100%; max-width: 520px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 20px 20px 0 0; padding: 20px 20px 32px;
+      transform: translateY(100%);
+      transition: transform .4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .sheet-backdrop.open .sheet { transform: translateY(0); }
+    .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 16px; }
+    .sheet-chore {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px; border-radius: 12px;
+      background: var(--bg3); border: 1px solid var(--border);
+      margin-bottom: 8px; cursor: pointer;
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    .sheet-chore:hover { border-color: var(--accent); }
+    .sheet-chore:active { transform: scale(.97); }
+    .sheet-chore.picked { border-color: var(--accent2); }
+    .sheet-chore .sc-name { flex: 1; font-size: 15px; font-weight: 500; }
+    .sheet-chore .sc-pts { font-family: var(--mono); font-weight: 700; color: var(--accent2); }
+    .sheet-chore .sc-check { width: 0; height: 22px; opacity: 0; transition: width .2s ease, opacity .2s ease; }
+    .sheet-chore .sc-check path { fill: none; stroke: var(--accent2); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; }
+    .sheet-chore.picked .sc-check { width: 22px; opacity: 1; }
+    .sheet-chore.picked .sc-check path { animation: drawCheck .4s ease forwards; }
+    @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+    .sheet-empty { text-align: center; padding: 30px 10px; color: var(--text2); }
+
     @media (max-width: 700px) {
       .sidebar { display: none; }
       .main { margin-left: 0; padding: 16px; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .fab { right: 16px; bottom: 16px; }
     }
   </style>
 </head>
@@ -367,6 +458,9 @@
       </div>
       <div class="nav-item" onclick="showPage('shop')">
         <span class="icon">🛒</span> Wydatki
+      </div>
+      <div class="nav-item" onclick="showPage('chores')">
+        <span class="icon">🧹</span> Obowiązki
       </div>
       <div class="nav-item" onclick="showPage('generator')">
         <span class="icon">🎲</span> Co teraz?
@@ -627,6 +721,38 @@
         </div>
       </div>
 
+      <!-- OBOWIĄZKI -->
+      <div class="page" id="page-chores">
+        <h2 style="margin-bottom:6px">Obowiązki domowe</h2>
+        <p class="text2" style="margin-bottom:18px">Osobny rejestr — zarobek za prace domowe (1 pkt = 0,45 zł).</p>
+
+        <div class="segmented" id="chore-tabs">
+          <button class="seg-btn active" data-tab="current" onclick="selectChoreTab('current')">Bieżący miesiąc</button>
+          <button class="seg-btn" data-tab="prev" onclick="selectChoreTab('prev')">Poprzedni miesiąc</button>
+        </div>
+
+        <div class="chore-summary card">
+          <div>
+            <div class="chore-month" id="chore-month-label">—</div>
+            <div class="text2">Zarobek miesiąca</div>
+          </div>
+          <div style="text-align:right">
+            <div class="chore-pln" id="chore-pln">0,00 zł</div>
+            <div class="text2"><span id="chore-pts">0</span> pkt</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cal-weekdays">
+            <span>Pn</span><span>Wt</span><span>Śr</span><span>Cz</span><span>Pt</span><span>So</span><span>Nd</span>
+          </div>
+          <div class="cal-grid" id="chore-cal"></div>
+          <div class="day-detail" id="chore-day-detail" style="display:none"></div>
+        </div>
+
+        <button class="fab" id="chore-fab" onclick="openChoreSheet()" aria-label="Dodaj obowiązek" style="display:none">+</button>
+      </div>
+
       <!-- SETTINGS -->
       <div class="page" id="page-settings">
         <h2 style="margin-bottom:20px">Ustawienia</h2>
@@ -692,6 +818,29 @@
       <p class="text2" style="margin-bottom:10px">Awansowałeś na</p>
       <div id="levelup-text" style="font-size:22px;font-weight:700;color:var(--accent);margin-bottom:22px">Poziom 2</div>
       <button class="btn-primary" onclick="closeLevelup()" style="min-width:140px">Super! 🚀</button>
+    </div>
+  </div>
+
+  <!-- Bottom-sheet wyboru obowiązku -->
+  <div class="sheet-backdrop" id="chore-sheet" onclick="if(event.target===this)closeChoreSheet()">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h3 style="margin-bottom:4px">Co zrobiłeś?</h3>
+      <p class="text2" style="margin-bottom:14px">Tapnij obowiązek, żeby dodać go na dziś.</p>
+      <div id="chore-sheet-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal "czy wczoraj?" -->
+  <div class="modal-overlay" id="chore-yesterday-modal">
+    <div class="modal" style="text-align:center">
+      <div style="font-size:40px;margin-bottom:8px">🗓️</div>
+      <h3 style="margin-bottom:10px">Kiedy to zrobiłeś?</h3>
+      <p class="text2" id="chore-yest-text" style="margin-bottom:20px"></p>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" style="flex:1" id="chore-yest-no">Dzisiaj</button>
+        <button class="btn-primary" style="flex:1" id="chore-yest-yes">Wczoraj</button>
+      </div>
     </div>
   </div>
 
@@ -799,10 +948,11 @@
       if (id === 'shop') loadPurchases();
       if (id === 'log-gaming') updateGameSelect();
       if (id === 'history') loadHistory();
+      if (id === 'chores') loadChores();
     };
 
     function navLabel(id) {
-      const m = { dashboard: 'Dashboard', 'log-activity': 'aktywność', 'log-gaming': 'granie', shop: 'Wydatki', generator: 'teraz', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia' };
+      const m = { dashboard: 'Dashboard', 'log-activity': 'aktywność', 'log-gaming': 'granie', shop: 'Wydatki', chores: 'Obowiązki', generator: 'teraz', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia' };
       return m[id] || '';
     }
 
@@ -1434,6 +1584,217 @@
       if (!reduce) requestAnimationFrame(() =>
         el.querySelectorAll('.bar').forEach(b => { b.style.height = b.dataset.h + 'px'; }));
     }
+
+    // ── Obowiązki domowe (osobny rejestr, niezależny od punktów LifeXP) ──
+    const CHORE_PLN_RATE = 0.45; // 1 pkt = 0,45 zł
+
+    // Stała lista obowiązków. Stabilne `id` — historyczne wpisy zachowują nazwę,
+    // nawet gdy lista się zmieni. TODO: pełna lista w przygotowaniu — dopisz tutaj.
+    const CHORES = [
+      { id: 'vacuum_ground',    name: 'Odkurzenie całego parteru',       points: 40 },
+      { id: 'trash_segregated', name: 'Opróżnienie kosza segregowanego', points: 20 },
+      { id: 'room_quick',       name: 'Pobieżne sprzątnięcie pokoju',     points: 40 },
+      { id: 'room_deep',        name: 'Gruntowne sprzątnięcie pokoju',    points: 60 },
+      { id: 'vacuum_stairs',    name: 'Odkurzenie schodów',               points: 5  },
+    ];
+    const choreById = (id) => CHORES.find(c => c.id === id) || { name: 'Obowiązek', points: 0 };
+
+    let choreEntries = [];        // wpisy z bieżącego + poprzedniego miesiąca
+    let choreTab = 'current';     // 'current' | 'prev'
+    let choreSelectedDay = null;  // dateISO rozwiniętego dnia
+    let chorePicking = false;
+
+    const MONTHS_PL = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+    function dateISOLocal(d = new Date()) {
+      const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    const monthKeyOf = (iso) => iso.slice(0, 7);
+    function monthKeys() {
+      const now = new Date();
+      const cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prev = `${p.getFullYear()}-${String(p.getMonth() + 1).padStart(2, '0')}`;
+      return { cur, prev };
+    }
+    function monthLabel(mk) { const [y, m] = mk.split('-').map(Number); return `${MONTHS_PL[m - 1]} ${y}`; }
+    const selectedMonthKey = () => { const { cur, prev } = monthKeys(); return choreTab === 'current' ? cur : prev; };
+    function syncChoreTabs() {
+      document.querySelectorAll('#chore-tabs .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === choreTab));
+    }
+
+    async function loadChores() {
+      const { cur, prev } = monthKeys();
+      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'chores'));
+      choreEntries = [];
+      const stale = [];
+      snap.forEach(d => {
+        const e = { id: d.id, ...d.data() };
+        if (e.monthKey === cur || e.monthKey === prev) choreEntries.push(e);
+        else stale.push(d.id); // starsze niż dwa miesiące → retencja
+      });
+      // Idempotentny cleanup (przechowujemy tylko 2 miesiące).
+      for (const id of stale) { try { await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', id)); } catch (_) {} }
+      syncChoreTabs();
+      renderChores();
+    }
+
+    window.selectChoreTab = (tab) => {
+      choreTab = tab;
+      choreSelectedDay = null;
+      syncChoreTabs();
+      renderChores();
+    };
+
+    function renderChores() {
+      const mk = selectedMonthKey();
+      const monthEntries = choreEntries.filter(e => e.monthKey === mk);
+
+      document.getElementById('chore-month-label').textContent = monthLabel(mk);
+      const pts = monthEntries.reduce((s, e) => s + (e.points || 0), 0);
+      animateCount(document.getElementById('chore-pts'), pts);
+      animateCount(document.getElementById('chore-pln'), pts, v => (v * CHORE_PLN_RATE).toFixed(2).replace('.', ',') + ' zł');
+
+      document.getElementById('chore-fab').style.display = choreTab === 'current' ? 'flex' : 'none';
+
+      renderCalendar(mk, monthEntries);
+      renderDayDetail(monthEntries);
+    }
+
+    function renderCalendar(mk, monthEntries) {
+      const [y, m] = mk.split('-').map(Number);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      const firstDow = (new Date(y, m - 1, 1).getDay() + 6) % 7; // poniedziałek = 0
+      const todayISO = dateISOLocal();
+
+      const ptsByDay = {};
+      monthEntries.forEach(e => { ptsByDay[e.dateISO] = (ptsByDay[e.dateISO] || 0) + (e.points || 0); });
+
+      let html = '';
+      for (let i = 0; i < firstDow; i++) html += `<div class="cal-cell blank"></div>`;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const iso = `${mk}-${String(d).padStart(2, '0')}`;
+        const has = ptsByDay[iso] != null;
+        const cls = ['cal-cell'];
+        if (has) cls.push('has');
+        if (iso === todayISO) cls.push('today');
+        if (iso === choreSelectedDay) cls.push('selected');
+        const click = has ? ` onclick="selectChoreDay('${iso}')"` : '';
+        const badge = has ? `<span class="cal-pts">${ptsByDay[iso]}</span>` : '';
+        html += `<div class="${cls.join(' ')}"${click}><span>${d}</span>${badge}</div>`;
+      }
+      document.getElementById('chore-cal').innerHTML = html;
+    }
+
+    window.selectChoreDay = (iso) => {
+      choreSelectedDay = (choreSelectedDay === iso) ? null : iso;
+      renderChores();
+    };
+
+    function renderDayDetail(monthEntries) {
+      const el = document.getElementById('chore-day-detail');
+      const dayEntries = choreSelectedDay
+        ? monthEntries.filter(e => e.dateISO === choreSelectedDay)
+            .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0))
+        : [];
+      if (dayEntries.length === 0) { el.style.display = 'none'; el.innerHTML = ''; return; }
+      const [yy, mm, dd] = choreSelectedDay.split('-');
+      el.style.display = 'block';
+      el.innerHTML = `<h4>${dd}.${mm}.${yy}</h4>` + dayEntries.map(e => `
+        <div class="chore-entry">
+          <span class="ce-name">${escapeHtml(choreById(e.choreId).name)}</span>
+          <span class="ce-pts">+${e.points} pkt</span>
+          <button class="activity-del" onclick="deleteChoreEntry('${e.id}')" title="Usuń">✕</button>
+        </div>`).join('');
+    }
+
+    // ── Bottom-sheet ──
+    window.openChoreSheet = () => {
+      const list = document.getElementById('chore-sheet-list');
+      list.innerHTML = CHORES.length === 0
+        ? '<div class="sheet-empty">Lista obowiązków jeszcze nie zdefiniowana.</div>'
+        : CHORES.map(c => `
+          <div class="sheet-chore" onclick="pickChore('${c.id}', this)">
+            <span class="sc-name">${escapeHtml(c.name)}</span>
+            <span class="sc-pts">+${c.points} pkt</span>
+            <svg class="sc-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>
+          </div>`).join('');
+      document.getElementById('chore-sheet').classList.add('open');
+    };
+    window.closeChoreSheet = () => document.getElementById('chore-sheet').classList.remove('open');
+
+    window.pickChore = (choreId, el) => {
+      if (chorePicking) return;
+      chorePicking = true;
+      if (!prefersReduced()) el.classList.add('picked');
+      const delay = prefersReduced() ? 0 : 450;
+      setTimeout(async () => {
+        closeChoreSheet();
+        await addChore(choreId);
+        chorePicking = false;
+      }, delay);
+    };
+
+    // Modal "dzisiaj / wczoraj?" → Promise<boolean> (true = wczoraj)
+    function askYesterday(choreName, yesterdayISO) {
+      return new Promise(resolve => {
+        const modal = document.getElementById('chore-yesterday-modal');
+        const [, mm, dd] = yesterdayISO.split('-');
+        document.getElementById('chore-yest-text').textContent =
+          `„${choreName}" jest już zaznaczony na dziś. Czy zrobiłeś to wczoraj (${dd}.${mm})?`;
+        modal.classList.add('open');
+        const yes = document.getElementById('chore-yest-yes');
+        const no = document.getElementById('chore-yest-no');
+        const finish = (val) => { modal.classList.remove('open'); yes.onclick = null; no.onclick = null; resolve(val); };
+        yes.onclick = () => finish(true);
+        no.onclick = () => finish(false);
+      });
+    }
+
+    async function addChore(choreId) {
+      const chore = choreById(choreId);
+      const todayISO = dateISOLocal();
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const yesterdayISO = dateISOLocal(y);
+
+      const todayHas = choreEntries.some(e => e.choreId === choreId && e.dateISO === todayISO);
+      const sameMonth = monthKeyOf(yesterdayISO) === monthKeyOf(todayISO);
+      const yesterdayHas = choreEntries.some(e => e.choreId === choreId && e.dateISO === yesterdayISO);
+
+      let dateISO = todayISO;
+      if (todayHas && sameMonth && !yesterdayHas) {
+        if (await askYesterday(chore.name, yesterdayISO)) dateISO = yesterdayISO;
+      }
+
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'chores'), {
+          choreId, points: chore.points, dateISO, monthKey: monthKeyOf(dateISO), createdAt: new Date()
+        });
+        // Pokaż miesiąc i dzień, do którego trafił wpis.
+        const { cur } = monthKeys();
+        choreTab = monthKeyOf(dateISO) === cur ? 'current' : 'prev';
+        choreSelectedDay = dateISO;
+        await loadChores();
+        pulseEl(document.querySelector('#page-chores .chore-summary'));
+        toast(`Dodano: ${chore.name} (+${chore.points} pkt)`);
+      } catch (e) {
+        console.error(e);
+        toast('Błąd zapisu obowiązku.', 'error');
+      }
+    }
+
+    window.deleteChoreEntry = async (id) => {
+      if (!confirm('Usunąć ten wpis?')) return;
+      try {
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', id));
+        await loadChores();
+        pulseEl(document.querySelector('#page-chores .chore-summary'));
+        toast('Wpis usunięty.');
+      } catch (e) {
+        console.error(e);
+        toast('Błąd usuwania.', 'error');
+      }
+    };
 
     // ── Settings ──────────────────────────────────────────
     window.saveSettings = async () => {
