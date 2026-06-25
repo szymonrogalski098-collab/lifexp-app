@@ -524,20 +524,11 @@
       <div class="nav-item active" onclick="showPage('dashboard')">
         <span class="icon">🏠</span> Dashboard
       </div>
-      <div class="nav-item" onclick="showPage('log-activity')">
-        <span class="icon">✅</span> Zaloguj aktywność
-      </div>
-      <div class="nav-item" onclick="showPage('log-gaming')">
-        <span class="icon">🎮</span> Zaloguj granie
-      </div>
       <div class="nav-item" onclick="showPage('shop')">
         <span class="icon">🛒</span> Wydatki
       </div>
       <div class="nav-item" onclick="showPage('chores')">
         <span class="icon">🧹</span> Obowiązki
-      </div>
-      <div class="nav-item" onclick="showPage('generator')">
-        <span class="icon">🎲</span> Co teraz?
       </div>
       <div class="nav-item" onclick="showPage('history')">
         <span class="icon">📜</span> Historia
@@ -565,44 +556,19 @@
       <div class="bn-item active" data-page="dashboard" onclick="showPage('dashboard')">
         <span class="bn-icon">🏠</span><span>Home</span>
       </div>
-      <div class="bn-item" data-page="log-activity" onclick="showPage('log-activity')">
-        <span class="bn-icon">✅</span><span>Aktywność</span>
-      </div>
       <div class="bn-item" data-page="chores" onclick="showPage('chores')">
         <span class="bn-icon">🧹</span><span>Obowiązki</span>
       </div>
       <div class="bn-item" data-page="shop" onclick="showPage('shop')">
         <span class="bn-icon">🛒</span><span>Wydatki</span>
       </div>
-      <div class="bn-item" id="bn-more" onclick="toggleMoreMenu()">
-        <span class="bn-icon">☰</span><span>Więcej</span>
+      <div class="bn-item" data-page="history" onclick="showPage('history')">
+        <span class="bn-icon">📜</span><span>Historia</span>
+      </div>
+      <div class="bn-item" data-page="settings" onclick="showPage('settings')">
+        <span class="bn-icon">⚙️</span><span>Ustawienia</span>
       </div>
     </nav>
-
-    <!-- More sheet (mobile) -->
-    <div id="more-menu" style="display:none">
-      <div class="more-overlay" onclick="toggleMoreMenu()"></div>
-      <div class="more-sheet">
-        <div class="more-sheet-item" onclick="showPage('log-gaming');toggleMoreMenu()">
-          <span class="ms-icon">🎮</span> Zaloguj granie
-        </div>
-        <div class="more-sheet-item" onclick="showPage('generator');toggleMoreMenu()">
-          <span class="ms-icon">🎲</span> Co teraz?
-        </div>
-        <div class="more-sheet-item" onclick="showPage('history');toggleMoreMenu()">
-          <span class="ms-icon">📜</span> Historia
-        </div>
-        <div class="more-sheet-item" onclick="showPage('stats');toggleMoreMenu()">
-          <span class="ms-icon">📊</span> Statystyki
-        </div>
-        <div class="more-sheet-item" onclick="showPage('settings');toggleMoreMenu()">
-          <span class="ms-icon">⚙️</span> Ustawienia
-        </div>
-        <div class="more-sheet-item" onclick="logout()">
-          <span class="ms-icon">🚪</span> Wyloguj
-        </div>
-      </div>
-    </div>
 
     <!-- Main -->
     <main class="main">
@@ -709,7 +675,7 @@
       <!-- LOG GAMING -->
       <div class="page" id="page-log-gaming">
         <h2 style="margin-bottom:20px">Zaloguj sesję grania</h2>
-        <div class="card">
+        <div class="card" style="margin-bottom:16px">
           <div class="form-group">
             <label>Gra</label>
             <select id="game-select">
@@ -737,6 +703,11 @@
           </div>
 
           <button class="btn-primary btn-full" onclick="logGaming()" style="width:100%">Zapisz sesję</button>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:14px">Historia sesji</h3>
+          <div id="gaming-history-list"><p class="text2">Brak sesji.</p></div>
         </div>
       </div>
 
@@ -1100,15 +1071,10 @@
 
       if (id === 'stats') loadStats();
       if (id === 'shop') loadPurchases();
-      if (id === 'log-gaming') updateGameSelect();
+      if (id === 'log-gaming') { updateGameSelect(); loadGamingHistory(); }
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
       if (id === 'settings') updateNotifStatus();
-    };
-
-    window.toggleMoreMenu = () => {
-      const m = document.getElementById('more-menu');
-      m.style.display = m.style.display === 'none' ? 'block' : 'none';
     };
 
     function navLabel(id) {
@@ -1578,15 +1544,62 @@
         }
 
         await loadDashboard();
+        await loadGamingHistory();
         toast(`Zapisano ${formatMinutes(min)} grania w ${game}.`);
         document.getElementById('game-select').value = '';
         document.getElementById('game-minutes').value = '';
-        showPage('dashboard');
+        document.getElementById('game-custom').value = '';
+        document.getElementById('game-custom-wrap').style.display = 'none';
+        document.getElementById('game-minutes').value = '';
       } catch (e) {
         toast('Błąd zapisu.', 'error');
         console.error(e);
       }
       btn.disabled = false;
+    };
+
+    window.loadGamingHistory = async () => {
+      const el = document.getElementById('gaming-history-list');
+      if (!el || !currentUser) return;
+      const q = query(
+        collection(db, 'users', currentUser.uid, 'gamingSessions'),
+        orderBy('timestamp', 'desc'),
+        limit(30)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) { el.innerHTML = '<p class="text2">Brak sesji.</p>'; return; }
+      el.innerHTML = snap.docs.map(d => {
+        const s = d.data();
+        const dateStr = s.date || s.timestamp?.toDate?.().toLocaleDateString('pl-PL') || '—';
+        return `<div class="history-item">
+          <div>
+            <div style="font-weight:600">${s.game}</div>
+            <div class="text2" style="font-size:13px">${dateStr} · ${formatMinutes(s.duration)}</div>
+          </div>
+          <button class="btn-ghost btn-sm" onclick="deleteGamingSession('${d.id}','${s.date || ''}',${s.duration})">Usuń</button>
+        </div>`;
+      }).join('');
+    };
+
+    window.deleteGamingSession = async (id, date, duration) => {
+      if (!confirm('Usunąć tę sesję?')) return;
+      try {
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'gamingSessions', id));
+        if (date) {
+          const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', date);
+          const daySnap = await getDoc(dayRef);
+          if (daySnap.exists()) {
+            const cur = daySnap.data().gamingMinutes || 0;
+            await updateDoc(dayRef, { gamingMinutes: Math.max(0, cur - duration) });
+          }
+        }
+        await loadDashboard();
+        await loadGamingHistory();
+        toast('Sesja usunięta.');
+      } catch (e) {
+        toast('Błąd usuwania.', 'error');
+        console.error(e);
+      }
     };
 
     // ── Shop ──────────────────────────────────────────────
