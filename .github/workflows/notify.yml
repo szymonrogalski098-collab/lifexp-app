@@ -1,0 +1,19 @@
+name: Push reminders
+
+on:
+  schedule:
+    - cron: '0 17 * * *'   # 17:00 UTC ≈ 18:00/19:00 czasu PL
+  workflow_dispatch: {}     # pozwala odpalić ręcznie z zakładki Actions
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install firebase-admin@12
+      - run: node scripts/send-notifications.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

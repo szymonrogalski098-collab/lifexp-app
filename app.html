@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LifeXP</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0e0f13">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LifeXP">
   <style>
     .app-layout {
       display: flex;
@@ -814,6 +820,12 @@
         </div>
 
         <div class="card settings-section">
+          <h3>Powiadomienia</h3>
+          <p class="text2" id="notif-status" style="margin-bottom:14px">Powiadomienia wyłączone.</p>
+          <button class="btn-primary" id="notif-btn" onclick="enableNotifications()">Włącz powiadomienia</button>
+        </div>
+
+        <div class="card settings-section">
           <h3>Narzędzia testowe</h3>
           <p class="text2" style="margin-bottom:14px">Zeruje licznik punktów zdobytych dzisiaj (dla testowania dziennego limitu). Nie zmienia salda ani statystyk łącznych.</p>
           <button class="btn-secondary" onclick="resetToday()">Resetuj dzisiejszy limit</button>
@@ -876,6 +888,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
     import {
       getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
       collection, addDoc, query, where, orderBy, limit, getDocs, increment
@@ -884,6 +897,16 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const messaging = getMessaging(app);
+
+    // WSTAW tu klucz VAPID z Firebase Console → Cloud Messaging → "Web Push certificates".
+    const VAPID_KEY = 'WSTAW_VAPID_KEY';
+
+    // Rejestracja service workera (PWA + push). Idempotentna.
+    let swRegistration = null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(r => { swRegistration = r; }).catch(e => console.warn('SW register failed', e));
+    }
 
     let currentUser = null;
     let userProfile = null;
@@ -973,6 +996,7 @@
       if (id === 'log-gaming') updateGameSelect();
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
+      if (id === 'settings') updateNotifStatus();
     };
 
     function navLabel(id) {
@@ -1923,6 +1947,51 @@
       await updateDoc(doc(db, 'users', currentUser.uid), { games });
       await loadProfile();
     };
+
+    // ── Powiadomienia push (FCM) ──────────────────────────
+    function updateNotifStatus(on) {
+      const el = document.getElementById('notif-status');
+      const btn = document.getElementById('notif-btn');
+      if (!el) return;
+      if (typeof Notification === 'undefined') {
+        el.textContent = 'Ta przeglądarka nie obsługuje powiadomień.';
+        if (btn) btn.style.display = 'none';
+        return;
+      }
+      if (on || Notification.permission === 'granted') {
+        el.textContent = '🔔 Powiadomienia włączone na tym urządzeniu.';
+        if (btn) btn.textContent = 'Odśwież token';
+      } else if (Notification.permission === 'denied') {
+        el.textContent = 'Powiadomienia zablokowane w ustawieniach przeglądarki.';
+      } else {
+        el.textContent = 'Powiadomienia wyłączone.';
+      }
+    }
+
+    window.enableNotifications = async () => {
+      if (typeof Notification === 'undefined') return toast('Brak wsparcia dla powiadomień.', 'error');
+      if (VAPID_KEY === 'WSTAW_VAPID_KEY') return toast('Brak klucza VAPID — skonfiguruj w kodzie.', 'error');
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') { updateNotifStatus(false); return toast('Nie udzielono zgody na powiadomienia.', 'error'); }
+        const reg = swRegistration || await navigator.serviceWorker.register('sw.js');
+        const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+        if (!token) return toast('Nie udało się uzyskać tokenu.', 'error');
+        await setDoc(doc(db, 'users', currentUser.uid, 'fcmTokens', token), {
+          token, createdAt: new Date(), ua: navigator.userAgent
+        });
+        updateNotifStatus(true);
+        toast('Powiadomienia włączone! 🔔');
+      } catch (e) {
+        console.error(e);
+        toast('Błąd włączania powiadomień.', 'error');
+      }
+    };
+
+    // Powiadomienie odebrane gdy apka jest na pierwszym planie → pokaż toast.
+    onMessage(messaging, (payload) => {
+      toast(payload.notification?.title || 'Nowe powiadomienie');
+    });
 
     // ── Email Report ──────────────────────────────────────
     // Client-side weekly auto-report: fires once on Sundays when the app is open.

@@ -1,0 +1,15 @@
+{
+  "name": "LifeXP",
+  "short_name": "LifeXP",
+  "description": "Zarabiaj punkty za produktywność i obowiązki, zamieniaj je na realne pieniądze.",
+  "lang": "pl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0f13",
+  "theme_color": "#0e0f13",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
