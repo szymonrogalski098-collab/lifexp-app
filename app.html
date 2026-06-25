@@ -451,9 +451,67 @@
 
     @media (max-width: 700px) {
       .sidebar { display: none; }
-      .main { margin-left: 0; padding: 16px; }
+      .main { margin-left: 0; padding: 16px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .fab { right: 16px; bottom: 16px; }
+      .fab { right: 16px; bottom: calc(72px + env(safe-area-inset-bottom) + 12px); }
+    }
+
+    /* ── Mobile bottom nav ── */
+    .bottom-nav {
+      display: none;
+    }
+    @media (max-width: 700px) {
+      .bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: var(--bg2);
+        border-top: 1px solid var(--border);
+        padding-bottom: env(safe-area-inset-bottom);
+        z-index: 200;
+      }
+      .bn-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 2px 6px;
+        font-size: 10px;
+        color: var(--text2);
+        cursor: pointer;
+        gap: 3px;
+        transition: color .15s;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .bn-item.active { color: var(--accent); }
+      .bn-item .bn-icon { font-size: 20px; line-height: 1; }
+
+      /* "Więcej" sheet */
+      .more-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300;
+      }
+      .more-sheet {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background: var(--bg2);
+        border-radius: 20px 20px 0 0;
+        border-top: 1px solid var(--border);
+        padding: 12px 0 calc(16px + env(safe-area-inset-bottom));
+        z-index: 301;
+        animation: slideUp .25s ease;
+      }
+      @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      .more-sheet-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 24px;
+        font-size: 15px;
+        cursor: pointer;
+        color: var(--text);
+      }
+      .more-sheet-item:active { background: var(--bg3); }
+      .more-sheet-item .ms-icon { font-size: 20px; width: 28px; text-align: center; }
     }
   </style>
 </head>
@@ -501,6 +559,50 @@
         </div>
       </div>
     </nav>
+
+    <!-- Mobile Bottom Nav -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <div class="bn-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <span class="bn-icon">🏠</span><span>Home</span>
+      </div>
+      <div class="bn-item" data-page="log-activity" onclick="showPage('log-activity')">
+        <span class="bn-icon">✅</span><span>Aktywność</span>
+      </div>
+      <div class="bn-item" data-page="chores" onclick="showPage('chores')">
+        <span class="bn-icon">🧹</span><span>Obowiązki</span>
+      </div>
+      <div class="bn-item" data-page="shop" onclick="showPage('shop')">
+        <span class="bn-icon">🛒</span><span>Wydatki</span>
+      </div>
+      <div class="bn-item" id="bn-more" onclick="toggleMoreMenu()">
+        <span class="bn-icon">☰</span><span>Więcej</span>
+      </div>
+    </nav>
+
+    <!-- More sheet (mobile) -->
+    <div id="more-menu" style="display:none">
+      <div class="more-overlay" onclick="toggleMoreMenu()"></div>
+      <div class="more-sheet">
+        <div class="more-sheet-item" onclick="showPage('log-gaming');toggleMoreMenu()">
+          <span class="ms-icon">🎮</span> Zaloguj granie
+        </div>
+        <div class="more-sheet-item" onclick="showPage('generator');toggleMoreMenu()">
+          <span class="ms-icon">🎲</span> Co teraz?
+        </div>
+        <div class="more-sheet-item" onclick="showPage('history');toggleMoreMenu()">
+          <span class="ms-icon">📜</span> Historia
+        </div>
+        <div class="more-sheet-item" onclick="showPage('stats');toggleMoreMenu()">
+          <span class="ms-icon">📊</span> Statystyki
+        </div>
+        <div class="more-sheet-item" onclick="showPage('settings');toggleMoreMenu()">
+          <span class="ms-icon">⚙️</span> Ustawienia
+        </div>
+        <div class="more-sheet-item" onclick="logout()">
+          <span class="ms-icon">🚪</span> Wyloguj
+        </div>
+      </div>
+    </div>
 
     <!-- Main -->
     <main class="main">
@@ -991,12 +1093,22 @@
       const navItems = document.querySelectorAll('.nav-item');
       navItems.forEach(n => { if (n.textContent.trim().includes(navLabel(id))) n.classList.add('active'); });
 
+      // Bottom nav active state
+      document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
+      const bnItem = document.querySelector(`.bn-item[data-page="${id}"]`);
+      if (bnItem) bnItem.classList.add('active');
+
       if (id === 'stats') loadStats();
       if (id === 'shop') loadPurchases();
       if (id === 'log-gaming') updateGameSelect();
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
       if (id === 'settings') updateNotifStatus();
+    };
+
+    window.toggleMoreMenu = () => {
+      const m = document.getElementById('more-menu');
+      m.style.display = m.style.display === 'none' ? 'block' : 'none';
     };
 
     function navLabel(id) {
