@@ -634,6 +634,25 @@
             </div>
           </div>
         </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:16px">Punkty — ostatnie 7 dni</h3>
+          <div id="week-chart-wrap" style="display:flex;align-items:flex-end;gap:4px;height:120px;">
+            <p class="text2" style="align-self:center;width:100%;text-align:center">Ładowanie...</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:4px">TOP aktywności</h3>
+          <p class="text2" style="font-size:12px;margin-bottom:12px">Ostatnie 50 wpisów</p>
+          <div id="top-activities-list"><p class="text2">Ładowanie...</p></div>
+        </div>
+
+        <div class="card" id="facts-card" style="display:none">
+          <h3 style="margin-bottom:14px">Ciekawostki</h3>
+          <div id="facts-list"></div>
+        </div>
+
       </div>
 
       <!-- LOG ACTIVITY -->
@@ -1306,13 +1325,134 @@
       // Level (XP based on all-time earned points)
       renderLevel(profile.points?.earnedAllTime || 0);
 
-      // Streak + recent activities
+      // Streak + recent activities + stats
       await renderStreak();
       await loadRecentActivities();
+      loadStatsSection();
 
       // Ustaw toggle raportu
       const rToggle = document.getElementById('auto-report-toggle');
       if (rToggle) rToggle.checked = userProfile?.autoReport === true;
+    }
+
+    // ── Stats section ─────────────────────────────────────
+    async function loadStatsSection() {
+      const today = new Date();
+      const days7 = [], days14 = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        days7.push(d.toISOString().split('T')[0]);
+      }
+      for (let i = 13; i >= 7; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        days14.push(d.toISOString().split('T')[0]);
+      }
+
+      const dayDataMap = {};
+      await Promise.all([...days7, ...days14].map(async d => {
+        const snap = await getDoc(doc(db, 'users', currentUser.uid, 'dailyLog', d));
+        dayDataMap[d] = snap.exists() ? snap.data() : { pointsEarned: 0, gamingMinutes: 0 };
+      }));
+
+      const thisWeekPts    = days7.reduce((s, d)  => s + (dayDataMap[d]?.pointsEarned  || 0), 0);
+      const lastWeekPts    = days14.reduce((s, d)  => s + (dayDataMap[d]?.pointsEarned  || 0), 0);
+      const thisWeekGaming = days7.reduce((s, d)  => s + (dayDataMap[d]?.gamingMinutes  || 0), 0);
+      const lastWeekGaming = days14.reduce((s, d) => s + (dayDataMap[d]?.gamingMinutes  || 0), 0);
+
+      // ── Wykres słupkowy ────────────────────────────────
+      const maxPts    = Math.max(...days7.map(d => dayDataMap[d]?.pointsEarned || 0), 1);
+      const DAY_NAMES = ['Nd','Pn','Wt','Śr','Cz','Pt','Sb'];
+      const chartWrap = document.getElementById('week-chart-wrap');
+      chartWrap.innerHTML = days7.map(d => {
+        const pts    = dayDataMap[d]?.pointsEarned || 0;
+        const pct    = Math.round((pts / maxPts) * 100);
+        const label  = DAY_NAMES[new Date(d + 'T12:00:00').getDay()];
+        const isToday = d === todayStr();
+        return `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <span style="font-size:10px;color:var(--accent);font-weight:700;${pts === 0 ? 'visibility:hidden' : ''}">${pts}</span>
+            <div style="width:100%;display:flex;align-items:flex-end;height:80px;">
+              <div style="width:100%;height:${Math.max(pct, 3)}%;background:${isToday ? 'var(--accent)' : 'var(--bg3)'};border-radius:4px 4px 0 0;border:1px solid ${isToday ? 'var(--accent)' : 'var(--border)'};"></div>
+            </div>
+            <span style="font-size:10px;color:${isToday ? 'var(--accent)' : 'var(--text2)'};font-weight:${isToday ? '700' : '400'}">${label}</span>
+          </div>`;
+      }).join('');
+
+      // ── TOP aktywności ──────────────────────────────────
+      const actSnap = await getDocs(query(
+        collection(db, 'users', currentUser.uid, 'activities'),
+        orderBy('timestamp', 'desc'), limit(50)
+      ));
+      const typeMap = {};
+      actSnap.forEach(d => {
+        const { type, points } = d.data();
+        if (!type) return;
+        if (!typeMap[type]) typeMap[type] = { count: 0, pts: 0 };
+        typeMap[type].count++;
+        typeMap[type].pts += points || 0;
+      });
+      const topActs = Object.entries(typeMap).sort((a, b) => b[1].count - a[1].count);
+      const MEDALS = ['🥇','🥈','🥉','4.','5.'];
+      const topEl = document.getElementById('top-activities-list');
+      topEl.innerHTML = topActs.length === 0
+        ? '<p class="text2">Brak danych. Zaloguj kilka aktywności!</p>'
+        : topActs.slice(0, 5).map(([name, { count, pts }], i) => `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+              <span style="font-size:18px;width:24px;text-align:center;flex-shrink:0">${MEDALS[i]}</span>
+              <span style="flex:1;font-weight:600;font-size:14px">${name}</span>
+              <span style="font-size:12px;color:var(--text2);margin-right:4px">${count}×</span>
+              <span style="font-weight:700;color:var(--accent2);font-family:var(--mono);font-size:13px">+${pts} pkt</span>
+            </div>`).join('');
+
+      // ── Ciekawostki ─────────────────────────────────────
+      const facts = [];
+
+      if (topActs.length > 0) {
+        const [topName, topData] = topActs[0];
+        facts.push(`Twoją ulubioną aktywnością jest <strong>${topName}</strong> — wykonałeś ją ${topData.count}×.`);
+      }
+
+      if (thisWeekPts > 0 || lastWeekPts > 0) {
+        const diff = thisWeekPts - lastWeekPts;
+        if (diff > 0)
+          facts.push(`W tym tygodniu zarobiłeś o <strong>${diff} pkt więcej</strong> niż w poprzednim (${thisWeekPts} vs ${lastWeekPts} pkt).`);
+        else if (diff < 0)
+          facts.push(`W poprzednim tygodniu zarobiłeś o <strong>${-diff} pkt więcej</strong> — masz co nadrabiać!`);
+        else if (thisWeekPts > 0)
+          facts.push(`W tym tygodniu zarobiłeś tyle samo co poprzednio — <strong>${thisWeekPts} pkt</strong>.`);
+      }
+
+      if (thisWeekPts > 0)
+        facts.push(`W tym tygodniu to <strong>${(thisWeekPts / 10).toFixed(2)} zł</strong> na koncie.`);
+
+      if (thisWeekGaming > 0 || lastWeekGaming > 0) {
+        const diff = thisWeekGaming - lastWeekGaming;
+        if (diff > 0)
+          facts.push(`Grałeś o <strong>${formatMinutes(diff)} więcej</strong> niż tydzień temu.`);
+        else if (diff < 0)
+          facts.push(`Grałeś o <strong>${formatMinutes(-diff)} mniej</strong> niż tydzień temu — dobra robota!`);
+      }
+
+      const bestDay = days7.reduce((best, d) =>
+        (dayDataMap[d]?.pointsEarned || 0) > (dayDataMap[best]?.pointsEarned || 0) ? d : best, days7[0]);
+      const bestPts = dayDataMap[bestDay]?.pointsEarned || 0;
+      if (bestPts > 0) {
+        const FULL_DAYS = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
+        facts.push(`Twój najlepszy dzień tego tygodnia to <strong>${FULL_DAYS[new Date(bestDay + 'T12:00:00').getDay()]}</strong> — ${bestPts} pkt.`);
+      }
+
+      const factsCard = document.getElementById('facts-card');
+      const factsEl   = document.getElementById('facts-list');
+      if (facts.length === 0) {
+        factsCard.style.display = 'none';
+      } else {
+        factsCard.style.display = 'block';
+        factsEl.innerHTML = facts.map(f => `
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:15px;flex-shrink:0;margin-top:1px">💡</span>
+            <p style="margin:0;font-size:14px;line-height:1.6;">${f}</p>
+          </div>`).join('');
+      }
     }
 
     // ── Level system ──────────────────────────────────────
