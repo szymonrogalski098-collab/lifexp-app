@@ -33,14 +33,14 @@ body.theme-apple {
 
 /* ── Motyw Gold ── */
 body.theme-gold {
-  --bg: #12100e;
-  --bg2: #1a1714;
-  --bg3: #242018;
-  --border: #2e2a1e;
-  --text: #f0ead6;
-  --text2: #8a7e68;
+  --bg: #080807;
+  --bg2: #111110;
+  --bg3: #1a1a18;
+  --border: #252420;
+  --text: #f5f2ec;
+  --text2: #7a7872;
   --accent: #f5c842;
-  --accent2: #e8956d;
+  --accent2: #c9960f;
   --warn: #e05555;
   --radius: 10px;
 }
