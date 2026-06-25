@@ -1,0 +1,20 @@
+name: Weekly report
+
+on:
+  schedule:
+    - cron: '0 8 * * 0'   # Każda niedziela 8:00 UTC = 9:00/10:00 czasu PL
+  workflow_dispatch: {}    # ręczne odpalenie z zakładki Actions
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install firebase-admin@12
+      - run: node scripts/send-weekly-report.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          EMAILJS_PRIVATE_KEY: ${{ secrets.EMAILJS_PRIVATE_KEY }}

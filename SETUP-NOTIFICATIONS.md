@@ -20,8 +20,16 @@ Kod jest gotowy. Żeby push ruszył, wykonaj 3 kroki w panelach (jednorazowo).
 - **iPhone/iPad:** web push działa tylko dla zainstalowanej PWA (iOS 16.4+). Najpierw „Dodaj do ekranu początkowego", potem włącz powiadomienia z poziomu zainstalowanej apki.
 - Android / Chrome desktop: działa od razu po zgodzie.
 
+## 4. Klucz prywatny EmailJS (potrzebny dla raportów tygodniowych)
+1. [EmailJS Dashboard](https://dashboard.emailjs.com/admin/account) → zakładka **API Keys**.
+2. Skopiuj **Private Key**.
+3. GitHub repo → Settings → Secrets → Actions → **New repository secret**.
+4. Nazwa: `EMAILJS_PRIVATE_KEY`, wartość: skopiowany klucz.
+
+> Bez tego GitHub Action wyśle push, ale raporty tygodniowe zwrócą błąd 401.
+
 ## Jak to działa
 - Token urządzenia zapisuje się w Firestore: `users/{uid}/fcmTokens/{token}`.
 - GitHub Action `.github/workflows/notify.yml` odpala się codziennie (cron 17:00 UTC) i wywołuje `scripts/send-notifications.js`, który wysyła push na wszystkie zapisane tokeny.
-- Treść/godzinę przypomnienia zmienisz w tych dwóch plikach.
-- Test ręczny: zakładka **Actions → Push reminders → Run workflow**.
+- GitHub Action `.github/workflows/weekly-report.yml` odpala się w każdą niedzielę (8:00 UTC) i wysyła raport tylko użytkownikom z włączoną opcją w Ustawieniach.
+- Test ręczny: zakładka **Actions → Weekly report → Run workflow**.
