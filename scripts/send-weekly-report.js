@@ -53,8 +53,8 @@ async function main() {
 
   for (const userDoc of snap.docs) {
     const user = userDoc.data();
-    const toEmail = user.parentEmail || user.email;
-    if (!toEmail) { console.log(`Pominięto ${user.name} — brak emaila.`); continue; }
+    const toEmail = user.parentEmail;
+    if (!toEmail) { console.log(`Pominięto ${user.name} — brak emaila rodzica.`); continue; }
 
     try {
       let weekPts = 0, weekGaming = 0, weekSpent = 0;

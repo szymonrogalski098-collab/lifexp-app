@@ -929,7 +929,7 @@
           <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
             <div>
               <h3>Raport tygodniowy</h3>
-              <p class="text2" style="font-size:13px;margin-top:4px">Automatycznie wysyłany w niedzielę na email rodzica.</p>
+              <p class="text2" style="font-size:13px;margin-top:4px" id="report-email-info">Automatycznie wysyłany w niedzielę na email rodzica.</p>
             </div>
             <label class="toggle">
               <input type="checkbox" id="auto-report-toggle" onchange="toggleAutoReport(this.checked)">
@@ -942,6 +942,27 @@
           <h3>Powiadomienia</h3>
           <p class="text2" id="notif-status" style="margin-bottom:14px">Powiadomienia wyłączone.</p>
           <button class="btn-primary" id="notif-btn" onclick="enableNotifications()">Włącz powiadomienia</button>
+        </div>
+
+        <div class="card settings-section" id="notif-hours-card" style="display:none">
+          <h3 style="margin-bottom:6px">Godziny powiadomień</h3>
+          <p class="text2" style="font-size:13px;margin-bottom:14px">Wybierz 1–3 godziny (czas polski) kiedy masz otrzymywać przypomnienie.</p>
+          <div id="notif-hours-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+          <div style="display:flex;gap:8px">
+            <select id="notif-hour-select" style="flex:1">
+              <option value="">— wybierz godzinę —</option>
+              <option value="6">6:00</option><option value="7">7:00</option>
+              <option value="8">8:00</option><option value="9">9:00</option>
+              <option value="10">10:00</option><option value="11">11:00</option>
+              <option value="12">12:00</option><option value="13">13:00</option>
+              <option value="14">14:00</option><option value="15">15:00</option>
+              <option value="16">16:00</option><option value="17">17:00</option>
+              <option value="18">18:00</option><option value="19">19:00</option>
+              <option value="20">20:00</option><option value="21">21:00</option>
+              <option value="22">22:00</option><option value="23">23:00</option>
+            </select>
+            <button class="btn-primary" onclick="addNotifHour()" style="padding:10px 16px">Dodaj</button>
+          </div>
         </div>
 
         <div class="card settings-section">
@@ -1124,6 +1145,15 @@
         updateNotifStatus();
         const rToggle = document.getElementById('auto-report-toggle');
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
+        const info = document.getElementById('report-email-info');
+        if (info) {
+          const pe = userProfile?.parentEmail;
+          info.textContent = pe
+            ? `Wysyłany w niedzielę na: ${pe}`
+            : 'Brak emaila rodzica — raport nie zostanie wysłany. Dodaj go w sekcji Profil.';
+          info.style.color = pe ? '' : 'var(--warn)';
+        }
+        renderNotifHours();
       }
     };
 
@@ -2142,6 +2172,7 @@
       } else {
         el.textContent = 'Powiadomienia wyłączone.';
       }
+      renderNotifHours();
     }
 
     // ── Motywy ────────────────────────────────────────────
@@ -2186,7 +2217,6 @@
     });
 
     // ── Email Report ──────────────────────────────────────
-    // Client-side weekly auto-report: fires once on Sundays when the app is open.
     window.toggleAutoReport = async (on) => {
       try {
         await updateDoc(doc(db, 'users', currentUser.uid), { autoReport: on });
@@ -2197,6 +2227,52 @@
         const t = document.getElementById('auto-report-toggle');
         if (t) t.checked = !on;
       }
+    };
+
+    // ── Godziny powiadomień ───────────────────────────────
+    function renderNotifHours() {
+      const hours = userProfile?.notifHours || [];
+      const card = document.getElementById('notif-hours-card');
+      if (card) card.style.display = Notification.permission === 'granted' ? 'block' : 'none';
+      const el = document.getElementById('notif-hours-chips');
+      if (!el) return;
+      if (hours.length === 0) {
+        el.innerHTML = '<span class="text2" style="font-size:13px">Brak wybranych godzin — powiadomienia nie będą wysyłane.</span>';
+        return;
+      }
+      el.innerHTML = hours.slice().sort((a,b)=>a-b).map(h =>
+        `<span class="tag" style="background:var(--accent);color:#fff;font-size:13px;display:inline-flex;align-items:center;gap:6px">
+          ${h}:00
+          <span onclick="removeNotifHour(${h})" style="cursor:pointer;opacity:.8;font-size:15px;line-height:1">×</span>
+        </span>`
+      ).join('');
+    }
+
+    window.addNotifHour = async () => {
+      const sel = document.getElementById('notif-hour-select');
+      const h = parseInt(sel.value);
+      if (isNaN(h)) return toast('Wybierz godzinę.', 'error');
+      const hours = userProfile?.notifHours || [];
+      if (hours.includes(h)) return toast('Ta godzina jest już dodana.', 'error');
+      if (hours.length >= 3) return toast('Możesz wybrać maksymalnie 3 godziny.', 'error');
+      const newHours = [...hours, h];
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), { notifHours: newHours });
+        userProfile.notifHours = newHours;
+        sel.value = '';
+        renderNotifHours();
+        toast(`Dodano godzinę ${h}:00.`);
+      } catch (e) { toast('Błąd zapisu.', 'error'); }
+    };
+
+    window.removeNotifHour = async (h) => {
+      const newHours = (userProfile?.notifHours || []).filter(x => x !== h);
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), { notifHours: newHours });
+        userProfile.notifHours = newHours;
+        renderNotifHours();
+        toast(`Usunięto godzinę ${h}:00.`);
+      } catch (e) { toast('Błąd zapisu.', 'error'); }
     };
 
       try {

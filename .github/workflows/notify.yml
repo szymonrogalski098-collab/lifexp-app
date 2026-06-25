@@ -2,8 +2,8 @@ name: Push reminders
 
 on:
   schedule:
-    - cron: '0 17 * * *'   # 17:00 UTC ≈ 18:00/19:00 czasu PL
-  workflow_dispatch: {}     # pozwala odpalić ręcznie z zakładki Actions
+    - cron: '0 * * * *'   # Co godzinę — skrypt sam sprawdza kto ma powiadomienie o tej porze
+  workflow_dispatch: {}    # ręczne odpalenie z zakładki Actions
 
 jobs:
   send:
