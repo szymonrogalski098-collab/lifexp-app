@@ -1,4 +1,6 @@
-// TWÓJ FIREBASE CONFIG — nie udostępniaj publicznie
+// Firebase web config — JEST publiczny z założenia (widoczny w DevTools).
+// To nie jest hasło, tylko identyfikator projektu. Bezpieczeństwo dają
+// reguły Firestore (firestore.rules) + Auth, NIE ukrywanie tych kluczy.
 const firebaseConfig = {
   apiKey: "AIzaSyD7Nk7rZydzSA5AdKPJpn0Jm18_LvpAsS4",
   authDomain: "faiobaj4.firebaseapp.com",
