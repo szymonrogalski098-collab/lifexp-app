@@ -34,10 +34,11 @@ self.addEventListener('notificationclick', (e) => {
 
 // ── PWA app-shell cache ──
 const CACHE = 'lifexp-shell-v1';
-const SHELL = ['./', 'index.html', 'app.html', 'verify.html', 'parent.html', 'style.css', 'manifest.json', 'icon.svg'];
+const STATIC = ['style.css', 'manifest.json', 'icon.svg'];
+const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIC)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -49,13 +50,27 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // Tylko GET-y z naszego origin obsługujemy z cache; Firebase/Firestore/EmailJS → sieć.
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  e.respondWith(
-    caches.match(e.request).then((hit) => hit || fetch(e.request).then((resp) => {
-      const copy = resp.clone();
-      caches.open(CACHE).then((c) => c.put(e.request, copy));
-      return resp;
-    }).catch(() => caches.match('app.html')))
-  );
+
+  const isHTML = HTML.some((f) => url.pathname.endsWith(f)) || url.pathname === '/' || url.pathname.endsWith('/');
+
+  if (isHTML) {
+    // Network-first: zawsze świeży HTML, fallback na cache gdy offline.
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        const copy = resp.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return resp;
+      }).catch(() => caches.match(e.request).then((hit) => hit || caches.match('app.html')))
+    );
+  } else {
+    // Cache-first: CSS, ikony itd. — szybkość, aktualizowane przy zmianie pliku.
+    e.respondWith(
+      caches.match(e.request).then((hit) => hit || fetch(e.request).then((resp) => {
+        const copy = resp.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return resp;
+      }))
+    );
+  }
 });
