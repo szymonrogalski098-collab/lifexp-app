@@ -862,42 +862,42 @@
 
         <div class="card settings-section">
           <h3 style="margin-bottom:16px">Motyw</h3>
-          <div class="theme-picker">
+          <div style="display:flex;gap:10px;">
 
-            <div class="theme-option active" id="theme-opt-lifexp" onclick="applyTheme('lifexp')">
-              <div class="theme-preview" style="background:#16181f">
-                <div class="tp-header" style="background:#6c63ff"></div>
-                <div class="tp-card-big" style="background:#1e2029;border:1px solid #2a2d3a"></div>
-                <div class="tp-row">
-                  <div class="tp-pill" style="background:#6c63ff"></div>
-                  <div class="tp-pill" style="background:#4ecca3"></div>
+            <div id="theme-opt-lifexp" onclick="applyTheme('lifexp')" style="flex:1;border-radius:14px;border:2px solid #6c63ff;overflow:hidden;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent;">
+              <div style="background:#16181f;padding:10px;display:flex;flex-direction:column;gap:6px;height:90px;">
+                <div style="background:#6c63ff;height:10px;border-radius:4px;width:60%"></div>
+                <div style="background:#1e2029;border:1px solid #2a2d3a;border-radius:6px;flex:1"></div>
+                <div style="display:flex;gap:4px;">
+                  <div style="background:#6c63ff;height:8px;border-radius:4px;flex:1"></div>
+                  <div style="background:#4ecca3;height:8px;border-radius:4px;flex:1"></div>
                 </div>
               </div>
-              <div class="theme-label" style="background:#0e0f13;color:#e8eaf0">LifeXP</div>
+              <div style="background:#0e0f13;color:#e8eaf0;text-align:center;font-size:12px;font-weight:700;padding:7px;">LifeXP ✓</div>
             </div>
 
-            <div class="theme-option" id="theme-opt-apple" onclick="applyTheme('apple')">
-              <div class="theme-preview" style="background:#1c1c1e">
-                <div class="tp-header" style="background:#0a84ff"></div>
-                <div class="tp-card-big" style="background:#2c2c2e;border:1px solid #3a3a3c"></div>
-                <div class="tp-row">
-                  <div class="tp-pill" style="background:#0a84ff"></div>
-                  <div class="tp-pill" style="background:#30d158"></div>
+            <div id="theme-opt-apple" onclick="applyTheme('apple')" style="flex:1;border-radius:14px;border:2px solid #3a3a3c;overflow:hidden;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent;">
+              <div style="background:#1c1c1e;padding:10px;display:flex;flex-direction:column;gap:6px;height:90px;">
+                <div style="background:#0a84ff;height:10px;border-radius:4px;width:60%"></div>
+                <div style="background:#2c2c2e;border:1px solid #3a3a3c;border-radius:6px;flex:1"></div>
+                <div style="display:flex;gap:4px;">
+                  <div style="background:#0a84ff;height:8px;border-radius:4px;flex:1"></div>
+                  <div style="background:#30d158;height:8px;border-radius:4px;flex:1"></div>
                 </div>
               </div>
-              <div class="theme-label" style="background:#000;color:#fff">Apple</div>
+              <div style="background:#000;color:#fff;text-align:center;font-size:12px;font-weight:700;padding:7px;">Apple</div>
             </div>
 
-            <div class="theme-option" id="theme-opt-gold" onclick="applyTheme('gold')">
-              <div class="theme-preview" style="background:#1a1714">
-                <div class="tp-header" style="background:#f5c842"></div>
-                <div class="tp-card-big" style="background:#242018;border:1px solid #2e2a1e"></div>
-                <div class="tp-row">
-                  <div class="tp-pill" style="background:#f5c842"></div>
-                  <div class="tp-pill" style="background:#e8956d"></div>
+            <div id="theme-opt-gold" onclick="applyTheme('gold')" style="flex:1;border-radius:14px;border:2px solid #2e2a1e;overflow:hidden;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent;">
+              <div style="background:#1a1714;padding:10px;display:flex;flex-direction:column;gap:6px;height:90px;">
+                <div style="background:#f5c842;height:10px;border-radius:4px;width:60%"></div>
+                <div style="background:#242018;border:1px solid #2e2a1e;border-radius:6px;flex:1"></div>
+                <div style="display:flex;gap:4px;">
+                  <div style="background:#f5c842;height:8px;border-radius:4px;flex:1"></div>
+                  <div style="background:#e8956d;height:8px;border-radius:4px;flex:1"></div>
                 </div>
               </div>
-              <div class="theme-label" style="background:#12100e;color:#f0ead6">Gold</div>
+              <div style="background:#12100e;color:#f0ead6;text-align:center;font-size:12px;font-weight:700;padding:7px;">Gold</div>
             </div>
 
           </div>
@@ -2176,14 +2176,29 @@
     }
 
     // ── Motywy ────────────────────────────────────────────
+    const THEME_ACCENTS = { lifexp: '#6c63ff', apple: '#0a84ff', gold: '#f5c842' };
+    const THEME_BORDERS = { lifexp: '#2a2d3a', apple: '#3a3a3c', gold: '#2e2a1e' };
+
     window.applyTheme = (name) => {
       document.body.classList.remove('theme-apple', 'theme-gold');
       if (name === 'apple') document.body.classList.add('theme-apple');
       if (name === 'gold')  document.body.classList.add('theme-gold');
       localStorage.setItem('lifexp-theme', name);
-      document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('active'));
-      const opt = document.getElementById('theme-opt-' + name);
-      if (opt) opt.classList.add('active');
+
+      // Update borders: active = accent, inactive = dim
+      ['lifexp', 'apple', 'gold'].forEach(t => {
+        const el = document.getElementById('theme-opt-' + t);
+        if (!el) return;
+        const isActive = t === name;
+        el.style.borderColor = isActive ? THEME_ACCENTS[t] : THEME_BORDERS[t];
+        el.style.transform = isActive ? 'scale(1.04)' : '';
+        // Update label checkmark
+        const label = el.querySelector('div:last-child');
+        if (label) {
+          const baseName = { lifexp: 'LifeXP', apple: 'Apple', gold: 'Gold' }[t];
+          label.textContent = isActive ? baseName + ' ✓' : baseName;
+        }
+      });
     };
 
     (function loadTheme() {
