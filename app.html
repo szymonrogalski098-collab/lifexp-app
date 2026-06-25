@@ -2275,63 +2275,6 @@
       } catch (e) { toast('Błąd zapisu.', 'error'); }
     };
 
-      try {
-        // Last 7 days data
-        const days = [];
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          days.push(d.toISOString().split('T')[0]);
-        }
-
-        let weekPts = 0, weekGaming = 0, weekSpent = 0;
-        for (const day of days) {
-          const snap = await getDoc(doc(db, 'users', currentUser.uid, 'dailyLog', day));
-          if (snap.exists()) {
-            weekPts += snap.data().pointsEarned || 0;
-            weekGaming += snap.data().gamingMinutes || 0;
-          }
-        }
-
-        // Purchases this week
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const pSnap = await getDocs(query(
-          collection(db, 'users', currentUser.uid, 'purchases'),
-          orderBy('timestamp', 'desc'),
-          limit(10)
-        ));
-        pSnap.docs.forEach(d => {
-          const ts = d.data().timestamp?.toDate ? d.data().timestamp.toDate() : new Date(d.data().timestamp);
-          if (ts > weekAgo) weekSpent += d.data().amount || 0;
-        });
-
-        const balance = userProfile?.points?.total || 0;
-
-        await emailjs.send('service_417sg11', 'template_jztwowz', {
-          to_email: toEmail,
-          user_name: userProfile?.name || 'Użytkownik',
-          points_earned: weekPts,
-          balance_pln: (balance / 10).toFixed(2) + ' zł',
-          gaming_time: formatMinutes(weekGaming),
-          purchases: weekSpent.toFixed(2),
-        });
-
-        // Bookkeeping is non-fatal: the email already went out, so a failed
-        // write here must NOT be reported as an email error.
-        try {
-          await updateDoc(doc(db, 'users', currentUser.uid), { lastReportSent: todayStr() });
-          userProfile.lastReportSent = todayStr();
-        } catch (e) { console.warn('lastReportSent update failed', e); }
-
-        toast(auto ? 'Wysłano automatyczny raport tygodniowy.' : 'Raport wysłany!');
-      } catch (e) {
-        console.error('EmailJS report error:', e);
-        if (!auto) toast('Błąd wysyłki: ' + (e?.text || e?.message || 'sprawdź konsolę'), 'error');
-      }
-
-      if (btn) btn.disabled = false;
-    };
   </script>
 </body>
 </html>
