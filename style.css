@@ -46,34 +46,40 @@ body.theme-gold {
 }
 
 /* ── Wybór motywu w ustawieniach ── */
-.theme-picker { display: flex; gap: 12px; flex-wrap: wrap; }
+.theme-picker { display: flex; gap: 12px; }
 
 .theme-option {
-  flex: 1; min-width: 90px;
-  border-radius: 12px;
+  flex: 1;
+  border-radius: 14px;
   border: 2px solid transparent;
   cursor: pointer;
   overflow: hidden;
   transition: border-color .2s, transform .15s;
+  background: var(--bg3);
 }
 .theme-option:hover { transform: translateY(-2px); }
 .theme-option.active { border-color: var(--accent); }
+.theme-option.active .theme-label::after { content: ' ✓'; }
 
 .theme-preview {
-  height: 72px;
-  padding: 10px;
+  height: 80px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+  border-radius: 10px 10px 0 0;
 }
-.tp-bar { height: 8px; border-radius: 4px; width: 60%; }
-.tp-card { height: 22px; border-radius: 6px; }
+.tp-header { height: 10px; border-radius: 4px; width: 55%; }
+.tp-card-big { flex: 1; border-radius: 6px; }
+.tp-row { display: flex; gap: 4px; }
+.tp-pill { height: 8px; border-radius: 4px; flex: 1; }
 
 .theme-label {
   text-align: center;
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 0;
+  padding: 7px 4px;
+  letter-spacing: .2px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
