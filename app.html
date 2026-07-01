@@ -681,11 +681,6 @@
             <label>Rodzaj aktywności</label>
             <select id="act-type" onchange="updatePointsPreview()">
               <option value="">— wybierz —</option>
-              <option value="learning" data-pts="40">Nauka (JS, Unity, C#) — 40 pkt/h</option>
-              <option value="project" data-pts="35">Praca nad projektem — 35 pkt/h</option>
-              <option value="reading" data-pts="25">Czytanie / kurs — 25 pkt/h</option>
-              <option value="exercise" data-pts="30">Ćwiczenia fizyczne — 30 pkt/h</option>
-              <option value="school" data-pts="20">Zadania szkolne — 20 pkt/h</option>
             </select>
           </div>
 
@@ -1081,6 +1076,35 @@
             </div>
           </div>
 
+          <div class="settings-category">
+            <div class="settings-cat-label">Aktywności</div>
+
+            <div class="card settings-section">
+              <h3 style="margin-bottom:16px">Zarządzaj aktywnościami</h3>
+              <div id="activity-defs-list" style="margin-bottom:14px"></div>
+
+              <div class="form-group">
+                <label>Nazwa</label>
+                <input type="text" id="ad-name" placeholder="Np. Gra na gitarze">
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)">Punkty za godzinę</label>
+                <input type="number" id="ad-points" min="1" placeholder="30" style="max-width:140px">
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)">Ikona</label>
+                <input type="hidden" id="ad-icon" value="">
+                <div id="ad-icon-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)">Kolor</label>
+                <input type="hidden" id="ad-color" value="">
+                <div id="ad-color-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+              </div>
+              <button class="btn-primary" onclick="addActivityDef()">Dodaj aktywność</button>
+            </div>
+          </div>
+
           </div>
           <div class="settings-col">
 
@@ -1250,13 +1274,48 @@
       return (zl && pts) ? (zl / pts) : (RATE_CHORES_ZL_DEFAULT / RATE_CHORES_PTS_DEFAULT);
     }
 
-    const ACTIVITIES = [
-      { value: 'learning', label: 'Nauka (JS, Unity, C#)', pts: 40, color: '#6c63ff', icon: 'ti-book' },
-      { value: 'project', label: 'Praca nad projektem', pts: 35, color: '#4ecca3', icon: 'ti-code' },
-      { value: 'reading', label: 'Czytanie / kurs', pts: 25, color: '#ffd700', icon: 'ti-book-2' },
-      { value: 'exercise', label: 'Ćwiczenia fizyczne', pts: 30, color: '#ff6b6b', icon: 'ti-run' },
-      { value: 'school', label: 'Zadania szkolne', pts: 20, color: '#8a8fa8', icon: 'ti-school' },
-    ];
+    // Definicje aktywności — edytowalne w Ustawieniach, przechowywane w Firestore
+    // (users/{uid}/activityDefs). Seed zachowuje te same `id` co dawna stała lista,
+    // żeby historyczne wpisy `activities` (referencujące `type`) się nie zgubiły.
+    let activityDefs = [];
+    let activityDefsSeeded = false;
+    const activityDefById = (id) => activityDefs.find(a => a.id === id) || { name: id, points: 0, color: '#6c63ff', icon: 'ti-star' };
+
+    async function ensureActivityDefsSeeded() {
+      if (activityDefsSeeded) return;
+      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'activityDefs'));
+      if (!snap.empty) { activityDefsSeeded = true; return; }
+      const seed = [
+        { id: 'learning', name: 'Nauka (JS, Unity, C#)', points: 40, color: '#6c63ff', icon: 'ti-book',   order: 0 },
+        { id: 'project',  name: 'Praca nad projektem',   points: 35, color: '#4ecca3', icon: 'ti-code',   order: 1 },
+        { id: 'reading',  name: 'Czytanie / kurs',       points: 25, color: '#ffd700', icon: 'ti-book-2', order: 2 },
+        { id: 'exercise', name: 'Ćwiczenia fizyczne',    points: 30, color: '#ff6b6b', icon: 'ti-run',    order: 3 },
+        { id: 'school',   name: 'Zadania szkolne',       points: 20, color: '#8a8fa8', icon: 'ti-school', order: 4 },
+      ];
+      for (const a of seed) {
+        const { id, ...data } = a;
+        await setDoc(doc(db, 'users', currentUser.uid, 'activityDefs', id), data);
+      }
+      activityDefsSeeded = true;
+    }
+
+    async function loadActivityDefs() {
+      await ensureActivityDefsSeeded();
+      const q = query(collection(db, 'users', currentUser.uid, 'activityDefs'), orderBy('order', 'asc'));
+      const snap = await getDocs(q);
+      activityDefs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderActivityTypeSelect();
+    }
+
+    function renderActivityTypeSelect() {
+      const sel = document.getElementById('act-type');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = '<option value="">— wybierz —</option>' + activityDefs.map(a =>
+        `<option value="${a.id}" data-pts="${a.points}">${escapeHtml(a.name)} — ${a.points} pkt/h</option>`
+      ).join('');
+      if (current) sel.value = current;
+    }
 
     // ── Auth ──────────────────────────────────────────────
     onAuthStateChanged(auth, async user => {
@@ -1281,6 +1340,12 @@
           window.location.href = 'verify.html';
           return;
         }
+      }
+
+      try {
+        await loadActivityDefs();
+      } catch (e) {
+        console.error('loadActivityDefs failed:', e);
       }
 
       try {
@@ -1354,6 +1419,7 @@
       if (id === 'chores') loadChores();
       if (id === 'settings') {
         loadChoreDefs().then(renderChoreDefsSettings);
+        loadActivityDefs().then(renderActivityDefsSettings);
         updateNotifStatus();
         const rToggle = document.getElementById('auto-report-toggle');
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
@@ -1771,14 +1837,14 @@
     }
 
     function activityRowHTML(id, a) {
-      const act = ACTIVITIES.find(x => x.value === a.type) || { label: a.type, color: '#6c63ff', icon: 'ti-star' };
+      const act = activityDefById(a.type);
       const date = new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp);
       const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
       const desc = a.desc ? ' · ' + escapeHtml(a.desc) : '';
       return `<div class="activity-item">
         <div class="activity-icon" style="background:${act.color}22"><i class="ti ${act.icon}"></i></div>
         <div class="activity-info">
-          <div class="activity-name">${escapeHtml(act.label)}</div>
+          <div class="activity-name">${escapeHtml(act.name)}</div>
           <div class="activity-meta">${formatMinutes(a.duration)} · ${dateStr}${desc}</div>
         </div>
         <div class="activity-pts">+${a.points} pkt</div>
@@ -2202,14 +2268,11 @@
     };
 
     window.generate = () => {
-      const available = ACTIVITIES.filter(a => {
-        if (!selectedGenTime) return true;
-        return true; // all activities work for any time
-      });
-      generatedActivity = available[Math.floor(Math.random() * available.length)];
+      generatedActivity = activityDefs[Math.floor(Math.random() * activityDefs.length)];
+      if (!generatedActivity) return toast('Brak zdefiniowanych aktywności.', 'error');
 
-      document.getElementById('gen-name').textContent = generatedActivity.label;
-      document.getElementById('gen-pts').textContent = `${generatedActivity.pts} pkt/h`;
+      document.getElementById('gen-name').textContent = generatedActivity.name;
+      document.getElementById('gen-pts').textContent = `${generatedActivity.points} pkt/h`;
       document.getElementById('gen-result').style.display = 'block';
       document.getElementById('gen-do-btn').style.display = 'inline-block';
     };
@@ -2217,7 +2280,7 @@
     window.goLogGenerated = () => {
       if (!generatedActivity) return;
       showPage('log-activity');
-      document.getElementById('act-type').value = generatedActivity.value;
+      document.getElementById('act-type').value = generatedActivity.id;
       if (selectedGenTime) {
         document.getElementById('act-minutes').value = selectedGenTime;
       }
@@ -2684,6 +2747,88 @@
       renderChoreDefsSettings();
       toast('Obowiązek usunięty.');
     };
+
+    // ── Zarządzanie aktywnościami w Ustawieniach ───────────
+    function renderActivityDefsSettings() {
+      const el = document.getElementById('activity-defs-list');
+      if (!el) return;
+      if (activityDefs.length === 0) { el.innerHTML = '<p class="text2">Brak zdefiniowanych aktywności.</p>'; return; }
+      el.innerHTML = activityDefs.map(a => `
+        <div class="preset-item" style="margin-bottom:6px">
+          <span class="preset-info"><i class="ti ${a.icon}" style="color:${a.color};margin-right:6px"></i>${escapeHtml(a.name)} — ${a.points} pkt/h</span>
+          <button class="btn-secondary" onclick="deleteActivityDef('${a.id}')" style="padding:4px 10px;font-size:12px">Usuń</button>
+        </div>`).join('');
+    }
+
+    window.addActivityDef = async () => {
+      const name = document.getElementById('ad-name').value.trim();
+      const points = parseInt(document.getElementById('ad-points').value);
+      const icon = document.getElementById('ad-icon').value || ACTIVITY_ICON_PRESETS[0];
+      const color = document.getElementById('ad-color').value || ACTIVITY_COLOR_PRESETS[0];
+      if (!name) return toast('Wpisz nazwę.', 'error');
+      if (!points || points <= 0) return toast('Wpisz punkty.', 'error');
+
+      const order = activityDefs.length ? Math.max(...activityDefs.map(a => a.order || 0)) + 1 : 0;
+      await addDoc(collection(db, 'users', currentUser.uid, 'activityDefs'), { name, points, icon, color, order });
+      await loadActivityDefs();
+      renderActivityDefsSettings();
+
+      document.getElementById('ad-name').value = '';
+      document.getElementById('ad-points').value = '';
+      document.getElementById('ad-icon').value = '';
+      document.getElementById('ad-color').value = '';
+      renderActivityIconPicker();
+      renderActivityColorPicker();
+      toast(`Dodano aktywność: ${name}`);
+    };
+
+    window.deleteActivityDef = async (id) => {
+      if (!await confirmDialog('Usunąć tę aktywność z listy? Historia wykonań nie zostanie ruszona.')) return;
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'activityDefs', id));
+      await loadActivityDefs();
+      renderActivityDefsSettings();
+      toast('Aktywność usunięta.');
+    };
+
+    // ── Pickery ikony i koloru dla aktywności (bez wolnego wpisywania) ──
+    const ACTIVITY_ICON_PRESETS = ['ti-book','ti-code','ti-run','ti-school','ti-book-2','ti-music','ti-palette','ti-language','ti-bike','ti-dumbbell','ti-pencil','ti-brain'];
+    const ACTIVITY_COLOR_PRESETS = ['#6c63ff','#4ecca3','#ffd700','#ff6b6b','#8a8fa8','#ff9f43','#00d2d3','#feca57'];
+
+    function renderActivityIconPicker() {
+      const el = document.getElementById('ad-icon-picker');
+      if (!el) return;
+      const current = document.getElementById('ad-icon').value;
+      el.innerHTML = ACTIVITY_ICON_PRESETS.map(ic => `
+        <button type="button" class="btn-secondary" data-icon="${ic}" onclick="pickActivityIcon('${ic}')"
+          style="padding:6px 10px;font-size:16px;border-color:${ic === current ? 'var(--accent)' : 'var(--border)'}"><i class="ti ${ic}"></i></button>
+      `).join('');
+    }
+    window.pickActivityIcon = (icon) => {
+      const hidden = document.getElementById('ad-icon');
+      hidden.value = (hidden.value === icon) ? '' : icon;
+      document.querySelectorAll('#ad-icon-picker button').forEach(b => {
+        b.style.borderColor = (b.dataset.icon === hidden.value) ? 'var(--accent)' : 'var(--border)';
+      });
+    };
+    renderActivityIconPicker();
+
+    function renderActivityColorPicker() {
+      const el = document.getElementById('ad-color-picker');
+      if (!el) return;
+      const current = document.getElementById('ad-color').value;
+      el.innerHTML = ACTIVITY_COLOR_PRESETS.map(c => `
+        <button type="button" data-color="${c}" onclick="pickActivityColor('${c}')"
+          style="width:28px;height:28px;border-radius:8px;background:${c};border:2px solid ${c === current ? 'var(--accent)' : 'var(--border)'};padding:0"></button>
+      `).join('');
+    }
+    window.pickActivityColor = (color) => {
+      const hidden = document.getElementById('ad-color');
+      hidden.value = (hidden.value === color) ? '' : color;
+      document.querySelectorAll('#ad-color-picker button').forEach(b => {
+        b.style.borderColor = (b.dataset.color === hidden.value) ? 'var(--accent)' : 'var(--border)';
+      });
+    };
+    renderActivityColorPicker();
 
     function updateParentEmailUI() {
       const verified   = userProfile?.parentEmail;
