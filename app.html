@@ -838,7 +838,7 @@
       <!-- OBOWIĄZKI -->
       <div class="page" id="page-chores">
         <h2 style="margin-bottom:6px">Obowiązki domowe</h2>
-        <p class="text2" style="margin-bottom:18px">Osobny rejestr — zarobek za prace domowe (1 pkt = 0,45 zł).</p>
+        <p class="text2" style="margin-bottom:18px">Osobny rejestr — zarobek za prace domowe (<span id="chore-rate-label">1 pkt = 0,45 zł</span>).</p>
 
         <div class="card payout-card">
           <div>
@@ -903,11 +903,11 @@
 
             <div id="theme-opt-apple" onclick="applyTheme('apple')" style="flex:1;border-radius:14px;border:2px solid #3a3a3c;overflow:hidden;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent;">
               <div style="background:#1c1c1e;padding:10px;display:flex;flex-direction:column;gap:6px;height:90px;">
-                <div style="background:#0a84ff;height:10px;border-radius:4px;width:60%"></div>
+                <div style="background:#1d6b4f;height:10px;border-radius:4px;width:60%"></div>
                 <div style="background:#2c2c2e;border:1px solid #3a3a3c;border-radius:6px;flex:1"></div>
                 <div style="display:flex;gap:4px;">
-                  <div style="background:#0a84ff;height:8px;border-radius:4px;flex:1"></div>
-                  <div style="background:#30d158;height:8px;border-radius:4px;flex:1"></div>
+                  <div style="background:#1d6b4f;height:8px;border-radius:4px;flex:1"></div>
+                  <div style="background:#2f8a68;height:8px;border-radius:4px;flex:1"></div>
                 </div>
               </div>
               <div style="background:#000;color:#fff;text-align:center;font-size:12px;font-weight:700;padding:7px;">Apple</div>
@@ -925,6 +925,28 @@
               <div style="background:#12100e;color:#f0ead6;text-align:center;font-size:12px;font-weight:700;padding:7px;">Gold</div>
             </div>
 
+          </div>
+        </div>
+
+        <div class="card settings-section">
+          <h3 style="margin-bottom:16px">Czcionka</h3>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div id="font-opt-manrope" onclick="applyFont('manrope')" style="flex:1;min-width:110px;border-radius:12px;border:2px solid var(--accent);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
+              <div style="font-family:'Manrope',sans-serif;font-size:16px;font-weight:700">Aa</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:6px">Manrope</div>
+            </div>
+            <div id="font-opt-jakarta" onclick="applyFont('jakarta')" style="flex:1;min-width:110px;border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
+              <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700">Aa</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:6px">Plus Jakarta</div>
+            </div>
+            <div id="font-opt-figtree" onclick="applyFont('figtree')" style="flex:1;min-width:110px;border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
+              <div style="font-family:'Figtree',sans-serif;font-size:16px;font-weight:700">Aa</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:6px">Figtree</div>
+            </div>
+            <div id="font-opt-inter" onclick="applyFont('inter')" style="flex:1;min-width:110px;border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
+              <div style="font-family:'Inter',sans-serif;font-size:16px;font-weight:700">Aa</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:6px">Inter</div>
+            </div>
           </div>
         </div>
 
@@ -966,6 +988,29 @@
             <input type="number" id="set-daily-limit" value="150" min="50" max="500" style="width:80px;text-align:center">
           </div>
           <button class="btn-secondary" style="margin-top:12px" onclick="saveSettings()">Zapisz limit</button>
+        </div>
+
+        <div class="card settings-section">
+          <h3 style="margin-bottom:16px">Ekonomia punktów</h3>
+          <div class="form-group">
+            <label>Ogólna ekonomia (dashboard, sklep)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="number" id="econ-general-zl" step="0.01" min="0.01" style="width:90px" placeholder="1">
+              <span class="text2">zł za</span>
+              <input type="number" id="econ-general-pts" step="1" min="1" style="width:90px" placeholder="10">
+              <span class="text2">pkt</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Ekonomia obowiązków</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="number" id="econ-chore-zl" step="0.01" min="0.01" style="width:90px" placeholder="0.45">
+              <span class="text2">zł za</span>
+              <input type="number" id="econ-chore-pts" step="1" min="1" style="width:90px" placeholder="1">
+              <span class="text2">pkt</span>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="saveEconomySettings()">Zapisz ekonomię</button>
         </div>
 
         <div class="card settings-section">
@@ -1021,6 +1066,34 @@
             <input type="text" id="new-game-input" placeholder="Dodaj grę..." style="flex:1">
             <button class="btn-primary" onclick="addGame()" style="padding:10px 16px">Dodaj</button>
           </div>
+        </div>
+
+        <div class="card settings-section">
+          <h3 style="margin-bottom:16px">Zarządzaj obowiązkami</h3>
+          <div id="chore-defs-list" style="margin-bottom:14px"></div>
+
+          <div class="form-group">
+            <label>Nazwa</label>
+            <input type="text" id="cd-name" placeholder="Np. Wyniesienie śmieci">
+          </div>
+          <div class="form-group">
+            <label>Opis (opcjonalny)</label>
+            <input type="text" id="cd-desc" placeholder="Szczegóły...">
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:10px">
+            <div style="flex:1">
+              <label style="font-size:12px;color:var(--text2)">Punkty</label>
+              <input type="number" id="cd-points" min="1" placeholder="10">
+            </div>
+            <div style="width:80px">
+              <label style="font-size:12px;color:var(--text2)">Emoji</label>
+              <input type="text" id="cd-emoji" maxlength="4" placeholder="🧹">
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:var(--text2)">
+            <input type="checkbox" id="cd-onetime" style="width:auto"> Jednorazowy (zniknie po wykonaniu)
+          </label>
+          <button class="btn-primary" onclick="addChoreDef()">Dodaj obowiązek</button>
         </div>
       </div>
 
@@ -1097,7 +1170,20 @@
     let generatedActivity = null;
 
     const DAILY_LIMIT_DEFAULT = 150;
-    const POINTS_PER_PLN = 10;
+    const RATE_GENERAL_ZL_DEFAULT  = 1;
+    const RATE_GENERAL_PTS_DEFAULT = 10;
+    const RATE_CHORES_ZL_DEFAULT   = 0.45;
+    const RATE_CHORES_PTS_DEFAULT  = 1;
+    function rateGeneral() {
+      const zl  = userProfile?.pointsRateGeneralZl;
+      const pts = userProfile?.pointsRateGeneralPts;
+      return (zl && pts) ? (zl / pts) : (RATE_GENERAL_ZL_DEFAULT / RATE_GENERAL_PTS_DEFAULT);
+    }
+    function rateChores() {
+      const zl  = userProfile?.pointsRateChoresZl;
+      const pts = userProfile?.pointsRateChoresPts;
+      return (zl && pts) ? (zl / pts) : (RATE_CHORES_ZL_DEFAULT / RATE_CHORES_PTS_DEFAULT);
+    }
 
     const ACTIVITIES = [
       { value: 'learning', label: '📚 Nauka (JS, Unity, C#)', pts: 40, color: '#6c63ff' },
@@ -1175,6 +1261,11 @@
       document.getElementById('set-daily-limit').value = userProfile.dailyLimit || DAILY_LIMIT_DEFAULT;
       updateParentEmailUI();
 
+      document.getElementById('econ-general-zl').value  = userProfile.pointsRateGeneralZl  || RATE_GENERAL_ZL_DEFAULT;
+      document.getElementById('econ-general-pts').value = userProfile.pointsRateGeneralPts || RATE_GENERAL_PTS_DEFAULT;
+      document.getElementById('econ-chore-zl').value    = userProfile.pointsRateChoresZl   || RATE_CHORES_ZL_DEFAULT;
+      document.getElementById('econ-chore-pts').value   = userProfile.pointsRateChoresPts  || RATE_CHORES_PTS_DEFAULT;
+
       renderGamesList();
     }
 
@@ -1197,6 +1288,7 @@
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
       if (id === 'settings') {
+        loadChoreDefs().then(renderChoreDefsSettings);
         updateNotifStatus();
         const rToggle = document.getElementById('auto-report-toggle');
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
@@ -1236,7 +1328,7 @@
     }
 
     function formatPLN(pts) {
-      return (pts / POINTS_PER_PLN).toFixed(2).replace('.', ',') + ' zł';
+      return (pts * rateGeneral()).toFixed(2).replace('.', ',') + ' zł';
     }
 
     function formatMinutes(min) {
@@ -1270,7 +1362,7 @@
     function confettiBurst() {
       if (prefersReduced()) return;
       const colors = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b'];
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 18; i++) {
         const p = document.createElement('div');
         p.className = 'confetti-piece';
         p.style.left = (window.innerWidth / 2 + (Math.random() - 0.5) * 140) + 'px';
@@ -1279,9 +1371,9 @@
         p.style.setProperty('--dx', ((Math.random() - 0.5) * 380) + 'px');
         p.style.setProperty('--dy', (220 + Math.random() * 260) + 'px');
         p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
-        p.style.setProperty('--dur', (0.9 + Math.random() * 0.6) + 's');
+        p.style.setProperty('--dur', (1.3 + Math.random() * 0.5) + 's');
         document.body.appendChild(p);
-        setTimeout(() => p.remove(), 1700);
+        setTimeout(() => p.remove(), 2000);
       }
     }
 
@@ -1954,7 +2046,7 @@
     // ── Shop ──────────────────────────────────────────────
     window.updateShopPreview = () => {
       const amount = parseFloat(document.getElementById('shop-amount').value) || 0;
-      const pts = Math.ceil(amount * POINTS_PER_PLN);
+      const pts = Math.ceil(amount / rateGeneral());
       document.getElementById('shop-pts-val').textContent = pts;
 
       const total = userProfile?.points?.total || 0;
@@ -1968,7 +2060,7 @@
       if (!desc) return toast('Wpisz opis zakupu.', 'error');
       if (!amount || amount <= 0) return toast('Wpisz kwotę.', 'error');
 
-      const pts = Math.ceil(amount * POINTS_PER_PLN);
+      const pts = Math.ceil(amount / rateGeneral());
       const total = userProfile?.points?.total || 0;
 
       if (pts > total) return toast('Nie masz wystarczających punktów!', 'error');
@@ -2108,21 +2200,41 @@
     }
 
     // ── Obowiązki domowe (osobny rejestr, niezależny od punktów LifeXP) ──
-    const CHORE_PLN_RATE = 0.45; // 1 pkt = 0,45 zł
 
-    // Stała lista obowiązków. Stabilne `id` — historyczne wpisy zachowują nazwę,
-    // nawet gdy lista się zmieni. TODO: pełna lista w przygotowaniu — dopisz tutaj.
-    const CHORES = [
-      { id: 'entryway',         name: 'Odkurzanie wiatrołapu (buty, kurtki, czapki)',  points: 10 },
-      { id: 'vacuum_stairs',    name: 'Odkurzanie schodów',                            points: 5  },
-      { id: 'wash_stairs',      name: 'Zmycie schodów na mokro',                       points: 30 },
-      { id: 'vacuum_ground',    name: 'Kompleksowe odkurzenie całego parteru',         points: 40 },
-      { id: 'room_quick',       name: 'Pobieżne sprzątnięcie pokoju',                  points: 30 },
-      { id: 'room_deep',        name: 'Gruntowne sprzątnięcie pokoju',                 points: 60 },
-      { id: 'trash_segregated', name: 'Opróżnienie głównego kosza segregowanego',      points: 40 },
-      { id: 'dishwasher',       name: 'Opróżnienie zmywarki',                          points: 15 },
-    ];
-    const choreById = (id) => CHORES.find(c => c.id === id) || { name: 'Obowiązek', points: 0 };
+    // Definicje obowiązków — edytowalne w Ustawieniach, przechowywane w Firestore
+    // (users/{uid}/choreDefs). Seed poniżej zachowuje te same `id` co dawna stała
+    // lista, żeby historyczne wpisy `chores` (referencujące choreId) się nie zgubiły.
+    let choreDefs = [];
+    let choreDefsSeeded = false;
+    const choreDefById = (id) => choreDefs.find(c => c.id === id) || { name: 'Obowiązek', points: 0, emoji: '' };
+
+    async function ensureChoreDefsSeeded() {
+      if (choreDefsSeeded) return;
+      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'choreDefs'));
+      if (!snap.empty) { choreDefsSeeded = true; return; }
+      const seed = [
+        { id: 'entryway',         name: 'Odkurzanie wiatrołapu (buty, kurtki, czapki)', desc: '', emoji: '🧹', points: 10, oneTime: false, order: 0 },
+        { id: 'vacuum_stairs',    name: 'Odkurzanie schodów',                           desc: '', emoji: '🧹', points: 5,  oneTime: false, order: 1 },
+        { id: 'wash_stairs',      name: 'Zmycie schodów na mokro',                      desc: '', emoji: '🪣', points: 30, oneTime: false, order: 2 },
+        { id: 'vacuum_ground',    name: 'Kompleksowe odkurzenie całego parteru',        desc: '', emoji: '🧹', points: 40, oneTime: false, order: 3 },
+        { id: 'room_quick',       name: 'Pobieżne sprzątnięcie pokoju',                 desc: '', emoji: '🛏️', points: 30, oneTime: false, order: 4 },
+        { id: 'room_deep',        name: 'Gruntowne sprzątnięcie pokoju',                desc: '', emoji: '🧽', points: 60, oneTime: false, order: 5 },
+        { id: 'trash_segregated', name: 'Opróżnienie głównego kosza segregowanego',     desc: '', emoji: '🗑️', points: 40, oneTime: false, order: 6 },
+        { id: 'dishwasher',       name: 'Opróżnienie zmywarki',                         desc: '', emoji: '🍽️', points: 15, oneTime: false, order: 7 },
+      ];
+      for (const c of seed) {
+        const { id, ...data } = c;
+        await setDoc(doc(db, 'users', currentUser.uid, 'choreDefs', id), data);
+      }
+      choreDefsSeeded = true;
+    }
+
+    async function loadChoreDefs() {
+      await ensureChoreDefsSeeded();
+      const q = query(collection(db, 'users', currentUser.uid, 'choreDefs'), orderBy('order', 'asc'));
+      const snap = await getDocs(q);
+      choreDefs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
 
     let choreEntries = [];        // wszystkie nierozliczone wpisy
     let chorePayouts = [];        // historia wypłat (durable)
@@ -2150,6 +2262,7 @@
     }
 
     async function loadChores() {
+      await loadChoreDefs();
       // Wpisy NIE są kasowane retencją — to realna kasa do wypłaty. Czyszczenie
       // następuje dopiero przy rozliczeniu (settleChores → archiwum w chorePayouts).
       const [eSnap, pSnap] = await Promise.all([
@@ -2171,13 +2284,16 @@
     };
 
     function renderChores() {
+      const rateLabel = document.getElementById('chore-rate-label');
+      if (rateLabel) rateLabel.textContent = `1 pkt = ${rateChores().toFixed(2).replace('.', ',')} zł`;
+
       const mk = selectedMonthKey();
       const monthEntries = choreEntries.filter(e => e.monthKey === mk);
 
       document.getElementById('chore-month-label').textContent = monthLabel(mk);
       const pts = monthEntries.reduce((s, e) => s + (e.points || 0), 0);
       animateCount(document.getElementById('chore-pts'), pts);
-      animateCount(document.getElementById('chore-pln'), pts, v => (v * CHORE_PLN_RATE).toFixed(2).replace('.', ',') + ' zł');
+      animateCount(document.getElementById('chore-pln'), pts, v => (v * rateChores()).toFixed(2).replace('.', ',') + ' zł');
 
       document.getElementById('chore-fab').style.display = choreTab === 'current' ? 'flex' : 'none';
 
@@ -2191,7 +2307,7 @@
     function renderOutstanding() {
       const pts = choreEntries.reduce((s, e) => s + (e.points || 0), 0);
       animateCount(document.getElementById('chore-outstanding-pts'), pts);
-      animateCount(document.getElementById('chore-outstanding'), pts, v => (v * CHORE_PLN_RATE).toFixed(2).replace('.', ',') + ' zł');
+      animateCount(document.getElementById('chore-outstanding'), pts, v => (v * rateChores()).toFixed(2).replace('.', ',') + ' zł');
       document.getElementById('chore-settle-btn').disabled = pts === 0;
     }
 
@@ -2218,7 +2334,7 @@
     window.settleChores = async () => {
       const pts = choreEntries.reduce((s, e) => s + (e.points || 0), 0);
       if (pts === 0) return;
-      const amount = pts * CHORE_PLN_RATE;
+      const amount = pts * rateChores();
       const amountStr = amount.toFixed(2).replace('.', ',');
       if (!confirm(`Rozliczyć ${amountStr} zł (${pts} pkt)? Wpisy trafią do historii wypłat i znikną z kalendarza.`)) return;
 
@@ -2287,7 +2403,7 @@
       el.style.display = 'block';
       el.innerHTML = `<h4>${dd}.${mm}.${yy}</h4>` + dayEntries.map(e => `
         <div class="chore-entry">
-          <span class="ce-name">${escapeHtml(choreById(e.choreId).name)}</span>
+          <span class="ce-name">${escapeHtml(e.choreName || choreDefById(e.choreId).name)}</span>
           <span class="ce-pts">+${e.points} pkt</span>
           <button class="activity-del" onclick="deleteChoreEntry('${e.id}')" title="Usuń">✕</button>
         </div>`).join('');
@@ -2296,11 +2412,11 @@
     // ── Bottom-sheet ──
     window.openChoreSheet = () => {
       const list = document.getElementById('chore-sheet-list');
-      list.innerHTML = CHORES.length === 0
+      list.innerHTML = choreDefs.length === 0
         ? '<div class="sheet-empty">Lista obowiązków jeszcze nie zdefiniowana.</div>'
-        : CHORES.map(c => `
+        : choreDefs.map(c => `
           <div class="sheet-chore" onclick="pickChore('${c.id}', this)">
-            <span class="sc-name">${escapeHtml(c.name)}</span>
+            <span class="sc-name">${c.emoji ? c.emoji + ' ' : ''}${escapeHtml(c.name)}</span>
             <span class="sc-pts">+${c.points} pkt</span>
             <svg class="sc-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>
           </div>`).join('');
@@ -2337,7 +2453,7 @@
     }
 
     async function addChore(choreId) {
-      const chore = choreById(choreId);
+      const chore = choreDefById(choreId);
       const todayISO = dateISOLocal();
       const y = new Date(); y.setDate(y.getDate() - 1);
       const yesterdayISO = dateISOLocal(y);
@@ -2353,8 +2469,12 @@
 
       try {
         await addDoc(collection(db, 'users', currentUser.uid, 'chores'), {
-          choreId, points: chore.points, dateISO, monthKey: monthKeyOf(dateISO), createdAt: new Date()
+          choreId, choreName: chore.name, choreEmoji: chore.emoji || '',
+          points: chore.points, dateISO, monthKey: monthKeyOf(dateISO), createdAt: new Date()
         });
+        if (chore.oneTime) {
+          try { await deleteDoc(doc(db, 'users', currentUser.uid, 'choreDefs', choreId)); } catch (_) {}
+        }
         // Pokaż miesiąc i dzień, do którego trafił wpis.
         const { cur } = monthKeys();
         choreTab = monthKeyOf(dateISO) === cur ? 'current' : 'prev';
@@ -2388,6 +2508,63 @@
       await updateDoc(doc(db, 'users', currentUser.uid), { name, dailyLimit });
       await loadProfile();
       toast('Zapisano ustawienia.');
+    };
+
+    window.saveEconomySettings = async () => {
+      const genZl  = parseFloat(document.getElementById('econ-general-zl').value)  || RATE_GENERAL_ZL_DEFAULT;
+      const genPts = parseFloat(document.getElementById('econ-general-pts').value) || RATE_GENERAL_PTS_DEFAULT;
+      const choZl  = parseFloat(document.getElementById('econ-chore-zl').value)    || RATE_CHORES_ZL_DEFAULT;
+      const choPts = parseFloat(document.getElementById('econ-chore-pts').value)   || RATE_CHORES_PTS_DEFAULT;
+      if (genPts <= 0 || choPts <= 0) return toast('Liczba punktów musi być większa od 0.', 'error');
+
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        pointsRateGeneralZl: genZl, pointsRateGeneralPts: genPts,
+        pointsRateChoresZl:  choZl, pointsRateChoresPts:  choPts,
+      });
+      await loadProfile();
+      if (document.getElementById('page-chores').classList.contains('active')) renderChores();
+      toast('Zapisano ekonomię punktów.');
+    };
+
+    function renderChoreDefsSettings() {
+      const el = document.getElementById('chore-defs-list');
+      if (!el) return;
+      if (choreDefs.length === 0) { el.innerHTML = '<p class="text2">Brak zdefiniowanych obowiązków.</p>'; return; }
+      el.innerHTML = choreDefs.map(c => `
+        <div class="preset-item" style="margin-bottom:6px">
+          <span class="preset-info">${c.emoji ? c.emoji + ' ' : ''}${escapeHtml(c.name)} — ${c.points} pkt${c.oneTime ? ' · jednorazowy' : ''}</span>
+          <button class="btn-secondary" onclick="deleteChoreDef('${c.id}')" style="padding:4px 10px;font-size:12px">Usuń</button>
+        </div>`).join('');
+    }
+
+    window.addChoreDef = async () => {
+      const name = document.getElementById('cd-name').value.trim();
+      const desc = document.getElementById('cd-desc').value.trim();
+      const points = parseInt(document.getElementById('cd-points').value);
+      const emoji = document.getElementById('cd-emoji').value.trim();
+      const oneTime = document.getElementById('cd-onetime').checked;
+      if (!name) return toast('Wpisz nazwę.', 'error');
+      if (!points || points <= 0) return toast('Wpisz punkty.', 'error');
+
+      const order = choreDefs.length ? Math.max(...choreDefs.map(c => c.order || 0)) + 1 : 0;
+      await addDoc(collection(db, 'users', currentUser.uid, 'choreDefs'), { name, desc, emoji, points, oneTime, order });
+      await loadChoreDefs();
+      renderChoreDefsSettings();
+
+      document.getElementById('cd-name').value = '';
+      document.getElementById('cd-desc').value = '';
+      document.getElementById('cd-points').value = '';
+      document.getElementById('cd-emoji').value = '';
+      document.getElementById('cd-onetime').checked = false;
+      toast(`Dodano obowiązek: ${name}`);
+    };
+
+    window.deleteChoreDef = async (id) => {
+      if (!confirm('Usunąć ten obowiązek z listy? Historia wykonań nie zostanie ruszona.')) return;
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'choreDefs', id));
+      await loadChoreDefs();
+      renderChoreDefsSettings();
+      toast('Obowiązek usunięty.');
     };
 
     function updateParentEmailUI() {
@@ -2537,7 +2714,7 @@
     }
 
     // ── Motywy ────────────────────────────────────────────
-    const THEME_ACCENTS = { lifexp: '#6c63ff', apple: '#0a84ff', gold: '#f5c842' };
+    const THEME_ACCENTS = { lifexp: '#6c63ff', apple: '#1d6b4f', gold: '#f5c842' };
     const THEME_BORDERS = { lifexp: '#2a2d3a', apple: '#3a3a3c', gold: '#2e2a1e' };
 
     window.applyTheme = (name) => {
@@ -2565,6 +2742,32 @@
     (function loadTheme() {
       const saved = localStorage.getItem('lifexp-theme') || 'lifexp';
       applyTheme(saved);
+    })();
+
+    // ── Czcionka ──────────────────────────────────────────
+    const FONT_STACKS = {
+      manrope: "'Manrope', sans-serif",
+      jakarta: "'Plus Jakarta Sans', sans-serif",
+      figtree: "'Figtree', sans-serif",
+      inter:   "'Inter', sans-serif",
+    };
+    const FONT_DEFAULT = 'manrope';
+
+    window.applyFont = (name) => {
+      const stack = FONT_STACKS[name] || FONT_STACKS[FONT_DEFAULT];
+      document.body.style.setProperty('--font-user', stack);
+      localStorage.setItem('lifexp-font', name);
+
+      Object.keys(FONT_STACKS).forEach(f => {
+        const el = document.getElementById('font-opt-' + f);
+        if (!el) return;
+        el.style.borderColor = f === name ? 'var(--accent)' : 'var(--border)';
+      });
+    };
+
+    (function loadFont() {
+      const saved = localStorage.getItem('lifexp-font') || FONT_DEFAULT;
+      applyFont(saved);
     })();
 
     window.enableNotifications = async () => {

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   --bg: #0e0f13;
@@ -12,11 +12,11 @@
   --warn: #ff6b6b;
   --gold: #ffd700;
   --radius: 12px;
-  --font: 'Inter', sans-serif;
+  --font: 'Manrope', sans-serif;
   --mono: 'JetBrains Mono', monospace;
 }
 
-/* ── Motyw Apple (light) ── */
+/* ── Motyw Apple (light, iOS glassmorphism) ── */
 body.theme-apple {
   --bg: #f2f2f7;
   --bg2: #ffffff;
@@ -24,8 +24,8 @@ body.theme-apple {
   --border: #c6c6c8;
   --text: #000000;
   --text2: #6c6c70;
-  --accent: #007aff;
-  --accent2: #34c759;
+  --accent: #1d6b4f;
+  --accent2: #2f8a68;
   --warn: #ff3b30;
   --radius: 16px;
   --font: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
@@ -38,7 +38,11 @@ body.theme-apple .card {
 }
 body.theme-apple .sidebar,
 body.theme-apple .bottom-nav {
-  box-shadow: 0 -1px 0 var(--border);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-color: rgba(0,0,0,0.06);
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.06);
 }
 body.theme-apple input,
 body.theme-apple select {
@@ -46,12 +50,39 @@ body.theme-apple select {
   color: var(--text);
 }
 body.theme-apple .balance-card {
-  background: linear-gradient(135deg, #007aff, #5ac8fa);
+  background: linear-gradient(135deg, rgba(29,107,79,0.9), rgba(47,138,104,0.85));
+}
+body.theme-apple .btn-primary {
+  background: rgba(29, 107, 79, 0.72);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.35);
 }
 body.theme-apple .btn-secondary {
-  background: var(--bg3);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+body.theme-apple .btn-success {
+  background: rgba(47, 138, 104, 0.65);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  color: #ffffff;
+}
+body.theme-apple .fab {
+  background: rgba(29, 107, 79, 0.75);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(29,107,79,.28);
+}
+body.theme-apple .nav-item.active {
+  background: rgba(29, 107, 79, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* ── Motyw Gold ── */
@@ -110,7 +141,7 @@ body.theme-gold {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font);
+  font-family: var(--font-user, var(--font));
   min-height: 100vh;
   line-height: 1.6;
 }
@@ -119,7 +150,7 @@ a { color: var(--accent); text-decoration: none; }
 
 button {
   cursor: pointer;
-  font-family: var(--font);
+  font-family: var(--font-user, var(--font));
   border: none;
   border-radius: var(--radius);
   font-size: 14px;
@@ -135,7 +166,7 @@ input, select {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-family: var(--font);
+  font-family: var(--font-user, var(--font));
   font-size: 14px;
   padding: 10px 14px;
   outline: none;
@@ -270,10 +301,10 @@ input:focus, select:focus { border-color: var(--accent); }
 
 /* ───────────────── Animacje i efekty ───────────────── */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes flamePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18) rotate(-4deg); filter: drop-shadow(0 0 5px #ff8a3d); } }
-@keyframes cardPulse { 0% { box-shadow: 0 0 0 0 rgba(108,99,255,.5); } 100% { box-shadow: 0 0 0 20px rgba(108,99,255,0); } }
+@keyframes flamePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); filter: drop-shadow(0 0 3px #ff8a3d); } }
+@keyframes cardPulse { 0% { box-shadow: 0 0 0 0 rgba(108,99,255,.35); } 100% { box-shadow: 0 0 0 10px rgba(108,99,255,0); } }
 @keyframes confettiFall { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
-@keyframes modalPop { from { opacity: 0; transform: scale(.92) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes modalPop { from { opacity: 0; transform: scale(.97) translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* Hover / focus polish (działa w app, parent i logowaniu) */
 .stat-card, .preset-item, .chart-wrap {
@@ -287,13 +318,13 @@ input:focus, select:focus { border-color: var(--accent); }
 input:focus, select:focus { box-shadow: 0 0 0 3px rgba(108,99,255,.18); }
 
 /* Migoczący płomień streaka */
-.flame { display: inline-block; animation: flamePulse 1.7s ease-in-out infinite; }
+.flame { display: inline-block; animation: flamePulse 2.6s ease-in-out infinite; }
 
 /* Puls karty (dodawany/zdejmowany z JS) */
-.pulse { animation: cardPulse .65s ease-out; }
+.pulse { animation: cardPulse .9s ease; }
 
 /* Pop modala (level-up itp.) */
-.modal-overlay.open .modal { animation: modalPop .26s ease-out; }
+.modal-overlay.open .modal { animation: modalPop .32s ease; }
 
 /* Confetti */
 .confetti-piece {
@@ -301,7 +332,7 @@ input:focus, select:focus { box-shadow: 0 0 0 3px rgba(108,99,255,.18); }
   width: 9px; height: 9px;
   pointer-events: none; z-index: 9998;
   border-radius: 2px;
-  animation: confettiFall var(--dur, 1.1s) ease-in forwards;
+  animation: confettiFall var(--dur, 1.6s) ease-out forwards;
 }
 
 /* Szanuj systemowe ograniczenie ruchu */
