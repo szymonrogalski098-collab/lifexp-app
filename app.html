@@ -332,19 +332,16 @@
     .bar-val { font-size: 10px; color: var(--text2); font-family: var(--mono); }
 
     /* Settings */
-    .settings-grid { columns: 2; column-gap: 24px; }
-    .settings-category {
-      display: flex; flex-direction: column; gap: 16px;
-      break-inside: avoid; -webkit-column-break-inside: avoid;
-      margin-bottom: 24px;
-    }
+    .settings-grid { display: flex; gap: 24px; align-items: flex-start; }
+    .settings-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+    .settings-category { display: flex; flex-direction: column; gap: 16px; }
     .settings-category .settings-section { margin-bottom: 0; }
     .settings-cat-label {
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
       color: var(--text2); padding-bottom: 4px;
     }
     @media (max-width: 900px) {
-      .settings-grid { columns: 1; }
+      .settings-grid { flex-direction: column; }
     }
     .settings-section { margin-bottom: 28px; }
     .settings-section h3 { font-size: 15px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
@@ -901,6 +898,7 @@
         <h2 style="margin-bottom:20px">Ustawienia</h2>
 
         <div class="settings-grid">
+          <div class="settings-col">
 
           <div class="settings-category">
             <div class="settings-cat-label">Wygląd</div>
@@ -1071,6 +1069,22 @@
           </div>
 
           <div class="settings-category">
+            <div class="settings-cat-label">Granie</div>
+
+            <div class="card settings-section">
+              <h3>Lista gier</h3>
+              <div id="games-list" style="margin-bottom:12px"></div>
+              <div style="display:flex;gap:8px">
+                <input type="text" id="new-game-input" placeholder="Dodaj grę..." style="flex:1">
+                <button class="btn-primary" onclick="addGame()" style="padding:10px 16px">Dodaj</button>
+              </div>
+            </div>
+          </div>
+
+          </div>
+          <div class="settings-col">
+
+          <div class="settings-category">
             <div class="settings-cat-label">Wydatki</div>
 
             <div class="card settings-section">
@@ -1133,19 +1147,7 @@
             </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label">Granie</div>
-
-            <div class="card settings-section">
-              <h3>Lista gier</h3>
-              <div id="games-list" style="margin-bottom:12px"></div>
-              <div style="display:flex;gap:8px">
-                <input type="text" id="new-game-input" placeholder="Dodaj grę..." style="flex:1">
-                <button class="btn-primary" onclick="addGame()" style="padding:10px 16px">Dodaj</button>
-              </div>
-            </div>
           </div>
-
         </div>
       </div>
 
