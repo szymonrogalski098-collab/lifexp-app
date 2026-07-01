@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LifeXP</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f13">
   <link rel="apple-touch-icon" href="icon.svg">
@@ -532,22 +533,22 @@
       <div class="sidebar-logo">Life<span>XP</span></div>
 
       <div class="nav-item active" onclick="showPage('dashboard')">
-        <span class="icon">🏠</span> Dashboard
+        <span class="icon"><i class="ti ti-home"></i></span> Dashboard
       </div>
       <div class="nav-item" onclick="showPage('shop')">
-        <span class="icon">🛒</span> Wydatki
+        <span class="icon"><i class="ti ti-shopping-cart"></i></span> Wydatki
       </div>
       <div class="nav-item" onclick="showPage('chores')">
-        <span class="icon">🧹</span> Obowiązki
+        <span class="icon"><i class="ti ti-checklist"></i></span> Obowiązki
       </div>
       <div class="nav-item" onclick="showPage('history')">
-        <span class="icon">📜</span> Historia
+        <span class="icon"><i class="ti ti-history"></i></span> Historia
       </div>
       <div class="nav-item" onclick="showPage('stats')">
-        <span class="icon">📊</span> Statystyki
+        <span class="icon"><i class="ti ti-chart-bar"></i></span> Statystyki
       </div>
       <div class="nav-item" onclick="showPage('settings')">
-        <span class="icon">⚙️</span> Ustawienia
+        <span class="icon"><i class="ti ti-settings"></i></span> Ustawienia
       </div>
 
       <div class="sidebar-bottom">
@@ -556,7 +557,7 @@
           <div class="user-name" id="user-name">Ładowanie...</div>
         </div>
         <div class="nav-item" onclick="logout()" style="margin-top:4px">
-          <span class="icon">🚪</span> Wyloguj
+          <span class="icon"><i class="ti ti-door-exit"></i></span> Wyloguj
         </div>
       </div>
     </nav>
@@ -564,19 +565,19 @@
     <!-- Mobile Bottom Nav -->
     <nav class="bottom-nav" id="bottom-nav">
       <div class="bn-item active" data-page="dashboard" onclick="showPage('dashboard')">
-        <span class="bn-icon">🏠</span><span>Home</span>
+        <span class="bn-icon"><i class="ti ti-home"></i></span><span>Home</span>
       </div>
       <div class="bn-item" data-page="chores" onclick="showPage('chores')">
-        <span class="bn-icon">🧹</span><span>Obowiązki</span>
+        <span class="bn-icon"><i class="ti ti-checklist"></i></span><span>Obowiązki</span>
       </div>
       <div class="bn-item" data-page="shop" onclick="showPage('shop')">
-        <span class="bn-icon">🛒</span><span>Wydatki</span>
+        <span class="bn-icon"><i class="ti ti-shopping-cart"></i></span><span>Wydatki</span>
       </div>
       <div class="bn-item" data-page="history" onclick="showPage('history')">
-        <span class="bn-icon">📜</span><span>Historia</span>
+        <span class="bn-icon"><i class="ti ti-history"></i></span><span>Historia</span>
       </div>
       <div class="bn-item" data-page="settings" onclick="showPage('settings')">
-        <span class="bn-icon">⚙️</span><span>Ustawienia</span>
+        <span class="bn-icon"><i class="ti ti-settings"></i></span><span>Ustawienia</span>
       </div>
     </nav>
 
@@ -632,9 +633,9 @@
         </div>
 
         <div class="action-row">
-          <button class="btn-success" onclick="showPage('log-activity')">+ Zaloguj aktywność</button>
-          <button class="btn-secondary" onclick="showPage('log-gaming')">🎮 Zaloguj granie</button>
-          <button class="btn-secondary" onclick="showPage('generator')">🎲 Co teraz?</button>
+          <button class="btn-success" onclick="showPage('log-activity')"><i class="ti ti-plus"></i> Zaloguj aktywność</button>
+          <button class="btn-secondary" onclick="showPage('log-gaming')"><i class="ti ti-device-gamepad-2"></i> Zaloguj granie</button>
+          <button class="btn-secondary" onclick="showPage('generator')"><i class="ti ti-dice"></i> Co teraz?</button>
         </div>
 
         <div class="card">
@@ -679,11 +680,11 @@
             <label>Rodzaj aktywności</label>
             <select id="act-type" onchange="updatePointsPreview()">
               <option value="">— wybierz —</option>
-              <option value="learning" data-pts="40">📚 Nauka (JS, Unity, C#) — 40 pkt/h</option>
-              <option value="project" data-pts="35">💻 Praca nad projektem — 35 pkt/h</option>
-              <option value="reading" data-pts="25">📖 Czytanie / kurs — 25 pkt/h</option>
-              <option value="exercise" data-pts="30">🏃 Ćwiczenia fizyczne — 30 pkt/h</option>
-              <option value="school" data-pts="20">🏫 Zadania szkolne — 20 pkt/h</option>
+              <option value="learning" data-pts="40">Nauka (JS, Unity, C#) — 40 pkt/h</option>
+              <option value="project" data-pts="35">Praca nad projektem — 35 pkt/h</option>
+              <option value="reading" data-pts="25">Czytanie / kurs — 25 pkt/h</option>
+              <option value="exercise" data-pts="30">Ćwiczenia fizyczne — 30 pkt/h</option>
+              <option value="school" data-pts="20">Zadania szkolne — 20 pkt/h</option>
             </select>
           </div>
 
@@ -794,7 +795,7 @@
           </div>
 
           <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
-            <button class="btn-secondary" onclick="generate()" id="gen-btn" disabled>🎲 Losuj</button>
+            <button class="btn-secondary" onclick="generate()" id="gen-btn" disabled><i class="ti ti-dice"></i> Losuj</button>
             <button class="btn-success" onclick="goLogGenerated()" id="gen-do-btn" style="display:none">✅ Zrób to!</button>
           </div>
         </div>
@@ -954,9 +955,9 @@
                   <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700">Aa</div>
                   <div style="font-size:11px;color:var(--text2);margin-top:6px">Plus Jakarta</div>
                 </div>
-                <div id="font-opt-figtree" onclick="applyFont('figtree')" style="flex:1;min-width:110px;border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
-                  <div style="font-family:'Figtree',sans-serif;font-size:16px;font-weight:700">Aa</div>
-                  <div style="font-size:11px;color:var(--text2);margin-top:6px">Figtree</div>
+                <div id="font-opt-poppins" onclick="applyFont('poppins')" style="flex:1;min-width:110px;border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
+                  <div style="font-family:'Poppins',sans-serif;font-size:16px;font-weight:700">Aa</div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:6px">Poppins</div>
                 </div>
                 <div id="font-opt-inter" onclick="applyFont('inter')" style="flex:1;min-width:110px;border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
                   <div style="font-family:'Inter',sans-serif;font-size:16px;font-weight:700">Aa</div>
@@ -983,6 +984,7 @@
                   <button class="btn-ghost btn-sm" onclick="changeParentEmail()">Zmień</button>
                 </div>
                 <div id="parent-email-input-row">
+                  <p class="text2" id="parent-email-reverify-warn" style="display:none;color:var(--warn);margin-bottom:8px;">Ten email nie przeszedł jeszcze weryfikacji kodem — wyślij kod, aby go potwierdzić.</p>
                   <div style="display:flex;gap:8px;">
                     <input type="email" id="set-parent-email" placeholder="rodzic@email.com" style="flex:1;">
                     <button class="btn-secondary" style="white-space:nowrap;" onclick="sendParentEmailVerification()">Wyślij kod</button>
@@ -1111,15 +1113,14 @@
                 <label>Opis (opcjonalny)</label>
                 <input type="text" id="cd-desc" placeholder="Szczegóły...">
               </div>
-              <div style="display:flex;gap:10px;margin-bottom:10px">
-                <div style="flex:1">
-                  <label style="font-size:12px;color:var(--text2)">Punkty</label>
-                  <input type="number" id="cd-points" min="1" placeholder="10">
-                </div>
-                <div style="width:80px">
-                  <label style="font-size:12px;color:var(--text2)">Emoji</label>
-                  <input type="text" id="cd-emoji" maxlength="4" placeholder="🧹">
-                </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)">Punkty</label>
+                <input type="number" id="cd-points" min="1" placeholder="10" style="max-width:140px">
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)">Emoji (opcjonalnie)</label>
+                <input type="hidden" id="cd-emoji" value="">
+                <div id="cd-emoji-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
               </div>
               <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:var(--text2)">
                 <input type="checkbox" id="cd-onetime" style="width:auto"> Jednorazowy (zniknie po wykonaniu)
@@ -1183,6 +1184,17 @@
     </div>
   </div>
 
+  <!-- Uniwersalny modal potwierdzenia (zamiennik brzydkiego confirm()) -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal" style="text-align:center;max-width:360px">
+      <p id="confirm-modal-text" style="margin-bottom:22px;font-size:15px;line-height:1.6"></p>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" style="flex:1" id="confirm-modal-cancel">Anuluj</button>
+        <button class="btn-danger" style="flex:1" id="confirm-modal-ok">Usuń</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
     emailjs.init('1vFk29QDNKopU0RnJ');
@@ -1233,11 +1245,11 @@
     }
 
     const ACTIVITIES = [
-      { value: 'learning', label: '📚 Nauka (JS, Unity, C#)', pts: 40, color: '#6c63ff' },
-      { value: 'project', label: '💻 Praca nad projektem', pts: 35, color: '#4ecca3' },
-      { value: 'reading', label: '📖 Czytanie / kurs', pts: 25, color: '#ffd700' },
-      { value: 'exercise', label: '🏃 Ćwiczenia fizyczne', pts: 30, color: '#ff6b6b' },
-      { value: 'school', label: '🏫 Zadania szkolne', pts: 20, color: '#8a8fa8' },
+      { value: 'learning', label: 'Nauka (JS, Unity, C#)', pts: 40, color: '#6c63ff', icon: 'ti-book' },
+      { value: 'project', label: 'Praca nad projektem', pts: 35, color: '#4ecca3', icon: 'ti-code' },
+      { value: 'reading', label: 'Czytanie / kurs', pts: 25, color: '#ffd700', icon: 'ti-book-2' },
+      { value: 'exercise', label: 'Ćwiczenia fizyczne', pts: 30, color: '#ff6b6b', icon: 'ti-run' },
+      { value: 'school', label: 'Zadania szkolne', pts: 20, color: '#8a8fa8', icon: 'ti-school' },
     ];
 
     // ── Auth ──────────────────────────────────────────────
@@ -1753,14 +1765,14 @@
     }
 
     function activityRowHTML(id, a) {
-      const act = ACTIVITIES.find(x => x.value === a.type) || { label: a.type, color: '#6c63ff' };
+      const act = ACTIVITIES.find(x => x.value === a.type) || { label: a.type, color: '#6c63ff', icon: 'ti-star' };
       const date = new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp);
       const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
       const desc = a.desc ? ' · ' + escapeHtml(a.desc) : '';
       return `<div class="activity-item">
-        <div class="activity-icon" style="background:${act.color}22">${act.label.split(' ')[0]}</div>
+        <div class="activity-icon" style="background:${act.color}22"><i class="ti ${act.icon}"></i></div>
         <div class="activity-info">
-          <div class="activity-name">${act.label.replace(/^[^ ]+ /, '')}</div>
+          <div class="activity-name">${escapeHtml(act.label)}</div>
           <div class="activity-meta">${formatMinutes(a.duration)} · ${dateStr}${desc}</div>
         </div>
         <div class="activity-pts">+${a.points} pkt</div>
@@ -1774,7 +1786,7 @@
 
     // Delete an activity and roll back its points from totals + that day's log.
     window.deleteActivity = async (id) => {
-      if (!confirm('Usunąć tę aktywność? Punkty zostaną odjęte.')) return;
+      if (!await confirmDialog('Usunąć tę aktywność? Punkty zostaną odjęte.')) return;
       try {
         const ref = doc(db, 'users', currentUser.uid, 'activities', id);
         const snap = await getDoc(ref);
@@ -1861,7 +1873,7 @@
 
     // ── Daily reset (test tool) ───────────────────────────
     window.resetToday = async () => {
-      if (!confirm('Wyzerować dzisiejszy licznik punktów? Saldo i statystyki łączne pozostaną bez zmian.')) return;
+      if (!await confirmDialog('Wyzerować dzisiejszy licznik punktów? Saldo i statystyki łączne pozostaną bez zmian.', 'Wyzeruj')) return;
       try {
         const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', todayStr());
         const daySnap = await getDoc(dayRef);
@@ -2078,7 +2090,7 @@
     };
 
     window.deleteGamingSession = async (id, date, duration) => {
-      if (!confirm('Usunąć tę sesję?')) return;
+      if (!await confirmDialog('Usunąć tę sesję?')) return;
       try {
         await deleteDoc(doc(db, 'users', currentUser.uid, 'gamingSessions', id));
         if (date) {
@@ -2391,7 +2403,7 @@
       if (pts === 0) return;
       const amount = pts * rateChores();
       const amountStr = amount.toFixed(2).replace('.', ',');
-      if (!confirm(`Rozliczyć ${amountStr} zł (${pts} pkt)? Wpisy trafią do historii wypłat i znikną z kalendarza.`)) return;
+      if (!await confirmDialog(`Rozliczyć ${amountStr} zł (${pts} pkt)? Wpisy trafią do historii wypłat i znikną z kalendarza.`, 'Rozlicz')) return;
 
       const btn = document.getElementById('chore-settle-btn');
       btn.disabled = true;
@@ -2507,6 +2519,21 @@
       });
     }
 
+    // Uniwersalny modal potwierdzenia → Promise<boolean> (zamiennik window.confirm)
+    function confirmDialog(message, okLabel = 'Usuń') {
+      return new Promise(resolve => {
+        const modal = document.getElementById('confirm-modal');
+        document.getElementById('confirm-modal-text').textContent = message;
+        const ok = document.getElementById('confirm-modal-ok');
+        const cancel = document.getElementById('confirm-modal-cancel');
+        ok.textContent = okLabel;
+        modal.classList.add('open');
+        const finish = (val) => { modal.classList.remove('open'); ok.onclick = null; cancel.onclick = null; resolve(val); };
+        ok.onclick = () => finish(true);
+        cancel.onclick = () => finish(false);
+      });
+    }
+
     async function addChore(choreId) {
       const chore = choreDefById(choreId);
       const todayISO = dateISOLocal();
@@ -2544,7 +2571,7 @@
     }
 
     window.deleteChoreEntry = async (id) => {
-      if (!confirm('Usunąć ten wpis?')) return;
+      if (!await confirmDialog('Usunąć ten wpis?')) return;
       try {
         await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', id));
         await loadChores();
@@ -2620,11 +2647,32 @@
       document.getElementById('cd-points').value = '';
       document.getElementById('cd-emoji').value = '';
       document.getElementById('cd-onetime').checked = false;
+      renderChoreEmojiPicker();
       toast(`Dodano obowiązek: ${name}`);
     };
 
+    // ── Emoji picker dla obowiązków (bez wolnego wpisywania tekstu) ──
+    const CHORE_EMOJI_PRESETS = ['🧹','🪣','🧽','🗑️','🍽️','🛏️','🧺','🚿','🪴','🔧','📦','🐶'];
+    function renderChoreEmojiPicker() {
+      const el = document.getElementById('cd-emoji-picker');
+      if (!el) return;
+      const current = document.getElementById('cd-emoji').value;
+      el.innerHTML = CHORE_EMOJI_PRESETS.map(e => `
+        <button type="button" class="btn-secondary" data-emoji="${e}" onclick="pickChoreEmoji('${e}')"
+          style="padding:6px 10px;font-size:16px;border-color:${e === current ? 'var(--accent)' : 'var(--border)'}">${e}</button>
+      `).join('');
+    }
+    window.pickChoreEmoji = (emoji) => {
+      const hidden = document.getElementById('cd-emoji');
+      hidden.value = (hidden.value === emoji) ? '' : emoji;
+      document.querySelectorAll('#cd-emoji-picker button').forEach(b => {
+        b.style.borderColor = (b.dataset.emoji === hidden.value) ? 'var(--accent)' : 'var(--border)';
+      });
+    };
+    renderChoreEmojiPicker();
+
     window.deleteChoreDef = async (id) => {
-      if (!confirm('Usunąć ten obowiązek z listy? Historia wykonań nie zostanie ruszona.')) return;
+      if (!await confirmDialog('Usunąć ten obowiązek z listy? Historia wykonań nie zostanie ruszona.')) return;
       await deleteDoc(doc(db, 'users', currentUser.uid, 'choreDefs', id));
       await loadChoreDefs();
       renderChoreDefsSettings();
@@ -2632,8 +2680,9 @@
     };
 
     function updateParentEmailUI() {
-      const verified = userProfile?.parentEmail;
-      const pending  = userProfile?.pendingParentEmail;
+      const verified   = userProfile?.parentEmail;
+      const verifiedAt = userProfile?.parentEmailVerifiedAt;
+      const pending    = userProfile?.pendingParentEmail;
 
       const verifiedRow = document.getElementById('parent-email-verified-row');
       const inputRow    = document.getElementById('parent-email-input-row');
@@ -2645,15 +2694,23 @@
         inputRow.style.display    = 'none';
         pendingRow.style.display  = 'block';
         document.getElementById('parent-email-pending-addr').textContent = pending;
-      } else if (verified) {
+      } else if (verified && verifiedAt) {
         verifiedRow.style.display = 'flex';
         inputRow.style.display    = 'none';
         pendingRow.style.display  = 'none';
         document.getElementById('parent-email-verified-addr').textContent = verified;
+      } else if (verified && !verifiedAt) {
+        // Email zapisany zanim istniała weryfikacja kodem — nie ufamy mu, wymuszamy ponowną weryfikację.
+        verifiedRow.style.display = 'none';
+        pendingRow.style.display  = 'none';
+        inputRow.style.display    = 'block';
+        document.getElementById('set-parent-email').value = verified;
+        document.getElementById('parent-email-reverify-warn').style.display = 'block';
       } else {
         verifiedRow.style.display = 'none';
         inputRow.style.display    = 'block';
         pendingRow.style.display  = 'none';
+        document.getElementById('parent-email-reverify-warn').style.display = 'none';
       }
     }
 
@@ -2702,6 +2759,7 @@
       }
       await updateDoc(doc(db, 'users', currentUser.uid), {
         parentEmail: data.pendingParentEmail,
+        parentEmailVerifiedAt: new Date().toISOString(),
         pendingParentEmail: deleteField(),
         parentEmailCode: deleteField(),
         parentEmailCodeExpiry: deleteField(),
@@ -2755,7 +2813,7 @@
     };
 
     window.removeGame = async (i) => {
-      if (!confirm('Usunąć tę grę z listy?')) return;
+      if (!await confirmDialog('Usunąć tę grę z listy?')) return;
       try {
         const games = [...(Array.isArray(userProfile?.games) ? userProfile.games : [])];
         games.splice(i, 1);
@@ -2824,7 +2882,7 @@
     const FONT_STACKS = {
       manrope: "'Manrope', sans-serif",
       jakarta: "'Plus Jakarta Sans', sans-serif",
-      figtree: "'Figtree', sans-serif",
+      poppins: "'Poppins', sans-serif",
       inter:   "'Inter', sans-serif",
     };
     const FONT_DEFAULT = 'manrope';
