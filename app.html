@@ -129,6 +129,7 @@
       padding: 6px 12px;
       font-size: 13px;
       font-weight: 600;
+      color: #fff;
       z-index: 1;
     }
 
@@ -2260,13 +2261,16 @@
         }
 
         if (freezeEl) {
+          // Kolory na sztywno (biały/półprzezroczysty biały), bo ten element zawsze siedzi
+          // na kolorowej karcie salda — var(--accent)/var(--text2) bywają ciemne (np. Apple)
+          // i stają się nieczytelne na tle gradientu, tak jak wcześniej .balance-amount.
           if (freezeUsedNow) {
             freezeEl.textContent = i18next.t('dashboard.freezeUsed');
-            freezeEl.style.color = 'var(--accent)';
+            freezeEl.style.color = '#fff';
             freezeEl.style.display = 'block';
           } else if (freezeAvailable && streak > 0) {
             freezeEl.textContent = i18next.t('dashboard.freezeAvailable');
-            freezeEl.style.color = 'var(--text2)';
+            freezeEl.style.color = 'rgba(255,255,255,.7)';
             freezeEl.style.display = 'block';
           } else {
             freezeEl.style.display = 'none';
