@@ -654,7 +654,7 @@
           </div>
         </div>
 
-        <div class="card" id="goal-card" style="display:none"></div>
+        <div id="goal-card" style="display:none"></div>
 
         <div class="action-row">
           <button class="btn-success" onclick="showPage('log-activity')"><i class="ti ti-plus"></i> <span data-i18n="dashboard.logActivityBtn">Zaloguj aktywność</span></button>
@@ -1310,6 +1310,41 @@
         levelTitles: ['Novice', 'Learner', 'Practitioner', 'Specialist', 'Expert', 'Master', 'Virtuoso', 'Legend'],
         dayNamesShort: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
         dayNamesFull: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        genActivities: [
+          { name: 'Reading an educational book', points: 35, icon: 'ti-book' },
+          { name: 'Learning a foreign language', points: 45, icon: 'ti-language' },
+          { name: 'Solving problems / math', points: 50, icon: 'ti-math' },
+          { name: 'Programming / learning to code', points: 55, icon: 'ti-code' },
+          { name: 'Focused work (deep concentration task)', points: 60, icon: 'ti-target' },
+          { name: 'Writing (notes, essay, project)', points: 50, icon: 'ti-pencil' },
+          { name: 'Watching an educational course', points: 40, icon: 'ti-video' },
+          { name: 'Reviewing material (revision)', points: 45, icon: 'ti-refresh' },
+          { name: 'Planning your day / week', points: 30, icon: 'ti-calendar' },
+          { name: 'Brisk walk', points: 20, icon: 'ti-walk' },
+          { name: 'Light studying (flashcards, review)', points: 25, icon: 'ti-cards' },
+          { name: 'Tidying your desk', points: 20, icon: 'ti-table' },
+          { name: 'Stretching', points: 15, icon: 'ti-stretching' },
+          { name: 'Listening to an educational podcast', points: 15, icon: 'ti-headphones' },
+          { name: 'Half-focused educational video', points: 10, icon: 'ti-eye' },
+          { name: 'Strength training', points: 50, icon: 'ti-dumbbell' },
+          { name: 'Cardio (running, cycling)', points: 45, icon: 'ti-run' },
+          { name: 'HIIT interval training', points: 55, icon: 'ti-flame' },
+          { name: 'Yoga / pilates', points: 30, icon: 'ti-yoga' },
+          { name: 'Technical training (e.g. martial arts)', points: 55, icon: 'ti-karate' },
+          { name: 'Creative work (project, design)', points: 55, icon: 'ti-palette' },
+          { name: 'Learning to draw / design', points: 45, icon: 'ti-brush' },
+          { name: 'Writing code for a project', points: 60, icon: 'ti-terminal-2' },
+          { name: 'Making a presentation', points: 40, icon: 'ti-presentation' },
+          { name: 'Analysis / research', points: 50, icon: 'ti-search' },
+          { name: 'Organizing files / cleaning up your computer', points: 25, icon: 'ti-folder' },
+          { name: 'Learning with an app (Duolingo etc.)', points: 20, icon: 'ti-device-mobile' },
+          { name: 'Reading industry articles', points: 35, icon: 'ti-news' },
+          { name: 'Note-taking and mind mapping', points: 40, icon: 'ti-notes' },
+          { name: 'Reviewing study materials', points: 30, icon: 'ti-book-2' },
+          { name: 'Cleaning the apartment', points: 30, icon: 'ti-vacuum-cleaner' },
+          { name: 'Cooking (a healthy meal)', points: 25, icon: 'ti-tools-kitchen-2' },
+          { name: 'Grocery shopping', points: 20, icon: 'ti-shopping-cart' },
+        ],
         achievements: {
           first_activity: { name: 'First spark', desc: 'Log your first activity' },
           pts_1000: { name: 'Thousand points', desc: 'Earn 1,000 pts total' },
@@ -1368,10 +1403,14 @@
           title: 'Expenses', register: 'Register purchase', desc: 'Purchase description', descPh: 'e.g. a Steam game',
           amount: 'Amount (PLN)', amountPh: 'e.g. 49.99', cost: 'Cost:', notEnough: "You don't have enough points!",
           historyTitle: 'Purchase history', noPurchases: 'No purchases yet.',
+          enterDesc: 'Enter a purchase description.', enterAmount: 'Enter an amount.',
+          registered: 'Purchase registered. -{{pts}} pts', saveError: 'Save error.',
+          edit: 'Edit', delete: 'Delete', saveChanges: 'Save changes', updated: 'Purchase updated.',
+          confirmDelete: 'Delete this purchase? Points will be refunded.', deleted: 'Purchase deleted.',
         },
         goal: {
           title: 'Savings goal', namePh: 'e.g. Gaming mouse', amountLabel: 'Price (zł)', amountLabelPts: 'Target points',
-          typePoints: 'Points goal', typeMoney: 'Money goal',
+          typePoints: 'Points goal', typeMoney: 'Money goal', addAnother: 'Add another goal', maxReached: 'You can have up to 3 goals.',
           set: 'Set goal', missing: '{{zl}} zł to go', missingPts: '{{pts}} pts to go',
           reached: 'Goal reached! You have enough points 🎉',
           edit: 'Edit', remove: 'Remove', confirmRemove: 'Remove this goal?',
@@ -1406,6 +1445,41 @@
         levelTitles: ['Nowicjusz', 'Uczeń', 'Praktyk', 'Specjalista', 'Ekspert', 'Mistrz', 'Wirtuoz', 'Legenda'],
         dayNamesShort: ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'],
         dayNamesFull: ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'],
+        genActivities: [
+          { name: 'Czytanie książki edukacyjnej', points: 35, icon: 'ti-book' },
+          { name: 'Nauka języka obcego', points: 45, icon: 'ti-language' },
+          { name: 'Rozwiązywanie zadań / matematyka', points: 50, icon: 'ti-math' },
+          { name: 'Programowanie / nauka kodowania', points: 55, icon: 'ti-code' },
+          { name: 'Praca (koncentracja, zadania wymagające skupienia)', points: 60, icon: 'ti-target' },
+          { name: 'Pisanie (notatki, esej, projekt)', points: 50, icon: 'ti-pencil' },
+          { name: 'Oglądanie kursu edukacyjnego', points: 40, icon: 'ti-video' },
+          { name: 'Powtarzanie materiału (repetytorium)', points: 45, icon: 'ti-refresh' },
+          { name: 'Planowanie dnia / tygodnia', points: 30, icon: 'ti-calendar' },
+          { name: 'Spacer szybkim tempem', points: 20, icon: 'ti-walk' },
+          { name: 'Lekka nauka (fiszki, powtórki)', points: 25, icon: 'ti-cards' },
+          { name: 'Porządkowanie biurka', points: 20, icon: 'ti-table' },
+          { name: 'Stretching / rozciąganie', points: 15, icon: 'ti-stretching' },
+          { name: 'Słuchanie podcastu edukacyjnego', points: 15, icon: 'ti-headphones' },
+          { name: 'Oglądanie materiału edukacyjnego „na pół uwagi"', points: 10, icon: 'ti-eye' },
+          { name: 'Trening siłowy', points: 50, icon: 'ti-dumbbell' },
+          { name: 'Cardio (bieganie, rower)', points: 45, icon: 'ti-run' },
+          { name: 'Trening interwałowy HIIT', points: 55, icon: 'ti-flame' },
+          { name: 'Joga / pilates', points: 30, icon: 'ti-yoga' },
+          { name: 'Trening techniczny (np. sztuki walki)', points: 55, icon: 'ti-karate' },
+          { name: 'Praca kreatywna (projekt, design)', points: 55, icon: 'ti-palette' },
+          { name: 'Nauka rysunku / grafiki', points: 45, icon: 'ti-brush' },
+          { name: 'Pisanie kodu do projektu', points: 60, icon: 'ti-terminal-2' },
+          { name: 'Tworzenie prezentacji', points: 40, icon: 'ti-presentation' },
+          { name: 'Analiza / research', points: 50, icon: 'ti-search' },
+          { name: 'Organizacja plików / porządkowanie komputera', points: 25, icon: 'ti-folder' },
+          { name: 'Nauka z aplikacji (Duolingo itp.)', points: 20, icon: 'ti-device-mobile' },
+          { name: 'Czytanie artykułów branżowych', points: 35, icon: 'ti-news' },
+          { name: 'Notowanie i robienie map myśli', points: 40, icon: 'ti-notes' },
+          { name: 'Przegląd materiałów do nauki', points: 30, icon: 'ti-book-2' },
+          { name: 'Sprzątanie mieszkania', points: 30, icon: 'ti-vacuum-cleaner' },
+          { name: 'Gotowanie (zdrowy posiłek)', points: 25, icon: 'ti-tools-kitchen-2' },
+          { name: 'Zakupy spożywcze', points: 20, icon: 'ti-shopping-cart' },
+        ],
         achievements: {
           first_activity: { name: 'Pierwsza iskra', desc: 'Zaloguj pierwszą aktywność' },
           pts_1000: { name: 'Tysiąc punktów', desc: 'Zarobić 1 000 pkt łącznie' },
@@ -1464,10 +1538,14 @@
           title: 'Wydatki', register: 'Zarejestruj zakup', desc: 'Opis zakupu', descPh: 'np. gra na Steamie',
           amount: 'Kwota (PLN)', amountPh: 'np. 49.99', cost: 'Koszt:', notEnough: 'Nie masz wystarczających punktów!',
           historyTitle: 'Historia zakupów', noPurchases: 'Brak zakupów.',
+          enterDesc: 'Wpisz opis zakupu.', enterAmount: 'Wpisz kwotę.',
+          registered: 'Zakup zarejestrowany. -{{pts}} pkt', saveError: 'Błąd zapisu.',
+          edit: 'Edytuj', delete: 'Usuń', saveChanges: 'Zapisz zmiany', updated: 'Zakup zaktualizowany.',
+          confirmDelete: 'Usunąć ten zakup? Punkty zostaną zwrócone.', deleted: 'Zakup usunięty.',
         },
         goal: {
           title: 'Cel oszczędzania', namePh: 'Np. Myszka gamingowa', amountLabel: 'Cena (zł)', amountLabelPts: 'Punkty docelowe',
-          typePoints: 'Cel punktowy', typeMoney: 'Cel pieniężny',
+          typePoints: 'Cel punktowy', typeMoney: 'Cel pieniężny', addAnother: 'Dodaj kolejny cel', maxReached: 'Możesz mieć maksymalnie 3 cele.',
           set: 'Ustaw cel', missing: 'Brakuje {{zl}} zł', missingPts: 'Brakuje {{pts}} pkt',
           reached: 'Cel osiągnięty! Masz dość punktów 🎉',
           edit: 'Zmień', remove: 'Usuń', confirmRemove: 'Usunąć ten cel?',
@@ -1517,6 +1595,7 @@
           renderAchievements();
           renderGoal();
           updateParentEmailUI();
+          updateReportInfo();
           if (document.getElementById('page-dashboard').classList.contains('active')) loadStatsSection();
           if (document.getElementById('page-settings').classList.contains('active')) updateNotifStatus();
         }
@@ -1679,6 +1758,7 @@
       document.getElementById('set-name').value = userProfile.name || '';
       document.getElementById('set-daily-limit').value = userProfile.dailyLimit || DAILY_LIMIT_DEFAULT;
       updateParentEmailUI();
+      updateReportInfo();
 
       document.getElementById('econ-general-zl').value  = userProfile.pointsRateGeneralZl  || RATE_GENERAL_ZL_DEFAULT;
       document.getElementById('econ-general-pts').value = userProfile.pointsRateGeneralPts || RATE_GENERAL_PTS_DEFAULT;
@@ -1712,14 +1792,7 @@
         updateNotifStatus();
         const rToggle = document.getElementById('auto-report-toggle');
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
-        const info = document.getElementById('report-email-info');
-        if (info) {
-          const pe = userProfile?.parentEmail;
-          info.textContent = pe
-            ? i18next.t('settings.reportSentTo', { email: pe })
-            : i18next.t('settings.reportNoEmail');
-          info.style.color = pe ? '' : 'var(--warn)';
-        }
+        updateReportInfo();
         renderNotifHours();
       }
     };
@@ -1850,78 +1923,123 @@
       if (rToggle) rToggle.checked = userProfile?.autoReport === true;
     }
 
-    // ── Cel oszczędzania ──────────────────────────────────
-    let goalTypeChoice = null; // 'points' | 'money' — wybór typu zanim nowy cel zostanie zapisany (nie trwały)
+    // ── Cele oszczędzania (do 3 naraz) ─────────────────────
+    let goalFormState = null; // null | { editId: string|null, type: 'points'|'money'|null }
+    const newGoalId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-    function renderGoal() {
-      const card = document.getElementById('goal-card');
-      if (!card || !userProfile) return;
-      card.style.display = 'block';
+    // Jednorazowa migracja z pojedynczych pól (goalName/goalType/goalAmount) na tablicę `goals`.
+    async function migrateLegacyGoal() {
+      if (userProfile.goalName && userProfile.goalAmount && !userProfile.goals) {
+        const migrated = [{
+          id: newGoalId(), name: userProfile.goalName, type: userProfile.goalType || 'money',
+          amount: userProfile.goalAmount, celebrated: userProfile.goalCelebrated === true,
+        }];
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          goals: migrated,
+          goalName: deleteField(), goalType: deleteField(), goalAmount: deleteField(),
+          goalCelebrated: deleteField(), goalAmountZl: deleteField(),
+        });
+        userProfile.goals = migrated;
+      }
+    }
 
+    function goalCardHTML(g) {
       const t = (k, o) => i18next.t(k, o);
-      const name = userProfile.goalName;
-      const goalAmount = userProfile.goalAmount;
-      const goalType = userProfile.goalType || 'money';
+      const isMoney = g.type === 'money';
+      const balance = isMoney ? (userProfile.points?.total || 0) * rateGeneral() : (userProfile.points?.total || 0);
+      const pct = Math.min(100, (balance / g.amount) * 100);
+      const missing = Math.max(0, g.amount - balance);
+      const reached = balance >= g.amount;
+      const fmt = (n) => isMoney ? n.toFixed(2).replace('.', ',') + ' zł' : Math.round(n) + ' pkt';
 
-      if (!name || !goalAmount) {
-        if (!goalTypeChoice) {
-          card.innerHTML = `
+      if (reached && !g.celebrated) {
+        g.celebrated = true;
+        updateDoc(doc(db, 'users', currentUser.uid), { goals: userProfile.goals }).catch(() => {});
+        confettiBurst();
+        toast(t('goal.reached'), 'success');
+      }
+
+      return `
+        <div class="card goal-item">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
+            <h3 style="margin:0">🎯 ${escapeHtml(g.name)}</h3>
+            <div style="display:flex;gap:6px">
+              <button class="btn-ghost btn-sm" onclick="editGoal('${g.id}')">${t('goal.edit')}</button>
+              <button class="btn-ghost btn-sm" onclick="removeGoal('${g.id}')">${t('goal.remove')}</button>
+            </div>
+          </div>
+          <div class="progress-bar-wrap" style="margin-bottom:8px">
+            <div class="progress-bar" style="width:${pct}%;${reached ? 'background:var(--accent2)' : ''}"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <span class="text2">${fmt(balance)} / ${fmt(g.amount)} · <strong>${pct.toFixed(0)}%</strong></span>
+            <span style="font-size:13px;font-weight:600;color:${reached ? 'var(--accent2)' : 'var(--text2)'}">
+              ${reached ? t('goal.reached') : (isMoney ? t('goal.missing', { zl: missing.toFixed(2).replace('.', ',') }) : t('goal.missingPts', { pts: Math.ceil(missing) }))}
+            </span>
+          </div>
+        </div>`;
+    }
+
+    function goalFormHTML() {
+      const t = (k, o) => i18next.t(k, o);
+      if (!goalFormState.type) {
+        return `
+          <div class="card goal-item">
             <h3 style="margin-bottom:14px">🎯 ${t('goal.title')}</h3>
             <div style="display:flex;gap:8px">
               <button class="btn-secondary" style="flex:1" onclick="pickGoalType('points')">🎯 ${t('goal.typePoints')}</button>
               <button class="btn-secondary" style="flex:1" onclick="pickGoalType('money')">💰 ${t('goal.typeMoney')}</button>
-            </div>`;
-          return;
-        }
-        const isMoney = goalTypeChoice === 'money';
-        card.innerHTML = `
+            </div>
+            <button class="btn-ghost btn-sm" style="margin-top:8px" onclick="cancelGoalType()">${t('settings.cancel')}</button>
+          </div>`;
+      }
+      const isMoney = goalFormState.type === 'money';
+      return `
+        <div class="card goal-item">
           <h3 style="margin-bottom:14px">🎯 ${t('goal.title')}</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input type="text" id="goal-name-input" placeholder="${t('goal.namePh')}" style="flex:2;min-width:150px">
             <input type="number" id="goal-amount-input" min="1" step="${isMoney ? '0.01' : '1'}" placeholder="${isMoney ? t('goal.amountLabel') : t('goal.amountLabelPts')}" style="flex:1;min-width:90px">
             <button class="btn-primary" onclick="saveGoal()">${t('goal.set')}</button>
           </div>
-          <button class="btn-ghost btn-sm" style="margin-top:8px" onclick="goalTypeChoice=null;renderGoal()">${t('settings.cancel')}</button>`;
-        return;
-      }
-
-      goalTypeChoice = null;
-      const isMoney = goalType === 'money';
-      const balance = isMoney ? (userProfile.points?.total || 0) * rateGeneral() : (userProfile.points?.total || 0);
-      const pct = Math.min(100, (balance / goalAmount) * 100);
-      const missing = Math.max(0, goalAmount - balance);
-      const reached = balance >= goalAmount;
-      const fmt = (n) => isMoney ? n.toFixed(2).replace('.', ',') + ' zł' : Math.round(n) + ' pkt';
-
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-          <h3 style="margin:0">🎯 ${escapeHtml(name)}</h3>
-          <div style="display:flex;gap:6px">
-            <button class="btn-ghost btn-sm" onclick="editGoal()">${t('goal.edit')}</button>
-            <button class="btn-ghost btn-sm" onclick="removeGoal()">${t('goal.remove')}</button>
-          </div>
-        </div>
-        <div class="progress-bar-wrap" style="margin-bottom:8px">
-          <div class="progress-bar" style="width:${pct}%;${reached ? 'background:var(--accent2)' : ''}"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <span class="text2">${fmt(balance)} / ${fmt(goalAmount)} · <strong>${pct.toFixed(0)}%</strong></span>
-          <span style="font-size:13px;font-weight:600;color:${reached ? 'var(--accent2)' : 'var(--text2)'}">
-            ${reached ? t('goal.reached') : (isMoney ? t('goal.missing', { zl: missing.toFixed(2).replace('.', ',') }) : t('goal.missingPts', { pts: Math.ceil(missing) }))}
-          </span>
+          <button class="btn-ghost btn-sm" style="margin-top:8px" onclick="cancelGoalType()">${t('settings.cancel')}</button>
         </div>`;
-
-      // Jednorazowa celebracja osiągnięcia celu
-      if (reached && !userProfile.goalCelebrated) {
-        userProfile.goalCelebrated = true;
-        updateDoc(doc(db, 'users', currentUser.uid), { goalCelebrated: true }).catch(() => {});
-        confettiBurst();
-        toast(t('goal.reached'), 'success');
-      }
     }
 
+    async function renderGoal() {
+      const wrap = document.getElementById('goal-card');
+      if (!wrap || !userProfile) return;
+
+      await migrateLegacyGoal();
+      const goals = userProfile.goals || [];
+      wrap.style.display = 'block';
+
+      let html = goals.map(goalCardHTML).join('');
+
+      if (goalFormState) {
+        html += goalFormHTML();
+      } else if (goals.length < 3) {
+        html += `
+          <div class="card goal-item" style="text-align:center;cursor:pointer;border-style:dashed" onclick="openGoalForm()">
+            <span style="color:var(--text2);font-weight:600">+ ${i18next.t('goal.addAnother')}</span>
+          </div>`;
+      }
+
+      wrap.innerHTML = html;
+    }
+
+    window.openGoalForm = () => {
+      goalFormState = { editId: null, type: null };
+      renderGoal();
+    };
+
     window.pickGoalType = (type) => {
-      goalTypeChoice = type;
+      goalFormState.type = type;
+      renderGoal();
+    };
+
+    window.cancelGoalType = () => {
+      goalFormState = null;
       renderGoal();
     };
 
@@ -1930,32 +2048,37 @@
       const amount = parseFloat(document.getElementById('goal-amount-input').value);
       if (!name) return toast(i18next.t('goal.namePh'), 'error');
       if (!amount || amount <= 0) return toast(i18next.t('goal.amountLabel'), 'error');
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        goalName: name, goalType: goalTypeChoice, goalAmount: amount, goalCelebrated: false,
-        goalAmountZl: deleteField(),
-      });
-      goalTypeChoice = null;
+
+      const goals = userProfile.goals || [];
+      if (goalFormState.editId) {
+        const g = goals.find(x => x.id === goalFormState.editId);
+        if (g) { g.name = name; g.type = goalFormState.type; g.amount = amount; g.celebrated = false; }
+      } else {
+        if (goals.length >= 3) return toast(i18next.t('goal.maxReached'), 'error');
+        goals.push({ id: newGoalId(), name, type: goalFormState.type, amount, celebrated: false });
+      }
+      userProfile.goals = goals;
+      await updateDoc(doc(db, 'users', currentUser.uid), { goals });
+      goalFormState = null;
       await loadProfile();
       renderGoal();
     };
 
-    window.editGoal = () => {
-      const name = userProfile.goalName || '';
-      const amount = userProfile.goalAmount || '';
-      goalTypeChoice = userProfile.goalType || 'money';
-      userProfile.goalName = null; // tymczasowo pokaż formularz
-      renderGoal();
-      userProfile.goalName = name;
-      document.getElementById('goal-name-input').value = name;
-      document.getElementById('goal-amount-input').value = amount;
+    window.editGoal = (id) => {
+      const g = (userProfile.goals || []).find(x => x.id === id);
+      if (!g) return;
+      goalFormState = { editId: id, type: g.type };
+      renderGoal().then(() => {
+        document.getElementById('goal-name-input').value = g.name;
+        document.getElementById('goal-amount-input').value = g.amount;
+      });
     };
 
-    window.removeGoal = async () => {
+    window.removeGoal = async (id) => {
       if (!await confirmDialog(i18next.t('goal.confirmRemove'))) return;
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        goalName: deleteField(), goalType: deleteField(), goalAmount: deleteField(), goalCelebrated: deleteField(),
-      });
-      goalTypeChoice = null;
+      userProfile.goals = (userProfile.goals || []).filter(x => x.id !== id);
+      await updateDoc(doc(db, 'users', currentUser.uid), { goals: userProfile.goals });
+      goalFormState = null;
       await loadProfile();
       renderGoal();
     };
@@ -2238,13 +2361,14 @@
 
     function activityRowHTML(id, a) {
       const act = activityDefById(a.type);
+      const name = a.typeName || act.name;
       const date = new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp);
       const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
       const desc = a.desc ? ' · ' + escapeHtml(a.desc) : '';
       return `<div class="activity-item">
         <div class="activity-icon" style="background:${act.color}22"><i class="ti ${act.icon}"></i></div>
         <div class="activity-info">
-          <div class="activity-name">${escapeHtml(act.name)}</div>
+          <div class="activity-name">${escapeHtml(name)}</div>
           <div class="activity-meta">${formatMinutes(a.duration)} · ${dateStr}${desc}</div>
         </div>
         <div class="activity-pts">+${a.points} pkt</div>
@@ -2425,11 +2549,11 @@
       const beforeLevel = Math.floor(beforeEarned / XP_PER_LEVEL) + 1;
 
       try {
-        // Add activity record
-        await addDoc(collection(db, 'users', currentUser.uid, 'activities'), {
-          type, duration: min, points: actualEarned, desc,
-          timestamp: new Date()
-        });
+        // Add activity record. Aktywności z generatora (poza edytowalną listą activityDefs)
+        // dostają zdenormalizowaną nazwę, bo activityDefById nie ma dla nich definicji.
+        const activityDoc = { type, duration: min, points: actualEarned, desc, timestamp: new Date() };
+        if (type === '__generated__' && opt?.dataset.genName) activityDoc.typeName = opt.dataset.genName;
+        await addDoc(collection(db, 'users', currentUser.uid, 'activities'), activityDoc);
 
         // Update daily log
         const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', todayStr());
@@ -2591,21 +2715,58 @@
       document.getElementById('shop-error').style.display = pts > total ? 'block' : 'none';
     };
 
+    let editingPurchaseId = null;
+
+    function resetShopForm() {
+      document.getElementById('shop-desc').value = '';
+      document.getElementById('shop-amount').value = '';
+      document.getElementById('shop-pts-val').textContent = '0';
+      editingPurchaseId = null;
+      document.querySelector('#page-shop .btn-danger').textContent = i18next.t('shop.register');
+    }
+
     window.logPurchase = async () => {
       const desc = document.getElementById('shop-desc').value.trim();
       const amount = parseFloat(document.getElementById('shop-amount').value);
 
-      if (!desc) return toast('Wpisz opis zakupu.', 'error');
-      if (!amount || amount <= 0) return toast('Wpisz kwotę.', 'error');
+      if (!desc) return toast(i18next.t('shop.enterDesc'), 'error');
+      if (!amount || amount <= 0) return toast(i18next.t('shop.enterAmount'), 'error');
 
       const pts = Math.ceil(amount / rateGeneral());
-      const total = userProfile?.points?.total || 0;
-
-      if (pts > total) return toast('Nie masz wystarczających punktów!', 'error');
-
       const btn = document.querySelector('#page-shop .btn-danger');
-      btn.disabled = true;
 
+      if (editingPurchaseId) {
+        const ref = doc(db, 'users', currentUser.uid, 'purchases', editingPurchaseId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) { resetShopForm(); return; }
+        const diff = pts - (snap.data().pointsCost || 0);
+        const total = userProfile?.points?.total || 0;
+        if (diff > 0 && diff > total) return toast(i18next.t('shop.notEnough'), 'error');
+
+        btn.disabled = true;
+        try {
+          await updateDoc(ref, { description: desc, amount, pointsCost: pts });
+          await updateDoc(doc(db, 'users', currentUser.uid), {
+            'points.total': increment(-diff),
+            'points.spentAllTime': increment(diff),
+          });
+          await loadProfile();
+          await loadDashboard();
+          await loadPurchases();
+          toast(i18next.t('shop.updated'));
+          resetShopForm();
+        } catch (e) {
+          toast(i18next.t('shop.saveError'), 'error');
+          console.error(e);
+        }
+        btn.disabled = false;
+        return;
+      }
+
+      const total = userProfile?.points?.total || 0;
+      if (pts > total) return toast(i18next.t('shop.notEnough'), 'error');
+
+      btn.disabled = true;
       try {
         await addDoc(collection(db, 'users', currentUser.uid, 'purchases'), {
           description: desc, amount, pointsCost: pts, timestamp: new Date()
@@ -2619,15 +2780,48 @@
         await loadProfile();
         await loadDashboard();
         await loadPurchases();
-        toast(`Zakup zarejestrowany. -${pts} pkt`);
-        document.getElementById('shop-desc').value = '';
-        document.getElementById('shop-amount').value = '';
-        document.getElementById('shop-pts-val').textContent = '0';
+        toast(i18next.t('shop.registered', { pts }));
+        resetShopForm();
       } catch (e) {
-        toast('Błąd zapisu.', 'error');
+        toast(i18next.t('shop.saveError'), 'error');
         console.error(e);
       }
       btn.disabled = false;
+    };
+
+    window.editPurchase = async (id) => {
+      const snap = await getDoc(doc(db, 'users', currentUser.uid, 'purchases', id));
+      if (!snap.exists()) return;
+      const p = snap.data();
+      editingPurchaseId = id;
+      document.getElementById('shop-desc').value = p.description;
+      document.getElementById('shop-amount').value = p.amount;
+      updateShopPreview();
+      document.querySelector('#page-shop .btn-danger').textContent = i18next.t('shop.saveChanges');
+      document.getElementById('shop-desc').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.deletePurchase = async (id) => {
+      if (!await confirmDialog(i18next.t('shop.confirmDelete'))) return;
+      try {
+        const ref = doc(db, 'users', currentUser.uid, 'purchases', id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const pts = snap.data().pointsCost || 0;
+        await deleteDoc(ref);
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          'points.total': increment(pts),
+          'points.spentAllTime': increment(-pts),
+        });
+        if (editingPurchaseId === id) resetShopForm();
+        await loadProfile();
+        await loadDashboard();
+        await loadPurchases();
+        toast(i18next.t('shop.deleted'));
+      } catch (e) {
+        toast(i18next.t('shop.saveError'), 'error');
+        console.error(e);
+      }
     };
 
     async function loadPurchases() {
@@ -2639,7 +2833,7 @@
       const snap = await getDocs(q);
       const el = document.getElementById('purchase-list');
 
-      if (snap.empty) { el.innerHTML = '<p class="text2">Brak zakupów.</p>'; return; }
+      if (snap.empty) { el.innerHTML = `<p class="text2">${i18next.t('shop.noPurchases')}</p>`; return; }
 
       el.innerHTML = snap.docs.map(d => {
         const p = d.data();
@@ -2647,12 +2841,18 @@
         const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
         return `<div class="purchase-item">
           <div>
-            <div style="font-size:14px;font-weight:500">${p.description}</div>
+            <div style="font-size:14px;font-weight:500">${escapeHtml(p.description)}</div>
             <div class="text2">${dateStr}</div>
           </div>
-          <div style="text-align:right">
-            <div style="font-weight:700;color:var(--warn)">-${p.pointsCost} pkt</div>
-            <div class="text2">${p.amount.toFixed(2).replace('.', ',')} zł</div>
+          <div style="text-align:right;display:flex;align-items:center;gap:10px">
+            <div>
+              <div style="font-weight:700;color:var(--warn)">-${p.pointsCost} pkt</div>
+              <div class="text2">${p.amount.toFixed(2).replace('.', ',')} zł</div>
+            </div>
+            <div style="display:flex;gap:4px">
+              <button class="btn-ghost btn-sm" onclick="editPurchase('${d.id}')">${i18next.t('shop.edit')}</button>
+              <button class="btn-ghost btn-sm" onclick="deletePurchase('${d.id}')">${i18next.t('shop.delete')}</button>
+            </div>
           </div>
         </div>`;
       }).join('');
@@ -2666,9 +2866,13 @@
       document.getElementById('gen-btn').disabled = false;
     };
 
+    // Duża, dwujęzyczna pula (33 pozycje w resources i18n) + własne aktywności użytkownika —
+    // sam activityDefs (zwykle 5-8 pozycji) powtarzał się za często przy losowaniu.
     window.generate = () => {
-      generatedActivity = activityDefs[Math.floor(Math.random() * activityDefs.length)];
-      if (!generatedActivity) return toast('Brak zdefiniowanych aktywności.', 'error');
+      const staticPool = i18next.t('genActivities', { returnObjects: true }) || [];
+      const pool = [...staticPool, ...activityDefs];
+      generatedActivity = pool[Math.floor(Math.random() * pool.length)];
+      if (!generatedActivity) return;
 
       document.getElementById('gen-name').textContent = generatedActivity.name;
       document.getElementById('gen-pts').textContent = `${generatedActivity.points} pkt/h`;
@@ -2679,7 +2883,25 @@
     window.goLogGenerated = () => {
       if (!generatedActivity) return;
       showPage('log-activity');
-      document.getElementById('act-type').value = generatedActivity.id;
+      const sel = document.getElementById('act-type');
+
+      if (generatedActivity.id) {
+        // Prawdziwa pozycja z activityDefs — jest już w <select> jako zwykła opcja.
+        sel.value = generatedActivity.id;
+      } else {
+        // Aktywność z wbudowanej puli generatora — wstaw tymczasową opcję.
+        let opt = sel.querySelector('option[value="__generated__"]');
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = '__generated__';
+          sel.appendChild(opt);
+        }
+        opt.textContent = `${generatedActivity.name} — ${generatedActivity.points} pkt/h`;
+        opt.dataset.pts = generatedActivity.points;
+        opt.dataset.genName = generatedActivity.name;
+        sel.value = '__generated__';
+      }
+
       if (selectedGenTime) {
         document.getElementById('act-minutes').value = selectedGenTime;
       }
@@ -3262,6 +3484,20 @@
         pendingRow.style.display  = 'none';
         document.getElementById('parent-email-reverify-warn').style.display = 'none';
       }
+    }
+
+    // Wydzielone z showPage('settings') — musi się odświeżać zaraz po każdym loadProfile(),
+    // nie tylko przy wejściu na stronę Ustawień, bo inaczej po weryfikacji maila (która woła
+    // loadProfile, ale nie showPage) ten tekst zostawał z poprzedniego (błędnego) stanu.
+    function updateReportInfo() {
+      const info = document.getElementById('report-email-info');
+      if (!info) return;
+      const pe = userProfile?.parentEmail;
+      const verifiedAt = userProfile?.parentEmailVerifiedAt;
+      info.textContent = (pe && verifiedAt)
+        ? i18next.t('settings.reportSentTo', { email: pe })
+        : i18next.t('settings.reportNoEmail');
+      info.style.color = (pe && verifiedAt) ? '' : 'var(--warn)';
     }
 
     window.sendParentEmailVerification = async () => {

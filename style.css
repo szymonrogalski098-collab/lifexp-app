@@ -242,9 +242,14 @@ input:focus, select:focus { border-color: var(--accent); }
    dublować odstępów w Ustawieniach — tam karty są w kontenerze flex z gap.
    .action-row ma już własny margin-bottom (app.html), nie trzeba go tu powtarzać. */
 .page.active > .card,
-.page.active > .level-card {
+.page.active > .level-card,
+.page.active > #goal-card {
   margin-bottom: 20px;
 }
+
+/* Kilka kart celów w jednym wrapperze #goal-card — odstęp też między nimi. */
+.goal-item { margin-bottom: 12px; }
+.goal-item:last-child { margin-bottom: 0; }
 
 .btn-primary {
   background: var(--accent);
