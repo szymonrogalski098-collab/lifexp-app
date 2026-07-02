@@ -20,10 +20,10 @@
 body.theme-apple {
   --bg: #f2f2f7;
   --bg2: #ffffff;
-  --bg3: #e5e5ea;
-  --border: #c6c6c8;
-  --text: #000000;
-  --text2: #6c6c70;
+  --bg3: rgba(255, 255, 255, 0.5);
+  --border: rgba(255, 255, 255, 0.65);
+  --text: #0a1f16;
+  --text2: #5c6b63;
   --accent: #1d6b4f;
   --accent2: #2f8a68;
   --warn: #ff3b30;
@@ -31,58 +31,113 @@ body.theme-apple {
   --font: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
 }
 
-/* Karty w trybie jasnym potrzebują cienia zamiast border */
-body.theme-apple .card {
-  box-shadow: 0 1px 4px rgba(0,0,0,.08);
-  border-color: transparent;
+/* Tło z miękkimi zielonkawymi plamami — szkło musi mieć CO rozmywać,
+   na jednolitym kolorze blur jest niewidoczny. Warstwa ::before zamiast
+   background-attachment:fixed — komponowana raz, brak przemalowań przy scrollu. */
+body.theme-apple::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 45% at 12% 8%,  rgba(47, 138, 104, 0.22), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 88% 28%, rgba(90, 200, 250, 0.18), transparent 70%),
+    radial-gradient(ellipse 65% 50% at 45% 95%, rgba(29, 107, 79, 0.14), transparent 70%),
+    linear-gradient(160deg, #eef4f0 0%, #f2f2f7 55%, #e9f0ec 100%);
+}
+
+/* Matowe szkło: karty, modale, sheet */
+body.theme-apple .card,
+body.theme-apple .modal,
+body.theme-apple .sheet,
+body.theme-apple .stat-card,
+body.theme-apple .level-card,
+body.theme-apple .preset-item {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 32px rgba(30, 60, 45, 0.10);
 }
 body.theme-apple .sidebar,
 body.theme-apple .bottom-nav {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-color: rgba(0,0,0,0.06);
-  box-shadow: 0 -1px 0 rgba(0,0,0,0.06);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.05);
 }
 body.theme-apple input,
 body.theme-apple select {
-  background: var(--bg3);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   color: var(--text);
 }
 body.theme-apple .balance-card {
-  background: linear-gradient(135deg, rgba(29,107,79,0.9), rgba(47,138,104,0.85));
+  background: linear-gradient(135deg, rgba(29,107,79,0.82), rgba(47,138,104,0.72));
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 36px rgba(29,107,79,0.25);
 }
+
+/* Mgliste przyciski: mocno przezroczyste + jasna górna krawędź = efekt tafli szkła */
 body.theme-apple .btn-primary {
-  background: rgba(29, 107, 79, 0.72);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  background: rgba(29, 107, 79, 0.5);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
   color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 18px rgba(29,107,79,0.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.18);
 }
 body.theme-apple .btn-secondary {
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  background: rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 2px 12px rgba(30,60,45,0.08);
 }
 body.theme-apple .btn-success {
-  background: rgba(47, 138, 104, 0.65);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  background: rgba(47, 138, 104, 0.48);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
   color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 18px rgba(47,138,104,0.28);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+body.theme-apple .btn-danger {
+  background: rgba(255, 59, 48, 0.5);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 18px rgba(255,59,48,0.25);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 body.theme-apple .fab {
-  background: rgba(29, 107, 79, 0.75);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  background: rgba(29, 107, 79, 0.55);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
   color: #ffffff;
-  box-shadow: 0 8px 24px rgba(29,107,79,.28);
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 8px 24px rgba(29,107,79,.3);
 }
 body.theme-apple .nav-item.active {
-  background: rgba(29, 107, 79, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(29, 107, 79, 0.6);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.35);
+}
+body.theme-apple .toggle-slider {
+  background: rgba(255,255,255,0.5);
+  border-color: rgba(255,255,255,0.8);
 }
 
 /* ── Motyw Gold ── */

@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LifeXP">
+  <script src="https://cdn.jsdelivr.net/npm/i18next@23/i18next.min.js"></script>
   <style>
     .app-layout {
       display: flex;
@@ -533,23 +534,23 @@
     <nav class="sidebar">
       <div class="sidebar-logo">Life<span>XP</span></div>
 
-      <div class="nav-item active" onclick="showPage('dashboard')">
-        <span class="icon"><i class="ti ti-home"></i></span> Dashboard
+      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <span class="icon"><i class="ti ti-home"></i></span> <span data-i18n="nav.dashboard">Dashboard</span>
       </div>
-      <div class="nav-item" onclick="showPage('shop')">
-        <span class="icon"><i class="ti ti-shopping-cart"></i></span> Wydatki
+      <div class="nav-item" data-page="shop" onclick="showPage('shop')">
+        <span class="icon"><i class="ti ti-shopping-cart"></i></span> <span data-i18n="nav.shop">Wydatki</span>
       </div>
-      <div class="nav-item" onclick="showPage('chores')">
-        <span class="icon"><i class="ti ti-checklist"></i></span> Obowiązki
+      <div class="nav-item" data-page="chores" onclick="showPage('chores')">
+        <span class="icon"><i class="ti ti-checklist"></i></span> <span data-i18n="nav.chores">Obowiązki</span>
       </div>
-      <div class="nav-item" onclick="showPage('history')">
-        <span class="icon"><i class="ti ti-history"></i></span> Historia
+      <div class="nav-item" data-page="history" onclick="showPage('history')">
+        <span class="icon"><i class="ti ti-history"></i></span> <span data-i18n="nav.history">Historia</span>
       </div>
-      <div class="nav-item" onclick="showPage('stats')">
-        <span class="icon"><i class="ti ti-chart-bar"></i></span> Statystyki
+      <div class="nav-item" data-page="stats" onclick="showPage('stats')">
+        <span class="icon"><i class="ti ti-chart-bar"></i></span> <span data-i18n="nav.stats">Statystyki</span>
       </div>
-      <div class="nav-item" onclick="showPage('settings')">
-        <span class="icon"><i class="ti ti-settings"></i></span> Ustawienia
+      <div class="nav-item" data-page="settings" onclick="showPage('settings')">
+        <span class="icon"><i class="ti ti-settings"></i></span> <span data-i18n="nav.settings">Ustawienia</span>
       </div>
 
       <div class="sidebar-bottom">
@@ -558,7 +559,7 @@
           <div class="user-name" id="user-name">Ładowanie...</div>
         </div>
         <div class="nav-item" onclick="logout()" style="margin-top:4px">
-          <span class="icon"><i class="ti ti-door-exit"></i></span> Wyloguj
+          <span class="icon"><i class="ti ti-door-exit"></i></span> <span data-i18n="nav.logout">Wyloguj</span>
         </div>
       </div>
     </nav>
@@ -566,19 +567,19 @@
     <!-- Mobile Bottom Nav -->
     <nav class="bottom-nav" id="bottom-nav">
       <div class="bn-item active" data-page="dashboard" onclick="showPage('dashboard')">
-        <span class="bn-icon"><i class="ti ti-home"></i></span><span>Home</span>
+        <span class="bn-icon"><i class="ti ti-home"></i></span><span data-i18n="nav.home">Home</span>
       </div>
       <div class="bn-item" data-page="chores" onclick="showPage('chores')">
-        <span class="bn-icon"><i class="ti ti-checklist"></i></span><span>Obowiązki</span>
+        <span class="bn-icon"><i class="ti ti-checklist"></i></span><span data-i18n="nav.chores">Obowiązki</span>
       </div>
       <div class="bn-item" data-page="shop" onclick="showPage('shop')">
-        <span class="bn-icon"><i class="ti ti-shopping-cart"></i></span><span>Wydatki</span>
+        <span class="bn-icon"><i class="ti ti-shopping-cart"></i></span><span data-i18n="nav.shop">Wydatki</span>
       </div>
       <div class="bn-item" data-page="history" onclick="showPage('history')">
-        <span class="bn-icon"><i class="ti ti-history"></i></span><span>Historia</span>
+        <span class="bn-icon"><i class="ti ti-history"></i></span><span data-i18n="nav.history">Historia</span>
       </div>
       <div class="bn-item" data-page="settings" onclick="showPage('settings')">
-        <span class="bn-icon"><i class="ti ti-settings"></i></span><span>Ustawienia</span>
+        <span class="bn-icon"><i class="ti ti-settings"></i></span><span data-i18n="nav.settings">Ustawienia</span>
       </div>
     </nav>
 
@@ -588,11 +589,11 @@
       <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
         <div class="balance-card">
-          <div class="streak-badge" id="dash-streak" style="display:none"><span class="flame">🔥</span> <span id="dash-streak-num">0</span> dni z rzędu</div>
+          <div class="streak-badge" id="dash-streak" style="display:none"><span class="flame">🔥</span> <span id="dash-streak-num">0</span> <span data-i18n="dashboard.streakSuffix">dni z rzędu</span></div>
           <div id="dash-freeze" style="display:none;font-size:11px;margin-top:4px;opacity:.8"></div>
-          <div class="balance-label">Dostępne środki</div>
+          <div class="balance-label" data-i18n="dashboard.available">Dostępne środki</div>
           <div class="balance-amount" id="dash-pln">0,00 zł</div>
-          <div class="balance-pts" id="dash-pts">0 punktów</div>
+          <div class="balance-pts"><span id="dash-pts-num">0</span> <span data-i18n="dashboard.points">punktów</span></div>
         </div>
 
         <div class="level-card">
@@ -610,22 +611,22 @@
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-label">Dziś zarobione</div>
+            <div class="stat-label" data-i18n="dashboard.todayEarned">Dziś zarobione</div>
             <div class="stat-value green" id="dash-today-pts">0</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Czas grania dziś</div>
+            <div class="stat-label" data-i18n="dashboard.gamingToday">Czas grania dziś</div>
             <div class="stat-value purple" id="dash-gaming-today">0h 0m</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Wydano łącznie</div>
+            <div class="stat-label" data-i18n="dashboard.totalSpent">Wydano łącznie</div>
             <div class="stat-value gold" id="dash-spent">0,00 zł</div>
           </div>
         </div>
 
         <div class="daily-progress card">
           <div class="progress-header">
-            <h3>Dzienny limit punktów</h3>
+            <h3 data-i18n="dashboard.dailyLimit">Dzienny limit punktów</h3>
             <span class="text2" id="dash-limit-text">0 / 150 pkt</span>
           </div>
           <div class="progress-bar-wrap">
@@ -633,41 +634,43 @@
           </div>
         </div>
 
+        <div class="card" id="goal-card" style="display:none"></div>
+
         <div class="action-row">
-          <button class="btn-success" onclick="showPage('log-activity')"><i class="ti ti-plus"></i> Zaloguj aktywność</button>
-          <button class="btn-secondary" onclick="showPage('log-gaming')"><i class="ti ti-device-gamepad-2"></i> Zaloguj granie</button>
-          <button class="btn-secondary" onclick="showPage('generator')"><i class="ti ti-dice"></i> Co teraz?</button>
+          <button class="btn-success" onclick="showPage('log-activity')"><i class="ti ti-plus"></i> <span data-i18n="dashboard.logActivityBtn">Zaloguj aktywność</span></button>
+          <button class="btn-secondary" onclick="showPage('log-gaming')"><i class="ti ti-device-gamepad-2"></i> <span data-i18n="dashboard.logGamingBtn">Zaloguj granie</span></button>
+          <button class="btn-secondary" onclick="showPage('generator')"><i class="ti ti-dice"></i> <span data-i18n="dashboard.whatNowBtn">Co teraz?</span></button>
         </div>
 
         <div class="card">
           <div class="recent-section">
-            <h3>Ostatnie aktywności</h3>
+            <h3 data-i18n="dashboard.recentActivities">Ostatnie aktywności</h3>
             <div id="recent-list">
-              <p class="text2">Brak aktywności. Zacznij zarabiać punkty!</p>
+              <p class="text2" data-i18n="dashboard.noActivities">Brak aktywności. Zacznij zarabiać punkty!</p>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:16px">Punkty — ostatnie 7 dni</h3>
+          <h3 style="margin-bottom:16px" data-i18n="dashboard.weekChart">Punkty — ostatnie 7 dni</h3>
           <div id="week-chart-wrap" style="display:flex;align-items:flex-end;gap:4px;height:120px;">
-            <p class="text2" style="align-self:center;width:100%;text-align:center">Ładowanie...</p>
+            <p class="text2" style="align-self:center;width:100%;text-align:center" data-i18n="dashboard.loading">Ładowanie...</p>
           </div>
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:4px">TOP aktywności</h3>
-          <p class="text2" style="font-size:12px;margin-bottom:12px">Ostatnie 50 wpisów</p>
-          <div id="top-activities-list"><p class="text2">Ładowanie...</p></div>
+          <h3 style="margin-bottom:4px" data-i18n="dashboard.topActivities">TOP aktywności</h3>
+          <p class="text2" style="font-size:12px;margin-bottom:12px" data-i18n="dashboard.last50">Ostatnie 50 wpisów</p>
+          <div id="top-activities-list"><p class="text2" data-i18n="dashboard.loading">Ładowanie...</p></div>
         </div>
 
         <div class="card" id="facts-card" style="display:none">
-          <h3 style="margin-bottom:14px">Ciekawostki</h3>
+          <h3 style="margin-bottom:14px" data-i18n="dashboard.facts">Ciekawostki</h3>
           <div id="facts-list"></div>
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:14px">Osiągnięcia</h3>
+          <h3 style="margin-bottom:14px" data-i18n="dashboard.achievements">Osiągnięcia</h3>
           <div id="achievements-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
         </div>
 
@@ -675,98 +678,98 @@
 
       <!-- LOG ACTIVITY -->
       <div class="page" id="page-log-activity">
-        <h2 style="margin-bottom:20px">Zaloguj aktywność</h2>
+        <h2 style="margin-bottom:20px" data-i18n="logActivity.title">Zaloguj aktywność</h2>
         <div class="card">
           <div class="form-group">
-            <label>Rodzaj aktywności</label>
+            <label data-i18n="logActivity.type">Rodzaj aktywności</label>
             <select id="act-type" onchange="updatePointsPreview()">
-              <option value="">— wybierz —</option>
+              <option value="" data-i18n="logActivity.choose">— wybierz —</option>
             </select>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Czas (minuty)</label>
-              <input type="number" id="act-minutes" min="5" max="480" placeholder="np. 60" oninput="updatePointsPreview()">
+              <label data-i18n="logActivity.minutes">Czas (minuty)</label>
+              <input type="number" id="act-minutes" min="5" max="480" placeholder="np. 60" data-i18n-placeholder="logActivity.minutesPh" oninput="updatePointsPreview()">
             </div>
             <div class="form-group">
-              <label>Opis (opcjonalne)</label>
-              <input type="text" id="act-desc" placeholder="np. rozdział 3 z JS">
+              <label data-i18n="logActivity.descOpt">Opis (opcjonalne)</label>
+              <input type="text" id="act-desc" placeholder="np. rozdział 3 z JS" data-i18n-placeholder="logActivity.descPh">
             </div>
           </div>
 
           <div class="points-preview" id="pts-preview">
-            Zarobisz: <span id="pts-preview-val">0</span> pkt
-            <span class="text2" id="pts-cap-warn" style="margin-left:8px;display:none">(limit dzienny — zostanie obcięte)</span>
+            <span data-i18n="logActivity.willEarn">Zarobisz:</span> <span id="pts-preview-val">0</span> <span data-i18n="logActivity.pkt">pkt</span>
+            <span class="text2" id="pts-cap-warn" style="margin-left:8px;display:none" data-i18n="logActivity.capNote">(limit dzienny — zostanie obcięte)</span>
           </div>
 
-          <button class="btn-success btn-full" onclick="logActivity()" style="width:100%">Zapisz aktywność</button>
+          <button class="btn-success btn-full" onclick="logActivity()" style="width:100%" data-i18n="logActivity.save">Zapisz aktywność</button>
         </div>
       </div>
 
       <!-- LOG GAMING -->
       <div class="page" id="page-log-gaming">
-        <h2 style="margin-bottom:20px">Zaloguj sesję grania</h2>
+        <h2 style="margin-bottom:20px" data-i18n="logGaming.title">Zaloguj sesję grania</h2>
         <div class="card" style="margin-bottom:16px">
           <div class="form-group">
-            <label>Gra</label>
+            <label data-i18n="logGaming.game">Gra</label>
             <select id="game-select">
-              <option value="">— wybierz —</option>
+              <option value="" data-i18n="logGaming.choose">— wybierz —</option>
               <option value="Minecraft">Minecraft</option>
               <option value="Geometry Dash">Geometry Dash</option>
-              <option value="Inna">Inna gra...</option>
+              <option value="Inna" data-i18n="logGaming.otherGame">Inna gra...</option>
             </select>
           </div>
 
           <div id="game-custom-wrap" style="display:none" class="form-group">
-            <label>Nazwa gry</label>
-            <input type="text" id="game-custom" placeholder="np. Valorant">
+            <label data-i18n="logGaming.gameName">Nazwa gry</label>
+            <input type="text" id="game-custom" placeholder="np. Valorant" data-i18n-placeholder="logGaming.gameNamePh">
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Czas (minuty)</label>
-              <input type="number" id="game-minutes" min="1" placeholder="np. 90">
+              <label data-i18n="logGaming.minutes">Czas (minuty)</label>
+              <input type="number" id="game-minutes" min="1" placeholder="np. 90" data-i18n-placeholder="logGaming.minutesPh">
             </div>
             <div class="form-group">
-              <label>Data</label>
+              <label data-i18n="logGaming.date">Data</label>
               <input type="date" id="game-date">
             </div>
           </div>
 
-          <button class="btn-primary btn-full" onclick="logGaming()" style="width:100%">Zapisz sesję</button>
+          <button class="btn-primary btn-full" onclick="logGaming()" style="width:100%" data-i18n="logGaming.save">Zapisz sesję</button>
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:14px">Historia sesji</h3>
-          <div id="gaming-history-list"><p class="text2">Brak sesji.</p></div>
+          <h3 style="margin-bottom:14px" data-i18n="logGaming.history">Historia sesji</h3>
+          <div id="gaming-history-list"><p class="text2" data-i18n="logGaming.noSessions">Brak sesji.</p></div>
         </div>
       </div>
 
       <!-- SHOP -->
       <div class="page" id="page-shop">
-        <h2 style="margin-bottom:20px">Wydatki</h2>
+        <h2 style="margin-bottom:20px" data-i18n="shop.title">Wydatki</h2>
         <div class="card" style="margin-bottom:16px">
-          <h3 style="margin-bottom:16px">Zarejestruj zakup</h3>
+          <h3 style="margin-bottom:16px" data-i18n="shop.register">Zarejestruj zakup</h3>
           <div class="form-group">
-            <label>Opis zakupu</label>
-            <input type="text" id="shop-desc" placeholder="np. gra na Steamie">
+            <label data-i18n="shop.desc">Opis zakupu</label>
+            <input type="text" id="shop-desc" placeholder="np. gra na Steamie" data-i18n-placeholder="shop.descPh">
           </div>
           <div class="form-group">
-            <label>Kwota (PLN)</label>
-            <input type="number" id="shop-amount" min="0.01" step="0.01" placeholder="np. 49.99" oninput="updateShopPreview()">
+            <label data-i18n="shop.amount">Kwota (PLN)</label>
+            <input type="number" id="shop-amount" min="0.01" step="0.01" placeholder="np. 49.99" data-i18n-placeholder="shop.amountPh" oninput="updateShopPreview()">
           </div>
           <div class="points-preview" id="shop-preview" style="display:block;border-color:var(--warn)">
-            Koszt: <span id="shop-pts-val" style="color:var(--warn)">0</span> pkt
+            <span data-i18n="shop.cost">Koszt:</span> <span id="shop-pts-val" style="color:var(--warn)">0</span> <span data-i18n="logActivity.pkt">pkt</span>
           </div>
-          <p class="text2" id="shop-error" style="color:var(--warn);display:none">Nie masz wystarczających punktów!</p>
-          <button class="btn-danger btn-full" onclick="logPurchase()" style="width:100%">Zarejestruj zakup</button>
+          <p class="text2" id="shop-error" style="color:var(--warn);display:none" data-i18n="shop.notEnough">Nie masz wystarczających punktów!</p>
+          <button class="btn-danger btn-full" onclick="logPurchase()" style="width:100%" data-i18n="shop.register">Zarejestruj zakup</button>
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:14px">Historia zakupów</h3>
+          <h3 style="margin-bottom:14px" data-i18n="shop.historyTitle">Historia zakupów</h3>
           <div id="purchase-list">
-            <p class="text2">Brak zakupów.</p>
+            <p class="text2" data-i18n="shop.noPurchases">Brak zakupów.</p>
           </div>
         </div>
       </div>
@@ -774,8 +777,8 @@
       <!-- GENERATOR -->
       <div class="page" id="page-generator">
         <div class="card generator-card">
-          <h2>Co teraz?</h2>
-          <p class="text2" style="margin-top:8px">Wybierz ile masz czasu, a wylosuję coś produktywnego.</p>
+          <h2 data-i18n="generator.title">Co teraz?</h2>
+          <p class="text2" style="margin-top:8px" data-i18n="generator.subtitle">Wybierz ile masz czasu, a wylosuję coś produktywnego.</p>
 
           <div class="time-btns">
             <button class="time-btn" onclick="selectTime(15, this)">15 min</button>
@@ -791,8 +794,8 @@
           </div>
 
           <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
-            <button class="btn-secondary" onclick="generate()" id="gen-btn" disabled><i class="ti ti-dice"></i> Losuj</button>
-            <button class="btn-success" onclick="goLogGenerated()" id="gen-do-btn" style="display:none">✅ Zrób to!</button>
+            <button class="btn-secondary" onclick="generate()" id="gen-btn" disabled><i class="ti ti-dice"></i> <span data-i18n="generator.roll">Losuj</span></button>
+            <button class="btn-success" onclick="goLogGenerated()" id="gen-do-btn" style="display:none">✅ <span data-i18n="generator.doIt">Zrób to!</span></button>
           </div>
         </div>
       </div>
@@ -890,16 +893,16 @@
 
       <!-- SETTINGS -->
       <div class="page" id="page-settings">
-        <h2 style="margin-bottom:20px">Ustawienia</h2>
+        <h2 style="margin-bottom:20px" data-i18n="settings.title">Ustawienia</h2>
 
         <div class="settings-grid">
           <div class="settings-col">
 
           <div class="settings-category">
-            <div class="settings-cat-label">Wygląd</div>
+            <div class="settings-cat-label" data-i18n="settings.catAppearance">Wygląd</div>
 
             <div class="card settings-section">
-              <h3 style="margin-bottom:16px">Motyw</h3>
+              <h3 style="margin-bottom:16px" data-i18n="settings.theme">Motyw</h3>
               <div style="display:flex;gap:10px;">
 
                 <div id="theme-opt-lifexp" onclick="applyTheme('lifexp')" style="flex:1;border-radius:14px;border:2px solid #6c63ff;overflow:hidden;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent;">
@@ -942,7 +945,7 @@
             </div>
 
             <div class="card settings-section">
-              <h3 style="margin-bottom:16px">Czcionka</h3>
+              <h3 style="margin-bottom:16px" data-i18n="settings.font">Czcionka</h3>
               <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
                 <div id="font-opt-manrope" onclick="applyFont('manrope')" style="border-radius:12px;border:2px solid var(--accent);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
                   <div style="font-family:'Manrope',sans-serif;font-size:16px;font-weight:700">Aa</div>
@@ -962,47 +965,59 @@
                 </div>
               </div>
             </div>
+
+            <div class="card settings-section">
+              <h3 style="margin-bottom:16px" data-i18n="settings.language">Language</h3>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+                <div id="lang-opt-en" onclick="applyLang('en')" style="border-radius:12px;border:2px solid var(--accent);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
+                  <div style="font-size:16px;font-weight:700">English</div>
+                </div>
+                <div id="lang-opt-pl" onclick="applyLang('pl')" style="border-radius:12px;border:2px solid var(--border);padding:14px 8px;text-align:center;cursor:pointer;background:var(--bg3)">
+                  <div style="font-size:16px;font-weight:700">Polski</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="settings-category">
-            <div class="settings-cat-label">Konto</div>
+            <div class="settings-cat-label" data-i18n="settings.catAccount">Konto</div>
 
             <div class="card settings-section">
-              <h3>Profil</h3>
+              <h3 data-i18n="settings.profile">Profil</h3>
               <div class="form-group">
-                <label>Imię</label>
-                <input type="text" id="set-name" placeholder="Twoje imię">
+                <label data-i18n="settings.name">Imię</label>
+                <input type="text" id="set-name" placeholder="Twoje imię" data-i18n-placeholder="settings.namePh">
               </div>
               <div class="form-group">
-                <label>Email rodzica (raporty tygodniowe)</label>
+                <label data-i18n="settings.parentEmail">Email rodzica (raporty tygodniowe)</label>
                 <div id="parent-email-verified-row" style="display:none;align-items:center;gap:10px;margin-bottom:10px;">
-                  <span style="font-size:13px;color:var(--accent2);">✓ Zweryfikowany:</span>
+                  <span style="font-size:13px;color:var(--accent2);">✓ <span data-i18n="settings.verified">Zweryfikowany:</span></span>
                   <span id="parent-email-verified-addr" style="font-size:13px;color:var(--text);font-weight:600;"></span>
-                  <button class="btn-ghost btn-sm" onclick="changeParentEmail()">Zmień</button>
+                  <button class="btn-ghost btn-sm" onclick="changeParentEmail()" data-i18n="settings.change">Zmień</button>
                 </div>
                 <div id="parent-email-input-row">
-                  <p class="text2" id="parent-email-reverify-warn" style="display:none;color:var(--warn);margin-bottom:8px;">Ten email nie przeszedł jeszcze weryfikacji kodem — wyślij kod, aby go potwierdzić.</p>
+                  <p class="text2" id="parent-email-reverify-warn" style="display:none;color:var(--warn);margin-bottom:8px;" data-i18n="settings.reverifyWarn">Ten email nie przeszedł jeszcze weryfikacji kodem — wyślij kod, aby go potwierdzić.</p>
                   <div style="display:flex;gap:8px;">
                     <input type="email" id="set-parent-email" placeholder="rodzic@email.com" style="flex:1;">
-                    <button class="btn-secondary" style="white-space:nowrap;" onclick="sendParentEmailVerification()">Wyślij kod</button>
+                    <button class="btn-secondary" style="white-space:nowrap;" onclick="sendParentEmailVerification()" data-i18n="settings.sendCode">Wyślij kod</button>
                   </div>
                 </div>
                 <div id="parent-email-pending-row" style="display:none;margin-top:10px;">
-                  <p class="text2" style="margin-bottom:8px;">Wysłano 6-cyfrowy kod na <strong id="parent-email-pending-addr"></strong>. Wpisz go poniżej (ważny 10 min):</p>
+                  <p class="text2" style="margin-bottom:8px;" data-i18n-html="settings.pendingCodeText">Wysłano 6-cyfrowy kod na <strong id="parent-email-pending-addr"></strong>. Wpisz go poniżej (ważny 10 min):</p>
                   <div style="display:flex;gap:8px;">
                     <input type="text" id="parent-email-code" placeholder="000000" maxlength="6" style="flex:1;letter-spacing:6px;text-align:center;font-size:20px;font-weight:700;">
-                    <button class="btn-primary" onclick="verifyParentEmailCode()">Zweryfikuj</button>
+                    <button class="btn-primary" onclick="verifyParentEmailCode()" data-i18n="settings.verify">Zweryfikuj</button>
                   </div>
-                  <button class="btn-ghost btn-sm" style="margin-top:8px;" onclick="cancelParentEmailVerification()">Anuluj</button>
+                  <button class="btn-ghost btn-sm" style="margin-top:8px;" onclick="cancelParentEmailVerification()" data-i18n="settings.cancel">Anuluj</button>
                 </div>
               </div>
-              <button class="btn-primary" onclick="saveSettings()">Zapisz</button>
+              <button class="btn-primary" onclick="saveSettings()" data-i18n="settings.save">Zapisz</button>
             </div>
 
             <div class="card settings-section">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
                 <div>
-                  <h3>Raport tygodniowy</h3>
+                  <h3 data-i18n="settings.weeklyReport">Raport tygodniowy</h3>
                   <p class="text2" style="font-size:13px;margin-top:4px" id="report-email-info">Automatycznie wysyłany w niedzielę na email rodzica.</p>
                 </div>
                 <label class="toggle">
@@ -1014,21 +1029,21 @@
           </div>
 
           <div class="settings-category">
-            <div class="settings-cat-label">Powiadomienia</div>
+            <div class="settings-cat-label" data-i18n="settings.catNotifications">Powiadomienia</div>
 
             <div class="card settings-section">
-              <h3>Powiadomienia</h3>
+              <h3 data-i18n="settings.notifications">Powiadomienia</h3>
               <p class="text2" id="notif-status" style="margin-bottom:14px">Powiadomienia wyłączone.</p>
-              <button class="btn-primary" id="notif-btn" onclick="enableNotifications()">Włącz powiadomienia</button>
+              <button class="btn-primary" id="notif-btn" onclick="enableNotifications()" data-i18n="settings.enableNotif">Włącz powiadomienia</button>
             </div>
 
             <div class="card settings-section" id="notif-hours-card" style="display:none">
-              <h3 style="margin-bottom:6px">Godziny powiadomień</h3>
-              <p class="text2" style="font-size:13px;margin-bottom:14px">Wybierz 1–3 godziny (<span id="notif-tz-label">czas lokalny</span>) kiedy masz otrzymywać przypomnienie.</p>
+              <h3 style="margin-bottom:6px" data-i18n="settings.notifHours">Godziny powiadomień</h3>
+              <p class="text2" id="notif-hours-info" style="font-size:13px;margin-bottom:14px">Wybierz 1–3 godziny (czas lokalny) kiedy masz otrzymywać przypomnienie.</p>
               <div id="notif-hours-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
               <div style="display:flex;gap:8px">
                 <select id="notif-hour-select" style="flex:1">
-                  <option value="">— wybierz godzinę —</option>
+                  <option value="" data-i18n="settings.chooseHour">— wybierz godzinę —</option>
                   <option value="6">6:00</option><option value="7">7:00</option>
                   <option value="8">8:00</option><option value="9">9:00</option>
                   <option value="10">10:00</option><option value="11">11:00</option>
@@ -1039,69 +1054,69 @@
                   <option value="20">20:00</option><option value="21">21:00</option>
                   <option value="22">22:00</option><option value="23">23:00</option>
                 </select>
-                <button class="btn-primary" onclick="addNotifHour()" style="padding:10px 16px">Dodaj</button>
+                <button class="btn-primary" onclick="addNotifHour()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
               </div>
             </div>
           </div>
 
           <div class="settings-category">
-            <div class="settings-cat-label">Dashboard</div>
+            <div class="settings-cat-label" data-i18n="settings.catDashboard">Dashboard</div>
 
             <div class="card settings-section">
-              <h3>Limity</h3>
+              <h3 data-i18n="settings.limits">Limity</h3>
               <div class="settings-row">
-                <label>Dzienny limit punktów</label>
+                <label data-i18n="settings.dailyPointLimit">Dzienny limit punktów</label>
                 <input type="number" id="set-daily-limit" value="150" min="50" max="500" style="width:80px;text-align:center">
               </div>
-              <button class="btn-secondary" style="margin-top:12px" onclick="saveSettings()">Zapisz limit</button>
+              <button class="btn-secondary" style="margin-top:12px" onclick="saveSettings()" data-i18n="settings.saveLimit">Zapisz limit</button>
             </div>
 
             <div class="card settings-section">
-              <h3>Narzędzia testowe</h3>
-              <p class="text2" style="margin-bottom:14px">Zeruje licznik punktów zdobytych dzisiaj (dla testowania dziennego limitu). Nie zmienia salda ani statystyk łącznych.</p>
-              <button class="btn-secondary" onclick="resetToday()">Resetuj dzisiejszy limit</button>
+              <h3 data-i18n="settings.testTools">Narzędzia testowe</h3>
+              <p class="text2" style="margin-bottom:14px" data-i18n="settings.resetTodayInfo">Zeruje licznik punktów zdobytych dzisiaj (dla testowania dziennego limitu). Nie zmienia salda ani statystyk łącznych.</p>
+              <button class="btn-secondary" onclick="resetToday()" data-i18n="settings.resetToday">Resetuj dzisiejszy limit</button>
             </div>
           </div>
 
           <div class="settings-category">
-            <div class="settings-cat-label">Granie</div>
+            <div class="settings-cat-label" data-i18n="settings.catGaming">Granie</div>
 
             <div class="card settings-section">
-              <h3>Lista gier</h3>
+              <h3 data-i18n="settings.gamesList">Lista gier</h3>
               <div id="games-list" style="margin-bottom:12px"></div>
               <div style="display:flex;gap:8px">
-                <input type="text" id="new-game-input" placeholder="Dodaj grę..." style="flex:1">
-                <button class="btn-primary" onclick="addGame()" style="padding:10px 16px">Dodaj</button>
+                <input type="text" id="new-game-input" placeholder="Dodaj grę..." style="flex:1" data-i18n-placeholder="settings.addGame">
+                <button class="btn-primary" onclick="addGame()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
               </div>
             </div>
           </div>
 
           <div class="settings-category">
-            <div class="settings-cat-label">Aktywności</div>
+            <div class="settings-cat-label" data-i18n="settings.catActivities">Aktywności</div>
 
             <div class="card settings-section">
-              <h3 style="margin-bottom:16px">Zarządzaj aktywnościami</h3>
+              <h3 style="margin-bottom:16px" data-i18n="settings.manageActivities">Zarządzaj aktywnościami</h3>
               <div id="activity-defs-list" style="margin-bottom:14px"></div>
 
               <div class="form-group">
-                <label>Nazwa</label>
-                <input type="text" id="ad-name" placeholder="Np. Gra na gitarze">
+                <label data-i18n="settings.activityName">Nazwa</label>
+                <input type="text" id="ad-name" placeholder="Np. Gra na gitarze" data-i18n-placeholder="settings.activityNamePh">
               </div>
               <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)">Punkty za godzinę</label>
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.pointsPerHour">Punkty za godzinę</label>
                 <input type="number" id="ad-points" min="1" placeholder="30" style="max-width:140px">
               </div>
               <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)">Ikona</label>
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.icon">Ikona</label>
                 <input type="hidden" id="ad-icon" value="">
                 <div id="ad-icon-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
               </div>
               <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)">Kolor</label>
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.color">Kolor</label>
                 <input type="hidden" id="ad-color" value="">
                 <div id="ad-color-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
               </div>
-              <button class="btn-primary" onclick="addActivityDef()">Dodaj aktywność</button>
+              <button class="btn-primary" onclick="addActivityDef()" data-i18n="settings.addActivity">Dodaj aktywność</button>
             </div>
           </div>
 
@@ -1109,65 +1124,65 @@
           <div class="settings-col">
 
           <div class="settings-category">
-            <div class="settings-cat-label">Wydatki</div>
+            <div class="settings-cat-label" data-i18n="settings.catExpenses">Wydatki</div>
 
             <div class="card settings-section">
-              <h3 style="margin-bottom:16px">Ekonomia ogólna</h3>
+              <h3 style="margin-bottom:16px" data-i18n="settings.generalEconomy">Ekonomia ogólna</h3>
               <div class="form-group">
-                <label>Ile złotych za ile punktów (dashboard, sklep)</label>
+                <label data-i18n="settings.ratePrompt">Ile złotych za ile punktów (dashboard, sklep)</label>
                 <div style="display:flex;align-items:center;gap:8px">
                   <input type="number" id="econ-general-zl" step="0.01" min="0.01" style="width:90px" placeholder="1">
-                  <span class="text2">zł za</span>
+                  <span class="text2" data-i18n="settings.zlFor">zł za</span>
                   <input type="number" id="econ-general-pts" step="1" min="1" style="width:90px" placeholder="10">
-                  <span class="text2">pkt</span>
+                  <span class="text2" data-i18n="settings.pts">pkt</span>
                 </div>
               </div>
-              <button class="btn-primary" onclick="saveEconomyGeneral()">Zapisz</button>
+              <button class="btn-primary" onclick="saveEconomyGeneral()" data-i18n="settings.save">Zapisz</button>
             </div>
           </div>
 
           <div class="settings-category">
-            <div class="settings-cat-label">Obowiązki</div>
+            <div class="settings-cat-label" data-i18n="settings.catChores">Obowiązki</div>
 
             <div class="card settings-section">
-              <h3 style="margin-bottom:16px">Ekonomia obowiązków</h3>
+              <h3 style="margin-bottom:16px" data-i18n="settings.chorEconomy">Ekonomia obowiązków</h3>
               <div class="form-group">
-                <label>Ile złotych za ile punktów</label>
+                <label data-i18n="settings.ratePromptChores">Ile złotych za ile punktów</label>
                 <div style="display:flex;align-items:center;gap:8px">
                   <input type="number" id="econ-chore-zl" step="0.01" min="0.01" style="width:90px" placeholder="0.45">
-                  <span class="text2">zł za</span>
+                  <span class="text2" data-i18n="settings.zlFor">zł za</span>
                   <input type="number" id="econ-chore-pts" step="1" min="1" style="width:90px" placeholder="1">
-                  <span class="text2">pkt</span>
+                  <span class="text2" data-i18n="settings.pts">pkt</span>
                 </div>
               </div>
-              <button class="btn-primary" onclick="saveEconomyChores()">Zapisz</button>
+              <button class="btn-primary" onclick="saveEconomyChores()" data-i18n="settings.save">Zapisz</button>
             </div>
 
             <div class="card settings-section">
-              <h3 style="margin-bottom:16px">Zarządzaj obowiązkami</h3>
+              <h3 style="margin-bottom:16px" data-i18n="settings.manageChores">Zarządzaj obowiązkami</h3>
               <div id="chore-defs-list" style="margin-bottom:14px"></div>
 
               <div class="form-group">
-                <label>Nazwa</label>
-                <input type="text" id="cd-name" placeholder="Np. Wyniesienie śmieci">
+                <label data-i18n="settings.activityName">Nazwa</label>
+                <input type="text" id="cd-name" placeholder="Np. Wyniesienie śmieci" data-i18n-placeholder="settings.choreNamePh">
               </div>
               <div class="form-group">
-                <label>Opis (opcjonalny)</label>
-                <input type="text" id="cd-desc" placeholder="Szczegóły...">
+                <label data-i18n="settings.descOpt">Opis (opcjonalny)</label>
+                <input type="text" id="cd-desc" placeholder="Szczegóły..." data-i18n-placeholder="settings.descPh">
               </div>
               <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)">Punkty</label>
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.points">Punkty</label>
                 <input type="number" id="cd-points" min="1" placeholder="10" style="max-width:140px">
               </div>
               <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)">Emoji (opcjonalnie)</label>
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.emojiOpt">Emoji (opcjonalnie)</label>
                 <input type="hidden" id="cd-emoji" value="">
                 <div id="cd-emoji-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
               </div>
               <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:var(--text2)">
-                <input type="checkbox" id="cd-onetime" style="width:auto"> Jednorazowy (zniknie po wykonaniu)
+                <input type="checkbox" id="cd-onetime" style="width:auto"> <span data-i18n="settings.oneTime">Jednorazowy (zniknie po wykonaniu)</span>
               </label>
-              <button class="btn-primary" onclick="addChoreDef()">Dodaj obowiązek</button>
+              <button class="btn-primary" onclick="addChoreDef()" data-i18n="settings.addChore">Dodaj obowiązek</button>
             </div>
           </div>
 
@@ -1184,10 +1199,10 @@
   <div class="modal-overlay" id="levelup-modal">
     <div class="modal" style="text-align:center">
       <div style="font-size:52px;margin-bottom:8px">🎉</div>
-      <h3 style="margin-bottom:6px">Nowy poziom!</h3>
-      <p class="text2" style="margin-bottom:10px">Awansowałeś na</p>
+      <h3 style="margin-bottom:6px" data-i18n="levelup.title">Nowy poziom!</h3>
+      <p class="text2" style="margin-bottom:10px" data-i18n="levelup.subtitle">Awansowałeś na</p>
       <div id="levelup-text" style="font-size:22px;font-weight:700;color:var(--accent);margin-bottom:22px">Poziom 2</div>
-      <button class="btn-primary" onclick="closeLevelup()" style="min-width:140px">Super! 🚀</button>
+      <button class="btn-primary" onclick="closeLevelup()" style="min-width:140px" data-i18n="levelup.cta">Super! 🚀</button>
     </div>
   </div>
 
@@ -1243,6 +1258,258 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const messaging = getMessaging(app);
+
+    // ── i18n (Faza 5: Dashboard + Ustawienia) ──────────────
+    const I18N_RESOURCES = {
+      en: { translation: {
+        nav: { dashboard: 'Dashboard', shop: 'Expenses', chores: 'Chores', history: 'History', stats: 'Stats', settings: 'Settings', logout: 'Log out', home: 'Home' },
+        dashboard: {
+          streakSuffix: 'day streak', available: 'Available funds', points: 'points',
+          level: 'Level {{n}}', xp: '{{cur}} / {{max}} XP',
+          todayEarned: 'Earned today', gamingToday: 'Gaming today', totalSpent: 'Total spent',
+          dailyLimit: 'Daily point limit',
+          logActivityBtn: 'Log activity', logGamingBtn: 'Log gaming', whatNowBtn: 'What now?',
+          recentActivities: 'Recent activities', noActivities: 'No activities yet. Start earning points!',
+          weekChart: 'Points — last 7 days', loading: 'Loading...',
+          topActivities: 'Top activities', last50: 'Last 50 entries', noDataTop: 'No data yet. Log a few activities!',
+          facts: 'Fun facts', achievements: 'Achievements',
+          freezeAvailable: '🛡️ Streak freeze available', freezeUsed: '🛡️ Streak freeze used!',
+        },
+        logActivity: {
+          title: 'Log activity', type: 'Activity type', choose: '— choose —',
+          minutes: 'Time (minutes)', minutesPh: 'e.g. 60', descOpt: 'Description (optional)', descPh: 'e.g. chapter 3 of JS',
+          willEarn: "You'll earn:", pkt: 'pts', capNote: '(daily limit — will be capped)', capReached: '(daily limit reached — 0 pts)', save: 'Save activity',
+        },
+        logGaming: {
+          title: 'Log gaming session', game: 'Game', choose: '— choose —', otherGame: 'Other game...',
+          gameName: 'Game name', gameNamePh: 'e.g. Valorant', minutes: 'Time (minutes)', minutesPh: 'e.g. 90',
+          date: 'Date', save: 'Save session', history: 'Session history', noSessions: 'No sessions yet.',
+        },
+        generator: { title: 'What now?', subtitle: "Pick how much time you have and I'll roll something productive.", roll: 'Roll', doIt: 'Do it!' },
+        levelup: { title: 'New level!', subtitle: 'You reached', cta: 'Awesome! 🚀' },
+        levelTitles: ['Novice', 'Learner', 'Practitioner', 'Specialist', 'Expert', 'Master', 'Virtuoso', 'Legend'],
+        dayNamesShort: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+        dayNamesFull: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        achievements: {
+          first_activity: { name: 'First spark', desc: 'Log your first activity' },
+          pts_1000: { name: 'Thousand points', desc: 'Earn 1,000 pts total' },
+          pts_5000: { name: 'Five thousand', desc: 'Earn 5,000 pts total' },
+          first_purchase: { name: 'First purchase', desc: 'Spend points for the first time' },
+          streak_7: { name: 'Week warrior', desc: '7 day streak' },
+          streak_30: { name: 'Month legend', desc: '30 day streak' },
+          gaming_hour: { name: 'Gaming marathon', desc: '60 min of gaming in one day' },
+          daily_limit: { name: 'Limit smashed!', desc: 'Hit your daily point limit' },
+        },
+        facts: {
+          favoriteActivity: 'Your favorite activity is <strong>{{name}}</strong> — you did it {{count}}×.',
+          moreThisWeek: 'This week you earned <strong>{{diff}} more pts</strong> than last week ({{cur}} vs {{prev}} pts).',
+          moreLastWeek: 'Last week you earned <strong>{{diff}} more pts</strong> — you have some catching up to do!',
+          sameAsLastWeek: 'This week you earned the same as last week — <strong>{{cur}} pts</strong>.',
+          weekMoney: 'This week that\'s <strong>{{amount}} zł</strong> on your account.',
+          gamedMoreThisWeek: 'You gamed <strong>{{diff}} more</strong> than last week.',
+          gamedLessThisWeek: 'You gamed <strong>{{diff}} less</strong> than last week — nice work!',
+          bestDay: 'Your best day this week is <strong>{{day}}</strong> — {{pts}} pts.',
+        },
+        toast: {
+          newBadge: 'New badge: {{list}}!',
+          earnedPts: '+{{pts}} pts earned! 🎉',
+        },
+        settings: {
+          title: 'Settings',
+          catAppearance: 'Appearance', catAccount: 'Account', catNotifications: 'Notifications',
+          catDashboard: 'Dashboard', catExpenses: 'Expenses', catChores: 'Chores', catGaming: 'Gaming', catActivities: 'Activities',
+          theme: 'Theme', font: 'Font', language: 'Language', english: 'English', polish: 'Polski',
+          profile: 'Profile', name: 'Name', namePh: 'Your name',
+          parentEmail: 'Parent email (weekly reports)', verified: 'Verified:', change: 'Change',
+          reverifyWarn: "This email hasn't been verified with a code yet — send a code to confirm it.",
+          sendCode: 'Send code', pendingCodeText: 'A 6-digit code was sent to <strong id="parent-email-pending-addr"></strong>. Enter it below (valid 10 min):',
+          verify: 'Verify', cancel: 'Cancel', save: 'Save',
+          weeklyReport: 'Weekly report', weeklyReportInfo: 'Automatically sent on Sunday to the parent email.',
+          notifications: 'Notifications', notifDisabled: 'Notifications disabled.', enableNotif: 'Enable notifications',
+          notifHours: 'Notification hours', notifHoursInfo: 'Choose 1–3 hours ({{tz}}) to receive a reminder.',
+          chooseHour: '— choose hour —', add: 'Add',
+          limits: 'Limits', dailyPointLimit: 'Daily point limit', saveLimit: 'Save limit',
+          testTools: 'Test tools', resetTodayInfo: "Resets today's earned points counter (for testing the daily limit). Doesn't change balance or overall stats.",
+          resetToday: "Reset today's limit",
+          generalEconomy: 'General economy', chorEconomy: 'Chore economy', ratePrompt: 'How many zł for how many points (dashboard, shop)',
+          ratePromptChores: 'How many zł for how many points', zlFor: 'zł for', pts: 'pts',
+          gamesList: 'Games list', addGame: 'Add game...',
+          manageActivities: 'Manage activities', activityName: 'Name', activityNamePh: 'e.g. Guitar practice',
+          pointsPerHour: 'Points per hour', icon: 'Icon', color: 'Color', addActivity: 'Add activity',
+          manageChores: 'Manage chores', choreNamePh: 'e.g. Take out trash', descOpt: 'Description (optional)', descPh: 'Details...',
+          points: 'Points', emojiOpt: 'Emoji (optional)', oneTime: 'One-time (disappears once done)', addChore: 'Add chore',
+          reportSentTo: 'Sent on Sunday to: {{email}}',
+          reportNoEmail: 'No parent email — the report will not be sent. Add it in the Profile section.',
+          notifOn: '🔔 Notifications enabled on this device.', notifOff: 'Notifications disabled.',
+          notifBlocked: 'Notifications blocked in browser settings.', notifUnsupported: "This browser doesn't support notifications.",
+          refreshToken: 'Refresh token', notifNoHours: 'No hours selected — notifications will not be sent.',
+        },
+        shop: {
+          title: 'Expenses', register: 'Register purchase', desc: 'Purchase description', descPh: 'e.g. a Steam game',
+          amount: 'Amount (PLN)', amountPh: 'e.g. 49.99', cost: 'Cost:', notEnough: "You don't have enough points!",
+          historyTitle: 'Purchase history', noPurchases: 'No purchases yet.',
+        },
+        goal: {
+          title: 'Savings goal', namePh: 'e.g. Gaming mouse', amountLabel: 'Price (zł)',
+          set: 'Set goal', missing: '{{zl}} zł to go ({{pts}} pts)',
+          reached: 'Goal reached! You have enough points 🎉',
+          edit: 'Edit', remove: 'Remove', confirmRemove: 'Remove this goal?',
+        },
+      }},
+      pl: { translation: {
+        nav: { dashboard: 'Dashboard', shop: 'Wydatki', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
+        dashboard: {
+          streakSuffix: 'dni z rzędu', available: 'Dostępne środki', points: 'punktów',
+          level: 'Poziom {{n}}', xp: '{{cur}} / {{max}} XP',
+          todayEarned: 'Dziś zarobione', gamingToday: 'Czas grania dziś', totalSpent: 'Wydano łącznie',
+          dailyLimit: 'Dzienny limit punktów',
+          logActivityBtn: 'Zaloguj aktywność', logGamingBtn: 'Zaloguj granie', whatNowBtn: 'Co teraz?',
+          recentActivities: 'Ostatnie aktywności', noActivities: 'Brak aktywności. Zacznij zarabiać punkty!',
+          weekChart: 'Punkty — ostatnie 7 dni', loading: 'Ładowanie...',
+          topActivities: 'TOP aktywności', last50: 'Ostatnie 50 wpisów', noDataTop: 'Brak danych. Zaloguj kilka aktywności!',
+          facts: 'Ciekawostki', achievements: 'Osiągnięcia',
+          freezeAvailable: '🛡️ Masz zamrożenie serii', freezeUsed: '🛡️ Zamrożenie serii użyte!',
+        },
+        logActivity: {
+          title: 'Zaloguj aktywność', type: 'Rodzaj aktywności', choose: '— wybierz —',
+          minutes: 'Czas (minuty)', minutesPh: 'np. 60', descOpt: 'Opis (opcjonalne)', descPh: 'np. rozdział 3 z JS',
+          willEarn: 'Zarobisz:', pkt: 'pkt', capNote: '(limit dzienny — zostanie obcięte)', capReached: '(limit dzienny osiągnięty — 0 pkt)', save: 'Zapisz aktywność',
+        },
+        logGaming: {
+          title: 'Zaloguj sesję grania', game: 'Gra', choose: '— wybierz —', otherGame: 'Inna gra...',
+          gameName: 'Nazwa gry', gameNamePh: 'np. Valorant', minutes: 'Czas (minuty)', minutesPh: 'np. 90',
+          date: 'Data', save: 'Zapisz sesję', history: 'Historia sesji', noSessions: 'Brak sesji.',
+        },
+        generator: { title: 'Co teraz?', subtitle: 'Wybierz ile masz czasu, a wylosuję coś produktywnego.', roll: 'Losuj', doIt: 'Zrób to!' },
+        levelup: { title: 'Nowy poziom!', subtitle: 'Awansowałeś na', cta: 'Super! 🚀' },
+        levelTitles: ['Nowicjusz', 'Uczeń', 'Praktyk', 'Specjalista', 'Ekspert', 'Mistrz', 'Wirtuoz', 'Legenda'],
+        dayNamesShort: ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'],
+        dayNamesFull: ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'],
+        achievements: {
+          first_activity: { name: 'Pierwsza iskra', desc: 'Zaloguj pierwszą aktywność' },
+          pts_1000: { name: 'Tysiąc punktów', desc: 'Zarobić 1 000 pkt łącznie' },
+          pts_5000: { name: 'Pięć tysięcy', desc: 'Zarobić 5 000 pkt łącznie' },
+          first_purchase: { name: 'Pierwszy zakup', desc: 'Wydaj punkty po raz pierwszy' },
+          streak_7: { name: 'Tygodniowy wojownik', desc: '7 dni z rzędu' },
+          streak_30: { name: 'Miesięczna legenda', desc: '30 dni z rzędu' },
+          gaming_hour: { name: 'Maraton gracza', desc: '60 min grania w jeden dzień' },
+          daily_limit: { name: 'Limit dobity!', desc: 'Dobij dzienny limit punktów' },
+        },
+        facts: {
+          favoriteActivity: 'Twoją ulubioną aktywnością jest <strong>{{name}}</strong> — wykonałeś ją {{count}}×.',
+          moreThisWeek: 'W tym tygodniu zarobiłeś o <strong>{{diff}} pkt więcej</strong> niż w poprzednim ({{cur}} vs {{prev}} pkt).',
+          moreLastWeek: 'W poprzednim tygodniu zarobiłeś o <strong>{{diff}} pkt więcej</strong> — masz co nadrabiać!',
+          sameAsLastWeek: 'W tym tygodniu zarobiłeś tyle samo co poprzednio — <strong>{{cur}} pkt</strong>.',
+          weekMoney: 'W tym tygodniu to <strong>{{amount}} zł</strong> na koncie.',
+          gamedMoreThisWeek: 'Grałeś o <strong>{{diff}} więcej</strong> niż tydzień temu.',
+          gamedLessThisWeek: 'Grałeś o <strong>{{diff}} mniej</strong> niż tydzień temu — dobra robota!',
+          bestDay: 'Twój najlepszy dzień tego tygodnia to <strong>{{day}}</strong> — {{pts}} pkt.',
+        },
+        toast: {
+          newBadge: 'Nowa odznaka: {{list}}!',
+          earnedPts: '+{{pts}} pkt zarobione! 🎉',
+        },
+        settings: {
+          title: 'Ustawienia',
+          catAppearance: 'Wygląd', catAccount: 'Konto', catNotifications: 'Powiadomienia',
+          catDashboard: 'Dashboard', catExpenses: 'Wydatki', catChores: 'Obowiązki', catGaming: 'Granie', catActivities: 'Aktywności',
+          theme: 'Motyw', font: 'Czcionka', language: 'Język', english: 'English', polish: 'Polski',
+          profile: 'Profil', name: 'Imię', namePh: 'Twoje imię',
+          parentEmail: 'Email rodzica (raporty tygodniowe)', verified: 'Zweryfikowany:', change: 'Zmień',
+          reverifyWarn: 'Ten email nie przeszedł jeszcze weryfikacji kodem — wyślij kod, aby go potwierdzić.',
+          sendCode: 'Wyślij kod', pendingCodeText: 'Wysłano 6-cyfrowy kod na <strong id="parent-email-pending-addr"></strong>. Wpisz go poniżej (ważny 10 min):',
+          verify: 'Zweryfikuj', cancel: 'Anuluj', save: 'Zapisz',
+          weeklyReport: 'Raport tygodniowy', weeklyReportInfo: 'Automatycznie wysyłany w niedzielę na email rodzica.',
+          notifications: 'Powiadomienia', notifDisabled: 'Powiadomienia wyłączone.', enableNotif: 'Włącz powiadomienia',
+          notifHours: 'Godziny powiadomień', notifHoursInfo: 'Wybierz 1–3 godziny ({{tz}}) kiedy masz otrzymywać przypomnienie.',
+          chooseHour: '— wybierz godzinę —', add: 'Dodaj',
+          limits: 'Limity', dailyPointLimit: 'Dzienny limit punktów', saveLimit: 'Zapisz limit',
+          testTools: 'Narzędzia testowe', resetTodayInfo: 'Zeruje licznik punktów zdobytych dzisiaj (dla testowania dziennego limitu). Nie zmienia salda ani statystyk łącznych.',
+          resetToday: 'Resetuj dzisiejszy limit',
+          generalEconomy: 'Ekonomia ogólna', chorEconomy: 'Ekonomia obowiązków', ratePrompt: 'Ile złotych za ile punktów (dashboard, sklep)',
+          ratePromptChores: 'Ile złotych za ile punktów', zlFor: 'zł za', pts: 'pkt',
+          gamesList: 'Lista gier', addGame: 'Dodaj grę...',
+          manageActivities: 'Zarządzaj aktywnościami', activityName: 'Nazwa', activityNamePh: 'Np. Gra na gitarze',
+          pointsPerHour: 'Punkty za godzinę', icon: 'Ikona', color: 'Kolor', addActivity: 'Dodaj aktywność',
+          manageChores: 'Zarządzaj obowiązkami', choreNamePh: 'Np. Wyniesienie śmieci', descOpt: 'Opis (opcjonalny)', descPh: 'Szczegóły...',
+          points: 'Punkty', emojiOpt: 'Emoji (opcjonalnie)', oneTime: 'Jednorazowy (zniknie po wykonaniu)', addChore: 'Dodaj obowiązek',
+          reportSentTo: 'Wysyłany w niedzielę na: {{email}}',
+          reportNoEmail: 'Brak emaila rodzica — raport nie zostanie wysłany. Dodaj go w sekcji Profil.',
+          notifOn: '🔔 Powiadomienia włączone na tym urządzeniu.', notifOff: 'Powiadomienia wyłączone.',
+          notifBlocked: 'Powiadomienia zablokowane w ustawieniach przeglądarki.', notifUnsupported: 'Ta przeglądarka nie obsługuje powiadomień.',
+          refreshToken: 'Odśwież token', notifNoHours: 'Brak wybranych godzin — powiadomienia nie będą wysyłane.',
+        },
+        shop: {
+          title: 'Wydatki', register: 'Zarejestruj zakup', desc: 'Opis zakupu', descPh: 'np. gra na Steamie',
+          amount: 'Kwota (PLN)', amountPh: 'np. 49.99', cost: 'Koszt:', notEnough: 'Nie masz wystarczających punktów!',
+          historyTitle: 'Historia zakupów', noPurchases: 'Brak zakupów.',
+        },
+        goal: {
+          title: 'Cel oszczędzania', namePh: 'Np. Myszka gamingowa', amountLabel: 'Cena (zł)',
+          set: 'Ustaw cel', missing: 'Brakuje {{zl}} zł ({{pts}} pkt)',
+          reached: 'Cel osiągnięty! Masz dość punktów 🎉',
+          edit: 'Zmień', remove: 'Usuń', confirmRemove: 'Usunąć ten cel?',
+        },
+      }},
+    };
+
+    const LANG_DEFAULT = 'en';
+    let i18nReady = i18next.init({
+      lng: localStorage.getItem('lifexp-lang') || LANG_DEFAULT,
+      fallbackLng: 'en',
+      resources: I18N_RESOURCES,
+    });
+
+    function translateStaticPage() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = i18next.t(el.getAttribute('data-i18n'));
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        el.placeholder = i18next.t(el.getAttribute('data-i18n-placeholder'));
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        el.innerHTML = i18next.t(el.getAttribute('data-i18n-html'));
+      });
+    }
+
+    window.applyLang = (lang) => {
+      i18next.changeLanguage(lang, () => {
+        localStorage.setItem('lifexp-lang', lang);
+        document.documentElement.lang = lang;
+        translateStaticPage();
+        refreshDynamicI18n();
+        ['en', 'pl'].forEach(l => {
+          const el = document.getElementById('lang-opt-' + l);
+          if (el) el.style.borderColor = l === lang ? 'var(--accent)' : 'var(--border)';
+        });
+      });
+    };
+
+    // Ponownie renderuje sekcje generowane z JS (poziom, osiągnięcia, ciekawostki),
+    // żeby zmiana języka odświeżyła też treści już wyrenderowane wcześniej.
+    function refreshDynamicI18n() {
+      try {
+        renderNotifHoursInfo();
+        if (userProfile) {
+          renderLevel((userProfile.points?.earnedAllTime) || 0);
+          renderAchievements();
+          renderGoal();
+          updateParentEmailUI();
+          if (document.getElementById('page-dashboard').classList.contains('active')) loadStatsSection();
+          if (document.getElementById('page-settings').classList.contains('active')) updateNotifStatus();
+        }
+        if (typeof activityDefs !== 'undefined' && activityDefs.length) renderActivityTypeSelect();
+      } catch (e) { /* dashboard jeszcze nie załadowany — nic nie robimy */ }
+    }
+
+    i18nReady.then(() => {
+      translateStaticPage();
+      const saved = localStorage.getItem('lifexp-lang') || LANG_DEFAULT;
+      ['en', 'pl'].forEach(l => {
+        const el = document.getElementById('lang-opt-' + l);
+        if (el) el.style.borderColor = l === saved ? 'var(--accent)' : 'var(--border)';
+      });
+    });
 
     // WSTAW tu klucz VAPID z Firebase Console → Cloud Messaging → "Web Push certificates".
     const VAPID_KEY = 'BKEWA7plEmqtfgKPW2fa95bRvJm3dwygOWXOVFSKzHvjDJMZu8-m45-wJedy1sVoBV2bK78fC03xaAnNzDSeDok';
@@ -1311,8 +1578,8 @@
       const sel = document.getElementById('act-type');
       if (!sel) return;
       const current = sel.value;
-      sel.innerHTML = '<option value="">— wybierz —</option>' + activityDefs.map(a =>
-        `<option value="${a.id}" data-pts="${a.points}">${escapeHtml(a.name)} — ${a.points} pkt/h</option>`
+      sel.innerHTML = `<option value="">${i18next.t('logActivity.choose')}</option>` + activityDefs.map(a =>
+        `<option value="${a.id}" data-pts="${a.points}">${escapeHtml(a.name)} — ${a.points} ${i18next.t('logActivity.pkt')}/h</option>`
       ).join('');
       if (current) sel.value = current;
     }
@@ -1404,8 +1671,8 @@
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById('page-' + id).classList.add('active');
-      const navItems = document.querySelectorAll('.nav-item');
-      navItems.forEach(n => { if (n.textContent.trim().includes(navLabel(id))) n.classList.add('active'); });
+      const navItem = document.querySelector(`.nav-item[data-page="${id}"]`);
+      if (navItem) navItem.classList.add('active');
 
       // Bottom nav active state
       document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
@@ -1427,18 +1694,13 @@
         if (info) {
           const pe = userProfile?.parentEmail;
           info.textContent = pe
-            ? `Wysyłany w niedzielę na: ${pe}`
-            : 'Brak emaila rodzica — raport nie zostanie wysłany. Dodaj go w sekcji Profil.';
+            ? i18next.t('settings.reportSentTo', { email: pe })
+            : i18next.t('settings.reportNoEmail');
           info.style.color = pe ? '' : 'var(--warn)';
         }
         renderNotifHours();
       }
     };
-
-    function navLabel(id) {
-      const m = { dashboard: 'Dashboard', 'log-activity': 'aktywność', 'log-gaming': 'granie', shop: 'Wydatki', chores: 'Obowiązki', generator: 'teraz', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia' };
-      return m[id] || '';
-    }
 
     window.logout = async () => {
       await signOut(auth);
@@ -1512,7 +1774,7 @@
 
     window.closeLevelup = () => document.getElementById('levelup-modal').classList.remove('open');
     function showLevelup(level, title) {
-      document.getElementById('levelup-text').textContent = `Poziom ${level} — ${title}`;
+      document.getElementById('levelup-text').textContent = `${i18next.t('dashboard.level', { n: level })} — ${title}`;
       document.getElementById('levelup-modal').classList.add('open');
       confettiBurst();
     }
@@ -1533,7 +1795,7 @@
 
       const totalPts = profile.points?.total || 0;
       animateCount(document.getElementById('dash-pln'), totalPts, formatPLN);
-      animateCount(document.getElementById('dash-pts'), totalPts, v => Math.round(v) + ' punktów');
+      animateCount(document.getElementById('dash-pts-num'), totalPts, v => Math.round(v).toString());
       animateCount(document.getElementById('stats-earned'), profile.points?.earnedAllTime || 0);
       animateCount(document.getElementById('stats-spent'), profile.points?.spentAllTime || 0);
       animateCount(document.getElementById('dash-spent'), profile.points?.spentAllTime || 0, formatPLN);
@@ -1542,7 +1804,7 @@
       const todayPts = await getTodayPts();
       const dailyLimit = await getDailyLimit();
       animateCount(document.getElementById('dash-today-pts'), todayPts);
-      document.getElementById('dash-limit-text').textContent = `${todayPts} / ${dailyLimit} pkt`;
+      document.getElementById('dash-limit-text').textContent = `${todayPts} / ${dailyLimit} ${i18next.t('logActivity.pkt')}`;
       const pct = Math.min(100, (todayPts / dailyLimit) * 100);
       document.getElementById('dash-progress-bar').style.width = pct + '%';
 
@@ -1554,16 +1816,102 @@
       // Level (XP based on all-time earned points)
       renderLevel(profile.points?.earnedAllTime || 0);
 
-      // Streak + recent activities + stats
+      // Streak + recent activities + stats + cel oszczędzania
       const streak = await renderStreak();
       await loadRecentActivities();
       loadStatsSection();
       checkAchievements({ streak });
+      renderGoal();
 
       // Ustaw toggle raportu
       const rToggle = document.getElementById('auto-report-toggle');
       if (rToggle) rToggle.checked = userProfile?.autoReport === true;
     }
+
+    // ── Cel oszczędzania ──────────────────────────────────
+    function renderGoal() {
+      const card = document.getElementById('goal-card');
+      if (!card || !userProfile) return;
+      card.style.display = 'block';
+
+      const t = (k, o) => i18next.t(k, o);
+      const name = userProfile.goalName;
+      const goalZl = userProfile.goalAmountZl;
+
+      if (!name || !goalZl) {
+        card.innerHTML = `
+          <h3 style="margin-bottom:14px">🎯 ${t('goal.title')}</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="goal-name-input" placeholder="${t('goal.namePh')}" style="flex:2;min-width:150px">
+            <input type="number" id="goal-amount-input" min="1" step="0.01" placeholder="${t('goal.amountLabel')}" style="flex:1;min-width:90px">
+            <button class="btn-primary" onclick="saveGoal()">${t('goal.set')}</button>
+          </div>`;
+        return;
+      }
+
+      const balanceZl = (userProfile.points?.total || 0) * rateGeneral();
+      const pct = Math.min(100, (balanceZl / goalZl) * 100);
+      const missingZl = Math.max(0, goalZl - balanceZl);
+      const missingPts = Math.ceil(missingZl / rateGeneral());
+      const reached = balanceZl >= goalZl;
+
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
+          <h3 style="margin:0">🎯 ${escapeHtml(name)}</h3>
+          <div style="display:flex;gap:6px">
+            <button class="btn-ghost btn-sm" onclick="editGoal()">${t('goal.edit')}</button>
+            <button class="btn-ghost btn-sm" onclick="removeGoal()">${t('goal.remove')}</button>
+          </div>
+        </div>
+        <div class="progress-bar-wrap" style="margin-bottom:8px">
+          <div class="progress-bar" style="width:${pct}%;${reached ? 'background:var(--accent2)' : ''}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <span class="text2">${balanceZl.toFixed(2).replace('.', ',')} / ${Number(goalZl).toFixed(2).replace('.', ',')} zł</span>
+          <span style="font-size:13px;font-weight:600;color:${reached ? 'var(--accent2)' : 'var(--text2)'}">
+            ${reached ? t('goal.reached') : t('goal.missing', { zl: missingZl.toFixed(2).replace('.', ','), pts: missingPts })}
+          </span>
+        </div>`;
+
+      // Jednorazowa celebracja osiągnięcia celu
+      if (reached && !userProfile.goalCelebrated) {
+        userProfile.goalCelebrated = true;
+        updateDoc(doc(db, 'users', currentUser.uid), { goalCelebrated: true }).catch(() => {});
+        confettiBurst();
+        toast(t('goal.reached'), 'success');
+      }
+    }
+
+    window.saveGoal = async () => {
+      const name = document.getElementById('goal-name-input').value.trim();
+      const amount = parseFloat(document.getElementById('goal-amount-input').value);
+      if (!name) return toast(i18next.t('goal.namePh'), 'error');
+      if (!amount || amount <= 0) return toast(i18next.t('goal.amountLabel'), 'error');
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        goalName: name, goalAmountZl: amount, goalCelebrated: false,
+      });
+      await loadProfile();
+      renderGoal();
+    };
+
+    window.editGoal = () => {
+      const name = userProfile.goalName || '';
+      const amount = userProfile.goalAmountZl || '';
+      userProfile.goalName = null; // tymczasowo pokaż formularz
+      renderGoal();
+      userProfile.goalName = name;
+      document.getElementById('goal-name-input').value = name;
+      document.getElementById('goal-amount-input').value = amount;
+    };
+
+    window.removeGoal = async () => {
+      if (!await confirmDialog(i18next.t('goal.confirmRemove'))) return;
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        goalName: deleteField(), goalAmountZl: deleteField(), goalCelebrated: deleteField(),
+      });
+      await loadProfile();
+      renderGoal();
+    };
 
     // ── Stats section ─────────────────────────────────────
     async function loadStatsSection() {
@@ -1591,7 +1939,7 @@
 
       // ── Wykres słupkowy ────────────────────────────────
       const maxPts    = Math.max(...days7.map(d => dayDataMap[d]?.pointsEarned || 0), 1);
-      const DAY_NAMES = ['Nd','Pn','Wt','Śr','Cz','Pt','Sb'];
+      const DAY_NAMES = i18next.t('dayNamesShort', { returnObjects: true });
       const chartWrap = document.getElementById('week-chart-wrap');
       chartWrap.innerHTML = days7.map(d => {
         const pts    = dayDataMap[d]?.pointsEarned || 0;
@@ -1625,50 +1973,50 @@
       const MEDALS = ['🥇','🥈','🥉','4.','5.'];
       const topEl = document.getElementById('top-activities-list');
       topEl.innerHTML = topActs.length === 0
-        ? '<p class="text2">Brak danych. Zaloguj kilka aktywności!</p>'
-        : topActs.slice(0, 5).map(([name, { count, pts }], i) => `
+        ? `<p class="text2">${i18next.t('dashboard.noDataTop')}</p>`
+        : topActs.slice(0, 5).map(([typeId, { count, pts }], i) => `
             <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
               <span style="font-size:18px;width:24px;text-align:center;flex-shrink:0">${MEDALS[i]}</span>
-              <span style="flex:1;font-weight:600;font-size:14px">${name}</span>
+              <span style="flex:1;font-weight:600;font-size:14px">${escapeHtml(activityDefById(typeId).name)}</span>
               <span style="font-size:12px;color:var(--text2);margin-right:4px">${count}×</span>
-              <span style="font-weight:700;color:var(--accent2);font-family:var(--mono);font-size:13px">+${pts} pkt</span>
+              <span style="font-weight:700;color:var(--accent2);font-family:var(--mono);font-size:13px">+${pts} ${i18next.t('logActivity.pkt')}</span>
             </div>`).join('');
 
       // ── Ciekawostki ─────────────────────────────────────
       const facts = [];
 
       if (topActs.length > 0) {
-        const [topName, topData] = topActs[0];
-        facts.push(`Twoją ulubioną aktywnością jest <strong>${topName}</strong> — wykonałeś ją ${topData.count}×.`);
+        const [topTypeId, topData] = topActs[0];
+        facts.push(i18next.t('facts.favoriteActivity', { name: activityDefById(topTypeId).name, count: topData.count }));
       }
 
       if (thisWeekPts > 0 || lastWeekPts > 0) {
         const diff = thisWeekPts - lastWeekPts;
         if (diff > 0)
-          facts.push(`W tym tygodniu zarobiłeś o <strong>${diff} pkt więcej</strong> niż w poprzednim (${thisWeekPts} vs ${lastWeekPts} pkt).`);
+          facts.push(i18next.t('facts.moreThisWeek', { diff, cur: thisWeekPts, prev: lastWeekPts }));
         else if (diff < 0)
-          facts.push(`W poprzednim tygodniu zarobiłeś o <strong>${-diff} pkt więcej</strong> — masz co nadrabiać!`);
+          facts.push(i18next.t('facts.moreLastWeek', { diff: -diff }));
         else if (thisWeekPts > 0)
-          facts.push(`W tym tygodniu zarobiłeś tyle samo co poprzednio — <strong>${thisWeekPts} pkt</strong>.`);
+          facts.push(i18next.t('facts.sameAsLastWeek', { cur: thisWeekPts }));
       }
 
       if (thisWeekPts > 0)
-        facts.push(`W tym tygodniu to <strong>${(thisWeekPts / 10).toFixed(2)} zł</strong> na koncie.`);
+        facts.push(i18next.t('facts.weekMoney', { amount: (thisWeekPts * rateGeneral()).toFixed(2) }));
 
       if (thisWeekGaming > 0 || lastWeekGaming > 0) {
         const diff = thisWeekGaming - lastWeekGaming;
         if (diff > 0)
-          facts.push(`Grałeś o <strong>${formatMinutes(diff)} więcej</strong> niż tydzień temu.`);
+          facts.push(i18next.t('facts.gamedMoreThisWeek', { diff: formatMinutes(diff) }));
         else if (diff < 0)
-          facts.push(`Grałeś o <strong>${formatMinutes(-diff)} mniej</strong> niż tydzień temu — dobra robota!`);
+          facts.push(i18next.t('facts.gamedLessThisWeek', { diff: formatMinutes(-diff) }));
       }
 
       const bestDay = days7.reduce((best, d) =>
         (dayDataMap[d]?.pointsEarned || 0) > (dayDataMap[best]?.pointsEarned || 0) ? d : best, days7[0]);
       const bestPts = dayDataMap[bestDay]?.pointsEarned || 0;
       if (bestPts > 0) {
-        const FULL_DAYS = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
-        facts.push(`Twój najlepszy dzień tego tygodnia to <strong>${FULL_DAYS[new Date(bestDay + 'T12:00:00').getDay()]}</strong> — ${bestPts} pkt.`);
+        const FULL_DAYS = i18next.t('dayNamesFull', { returnObjects: true });
+        facts.push(i18next.t('facts.bestDay', { day: FULL_DAYS[new Date(bestDay + 'T12:00:00').getDay()], pts: bestPts }));
       }
 
       const factsCard = document.getElementById('facts-card');
@@ -1687,15 +2035,17 @@
 
     // ── Level system ──────────────────────────────────────
     const XP_PER_LEVEL = 500;
-    const LEVEL_TITLES = ['Nowicjusz', 'Uczeń', 'Praktyk', 'Specjalista', 'Ekspert', 'Mistrz', 'Wirtuoz', 'Legenda'];
+    function levelTitle(level) {
+      const titles = i18next.t('levelTitles', { returnObjects: true });
+      return titles[Math.min(level - 1, titles.length - 1)];
+    }
 
     function renderLevel(xp) {
       const level = Math.floor(xp / XP_PER_LEVEL) + 1;
       const intoLevel = xp % XP_PER_LEVEL;
-      const title = LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)];
-      document.getElementById('dash-level').textContent = 'Poziom ' + level;
-      document.getElementById('dash-level-title').textContent = title;
-      document.getElementById('dash-level-xp').textContent = `${intoLevel} / ${XP_PER_LEVEL} XP`;
+      document.getElementById('dash-level').textContent = i18next.t('dashboard.level', { n: level });
+      document.getElementById('dash-level-title').textContent = levelTitle(level);
+      document.getElementById('dash-level-xp').textContent = i18next.t('dashboard.xp', { cur: intoLevel, max: XP_PER_LEVEL });
       document.getElementById('dash-level-bar').style.width = (intoLevel / XP_PER_LEVEL * 100) + '%';
     }
 
@@ -1741,11 +2091,11 @@
 
         if (freezeEl) {
           if (freezeUsedNow) {
-            freezeEl.textContent = '🛡️ Zamrożenie serii użyte!';
+            freezeEl.textContent = i18next.t('dashboard.freezeUsed');
             freezeEl.style.color = 'var(--accent)';
             freezeEl.style.display = 'block';
           } else if (freezeAvailable && streak > 0) {
-            freezeEl.textContent = '🛡️ Masz zamrożenie serii';
+            freezeEl.textContent = i18next.t('dashboard.freezeAvailable');
             freezeEl.style.color = 'var(--text2)';
             freezeEl.style.display = 'block';
           } else {
@@ -1760,16 +2110,16 @@
       }
     }
 
-    // ── Achievements ──────────────────────────────────────
+    // ── Achievements ── (nazwy/opisy w słowniku i18n: achievements.<id>)
     const ACHIEVEMENTS = [
-      { id: 'first_activity', emoji: '✨', name: 'Pierwsza iskra',      desc: 'Zaloguj pierwszą aktywność' },
-      { id: 'pts_1000',       emoji: '💰', name: 'Tysiąc punktów',      desc: 'Zarobić 1 000 pkt łącznie' },
-      { id: 'pts_5000',       emoji: '💎', name: 'Pięć tysięcy',        desc: 'Zarobić 5 000 pkt łącznie' },
-      { id: 'first_purchase', emoji: '🛒', name: 'Pierwszy zakup',      desc: 'Wydaj punkty po raz pierwszy' },
-      { id: 'streak_7',       emoji: '🔥', name: 'Tygodniowy wojownik', desc: '7 dni z rzędu' },
-      { id: 'streak_30',      emoji: '🏆', name: 'Miesięczna legenda',  desc: '30 dni z rzędu' },
-      { id: 'gaming_hour',    emoji: '🎮', name: 'Maraton gracza',      desc: '60 min grania w jeden dzień' },
-      { id: 'daily_limit',    emoji: '⚡', name: 'Limit dobity!',       desc: 'Dobij dzienny limit punktów' },
+      { id: 'first_activity', emoji: '✨' },
+      { id: 'pts_1000',       emoji: '💰' },
+      { id: 'pts_5000',       emoji: '💎' },
+      { id: 'first_purchase', emoji: '🛒' },
+      { id: 'streak_7',       emoji: '🔥' },
+      { id: 'streak_30',      emoji: '🏆' },
+      { id: 'gaming_hour',    emoji: '🎮' },
+      { id: 'daily_limit',    emoji: '⚡' },
     ];
 
     async function checkAchievements({ streak = 0 } = {}) {
@@ -1800,7 +2150,8 @@
         const updated = [...current, ...newOnes.map(a => a.id)];
         await updateDoc(doc(db, 'users', currentUser.uid), { achievements: updated });
         userProfile.achievements = updated;
-        toast('Nowa odznaka: ' + newOnes.map(a => a.emoji + ' ' + a.name).join(', ') + '!', 'success');
+        const list = newOnes.map(a => a.emoji + ' ' + i18next.t(`achievements.${a.id}.name`)).join(', ');
+        toast(i18next.t('toast.newBadge', { list }), 'success');
       }
 
       renderAchievements();
@@ -1812,9 +2163,11 @@
       const unlocked = new Set(userProfile.achievements || []);
       grid.innerHTML = ACHIEVEMENTS.map(a => {
         const done = unlocked.has(a.id);
-        return `<div title="${a.desc}" style="text-align:center;padding:10px 4px;border:1px solid ${done ? 'var(--accent)' : 'var(--border)'};border-radius:10px;${done ? 'background:var(--bg3)' : 'opacity:.35'};cursor:default;">
+        const name = i18next.t(`achievements.${a.id}.name`);
+        const desc = i18next.t(`achievements.${a.id}.desc`);
+        return `<div title="${desc}" style="text-align:center;padding:10px 4px;border:1px solid ${done ? 'var(--accent)' : 'var(--border)'};border-radius:10px;${done ? 'background:var(--bg3)' : 'opacity:.35'};cursor:default;">
           <div style="font-size:22px;margin-bottom:5px">${a.emoji}</div>
-          <div style="font-size:10px;font-weight:600;line-height:1.3;color:${done ? 'var(--text)' : 'var(--text2)'}">${a.name}</div>
+          <div style="font-size:10px;font-weight:600;line-height:1.3;color:${done ? 'var(--text)' : 'var(--text2)'}">${name}</div>
         </div>`;
       }).join('');
     }
@@ -1829,7 +2182,7 @@
       const el = document.getElementById('recent-list');
 
       if (snap.empty) {
-        el.innerHTML = '<p class="text2">Brak aktywności. Zacznij zarabiać punkty!</p>';
+        el.innerHTML = `<p class="text2">${i18next.t('dashboard.noActivities')}</p>`;
         return;
       }
 
@@ -1919,7 +2272,7 @@
       const pager = document.getElementById('history-pager');
 
       if (historyDocs.length === 0) {
-        el.innerHTML = '<p class="text2">Brak aktywności. Zacznij zarabiać punkty!</p>';
+        el.innerHTML = `<p class="text2">${i18next.t('dashboard.noActivities')}</p>`;
         pager.style.display = 'none';
         return;
       }
@@ -1987,7 +2340,7 @@
         // Warn only when the limit is already reached and nothing more can be earned.
         const capWarn = document.getElementById('pts-cap-warn');
         if (todayPts >= limit) {
-          capWarn.textContent = '(limit dzienny osiągnięty — 0 pkt)';
+          capWarn.textContent = i18next.t('logActivity.capReached');
           capWarn.style.display = 'inline';
         } else {
           capWarn.style.display = 'none';
@@ -2053,15 +2406,14 @@
         document.getElementById('pts-preview').style.display = 'none';
         showPage('dashboard');
         await loadDashboard();
-        toast(`+${actualEarned} pkt zarobione! 🎉`);
+        toast(i18next.t('toast.earnedPts', { pts: actualEarned }));
 
         // Reward feedback: pulse the balance, then celebrate a level-up or confetti.
         pulseEl(document.querySelector('.balance-card'));
         const afterEarned = userProfile.points?.earnedAllTime || 0;
         const afterLevel = Math.floor(afterEarned / XP_PER_LEVEL) + 1;
         if (afterLevel > beforeLevel) {
-          const title = LEVEL_TITLES[Math.min(afterLevel - 1, LEVEL_TITLES.length - 1)];
-          setTimeout(() => showLevelup(afterLevel, title), 350);
+          setTimeout(() => showLevelup(afterLevel, levelTitle(afterLevel)), 350);
         } else {
           confettiBurst();
         }
@@ -2147,7 +2499,7 @@
         limit(30)
       );
       const snap = await getDocs(q);
-      if (snap.empty) { el.innerHTML = '<p class="text2">Brak sesji.</p>'; return; }
+      if (snap.empty) { el.innerHTML = `<p class="text2">${i18next.t('logGaming.noSessions')}</p>`; return; }
       el.innerHTML = snap.docs.map(d => {
         const s = d.data();
         const dateStr = s.date || s.timestamp?.toDate?.().toLocaleDateString('pl-PL') || '—';
@@ -2983,17 +3335,17 @@
       const btn = document.getElementById('notif-btn');
       if (!el) return;
       if (typeof Notification === 'undefined') {
-        el.textContent = 'Ta przeglądarka nie obsługuje powiadomień.';
+        el.textContent = i18next.t('settings.notifUnsupported');
         if (btn) btn.style.display = 'none';
         return;
       }
       if (on || Notification.permission === 'granted') {
-        el.textContent = '🔔 Powiadomienia włączone na tym urządzeniu.';
-        if (btn) btn.textContent = 'Odśwież token';
+        el.textContent = i18next.t('settings.notifOn');
+        if (btn) btn.textContent = i18next.t('settings.refreshToken');
       } else if (Notification.permission === 'denied') {
-        el.textContent = 'Powiadomienia zablokowane w ustawieniach przeglądarki.';
+        el.textContent = i18next.t('settings.notifBlocked');
       } else {
-        el.textContent = 'Powiadomienia wyłączone.';
+        el.textContent = i18next.t('settings.notifOff');
       }
       renderNotifHours();
     }
@@ -3015,8 +3367,9 @@
         const isActive = t === name;
         el.style.borderColor = isActive ? THEME_ACCENTS[t] : THEME_BORDERS[t];
         el.style.transform = isActive ? 'scale(1.04)' : '';
-        // Update label checkmark
-        const label = el.querySelector('div:last-child');
+        // Update label checkmark — lastElementChild, bo querySelector('div:last-child')
+        // łapał pierwszy zagnieżdżony div i nadpisywał podgląd motywu tekstem.
+        const label = el.lastElementChild;
         if (label) {
           const baseName = { lifexp: 'LifeXP', apple: 'Apple', gold: 'Gold' }[t];
           label.textContent = isActive ? baseName + ' ✓' : baseName;
@@ -3056,21 +3409,23 @@
     })();
 
     // ── Strefa czasowa (wykryta z przeglądarki, tylko etykieta) ──
-    (function initTimezoneLabel() {
-      const el = document.getElementById('notif-tz-label');
-      if (!el) return;
+    function detectedTimezone() {
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const offsetMin = -new Date().getTimezoneOffset();
         const sign = offsetMin >= 0 ? '+' : '-';
         const abs = Math.abs(offsetMin);
         const h = Math.floor(abs / 60), m = abs % 60;
-        const offsetStr = `UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
-        el.textContent = `Twoja strefa: ${tz}, ${offsetStr}`;
+        return `${tz}, UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
       } catch (e) {
-        el.textContent = 'czas lokalny';
+        return 'local time';
       }
-    })();
+    }
+    function renderNotifHoursInfo() {
+      const el = document.getElementById('notif-hours-info');
+      if (el) el.textContent = i18next.t('settings.notifHoursInfo', { tz: detectedTimezone() });
+    }
+    i18nReady.then(renderNotifHoursInfo);
 
     window.enableNotifications = async () => {
       if (typeof Notification === 'undefined') return toast('Brak wsparcia dla powiadomień.', 'error');
@@ -3118,7 +3473,7 @@
       const el = document.getElementById('notif-hours-chips');
       if (!el) return;
       if (hours.length === 0) {
-        el.innerHTML = '<span class="text2" style="font-size:13px">Brak wybranych godzin — powiadomienia nie będą wysyłane.</span>';
+        el.innerHTML = `<span class="text2" style="font-size:13px">${i18next.t('settings.notifNoHours')}</span>`;
         return;
       }
       el.innerHTML = hours.slice().sort((a,b)=>a-b).map(h =>
