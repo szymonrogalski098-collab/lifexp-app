@@ -109,7 +109,7 @@
       background: rgba(255,255,255,.08);
     }
     .balance-label { font-size: 13px; color: rgba(255,255,255,.7); font-weight: 500; }
-    .balance-amount { font-size: 48px; font-weight: 700; font-family: var(--mono); margin: 4px 0; }
+    .balance-amount { font-size: 48px; font-weight: 700; font-family: var(--mono); margin: 4px 0; color: #fff; }
     .balance-pts { font-size: 14px; color: rgba(255,255,255,.7); }
 
     .stats-grid {
@@ -529,6 +529,26 @@
   </style>
 </head>
 <body>
+  <script>
+    // Blokujący, synchroniczny skrypt — musi wykonać się PRZED pierwszym malowaniem strony,
+    // inaczej widać błysk domyślnego motywu LifeXP zanim moduł na dole strony zdąży
+    // dodać klasę theme-apple/theme-gold (moduły są deferred, uruchamiają się po parsowaniu HTML).
+    // Mapa fontów musi być zsynchronizowana z FONT_STACKS w głównym skrypcie.
+    (function () {
+      var theme = localStorage.getItem('lifexp-theme');
+      if (theme === 'apple') document.body.classList.add('theme-apple');
+      else if (theme === 'gold') document.body.classList.add('theme-gold');
+
+      var fontStacks = {
+        manrope: "'Manrope', sans-serif",
+        jakarta: "'Plus Jakarta Sans', sans-serif",
+        poppins: "'Poppins', sans-serif",
+        inter: "'Inter', sans-serif",
+      };
+      var font = localStorage.getItem('lifexp-font');
+      if (font && fontStacks[font]) document.body.style.setProperty('--font-user', fontStacks[font]);
+    })();
+  </script>
   <div class="app-layout">
     <!-- Sidebar -->
     <nav class="sidebar">
@@ -1350,8 +1370,9 @@
           historyTitle: 'Purchase history', noPurchases: 'No purchases yet.',
         },
         goal: {
-          title: 'Savings goal', namePh: 'e.g. Gaming mouse', amountLabel: 'Price (zł)',
-          set: 'Set goal', missing: '{{zl}} zł to go ({{pts}} pts)',
+          title: 'Savings goal', namePh: 'e.g. Gaming mouse', amountLabel: 'Price (zł)', amountLabelPts: 'Target points',
+          typePoints: 'Points goal', typeMoney: 'Money goal',
+          set: 'Set goal', missing: '{{zl}} zł to go', missingPts: '{{pts}} pts to go',
           reached: 'Goal reached! You have enough points 🎉',
           edit: 'Edit', remove: 'Remove', confirmRemove: 'Remove this goal?',
         },
@@ -1445,8 +1466,9 @@
           historyTitle: 'Historia zakupów', noPurchases: 'Brak zakupów.',
         },
         goal: {
-          title: 'Cel oszczędzania', namePh: 'Np. Myszka gamingowa', amountLabel: 'Cena (zł)',
-          set: 'Ustaw cel', missing: 'Brakuje {{zl}} zł ({{pts}} pkt)',
+          title: 'Cel oszczędzania', namePh: 'Np. Myszka gamingowa', amountLabel: 'Cena (zł)', amountLabelPts: 'Punkty docelowe',
+          typePoints: 'Cel punktowy', typeMoney: 'Cel pieniężny',
+          set: 'Ustaw cel', missing: 'Brakuje {{zl}} zł', missingPts: 'Brakuje {{pts}} pkt',
           reached: 'Cel osiągnięty! Masz dość punktów 🎉',
           edit: 'Zmień', remove: 'Usuń', confirmRemove: 'Usunąć ten cel?',
         },
@@ -1829,6 +1851,8 @@
     }
 
     // ── Cel oszczędzania ──────────────────────────────────
+    let goalTypeChoice = null; // 'points' | 'money' — wybór typu zanim nowy cel zostanie zapisany (nie trwały)
+
     function renderGoal() {
       const card = document.getElementById('goal-card');
       if (!card || !userProfile) return;
@@ -1836,24 +1860,38 @@
 
       const t = (k, o) => i18next.t(k, o);
       const name = userProfile.goalName;
-      const goalZl = userProfile.goalAmountZl;
+      const goalAmount = userProfile.goalAmount;
+      const goalType = userProfile.goalType || 'money';
 
-      if (!name || !goalZl) {
+      if (!name || !goalAmount) {
+        if (!goalTypeChoice) {
+          card.innerHTML = `
+            <h3 style="margin-bottom:14px">🎯 ${t('goal.title')}</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn-secondary" style="flex:1" onclick="pickGoalType('points')">🎯 ${t('goal.typePoints')}</button>
+              <button class="btn-secondary" style="flex:1" onclick="pickGoalType('money')">💰 ${t('goal.typeMoney')}</button>
+            </div>`;
+          return;
+        }
+        const isMoney = goalTypeChoice === 'money';
         card.innerHTML = `
           <h3 style="margin-bottom:14px">🎯 ${t('goal.title')}</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input type="text" id="goal-name-input" placeholder="${t('goal.namePh')}" style="flex:2;min-width:150px">
-            <input type="number" id="goal-amount-input" min="1" step="0.01" placeholder="${t('goal.amountLabel')}" style="flex:1;min-width:90px">
+            <input type="number" id="goal-amount-input" min="1" step="${isMoney ? '0.01' : '1'}" placeholder="${isMoney ? t('goal.amountLabel') : t('goal.amountLabelPts')}" style="flex:1;min-width:90px">
             <button class="btn-primary" onclick="saveGoal()">${t('goal.set')}</button>
-          </div>`;
+          </div>
+          <button class="btn-ghost btn-sm" style="margin-top:8px" onclick="goalTypeChoice=null;renderGoal()">${t('settings.cancel')}</button>`;
         return;
       }
 
-      const balanceZl = (userProfile.points?.total || 0) * rateGeneral();
-      const pct = Math.min(100, (balanceZl / goalZl) * 100);
-      const missingZl = Math.max(0, goalZl - balanceZl);
-      const missingPts = Math.ceil(missingZl / rateGeneral());
-      const reached = balanceZl >= goalZl;
+      goalTypeChoice = null;
+      const isMoney = goalType === 'money';
+      const balance = isMoney ? (userProfile.points?.total || 0) * rateGeneral() : (userProfile.points?.total || 0);
+      const pct = Math.min(100, (balance / goalAmount) * 100);
+      const missing = Math.max(0, goalAmount - balance);
+      const reached = balance >= goalAmount;
+      const fmt = (n) => isMoney ? n.toFixed(2).replace('.', ',') + ' zł' : Math.round(n) + ' pkt';
 
       card.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
@@ -1867,9 +1905,9 @@
           <div class="progress-bar" style="width:${pct}%;${reached ? 'background:var(--accent2)' : ''}"></div>
         </div>
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <span class="text2">${balanceZl.toFixed(2).replace('.', ',')} / ${Number(goalZl).toFixed(2).replace('.', ',')} zł</span>
+          <span class="text2">${fmt(balance)} / ${fmt(goalAmount)} · <strong>${pct.toFixed(0)}%</strong></span>
           <span style="font-size:13px;font-weight:600;color:${reached ? 'var(--accent2)' : 'var(--text2)'}">
-            ${reached ? t('goal.reached') : t('goal.missing', { zl: missingZl.toFixed(2).replace('.', ','), pts: missingPts })}
+            ${reached ? t('goal.reached') : (isMoney ? t('goal.missing', { zl: missing.toFixed(2).replace('.', ',') }) : t('goal.missingPts', { pts: Math.ceil(missing) }))}
           </span>
         </div>`;
 
@@ -1882,21 +1920,29 @@
       }
     }
 
+    window.pickGoalType = (type) => {
+      goalTypeChoice = type;
+      renderGoal();
+    };
+
     window.saveGoal = async () => {
       const name = document.getElementById('goal-name-input').value.trim();
       const amount = parseFloat(document.getElementById('goal-amount-input').value);
       if (!name) return toast(i18next.t('goal.namePh'), 'error');
       if (!amount || amount <= 0) return toast(i18next.t('goal.amountLabel'), 'error');
       await updateDoc(doc(db, 'users', currentUser.uid), {
-        goalName: name, goalAmountZl: amount, goalCelebrated: false,
+        goalName: name, goalType: goalTypeChoice, goalAmount: amount, goalCelebrated: false,
+        goalAmountZl: deleteField(),
       });
+      goalTypeChoice = null;
       await loadProfile();
       renderGoal();
     };
 
     window.editGoal = () => {
       const name = userProfile.goalName || '';
-      const amount = userProfile.goalAmountZl || '';
+      const amount = userProfile.goalAmount || '';
+      goalTypeChoice = userProfile.goalType || 'money';
       userProfile.goalName = null; // tymczasowo pokaż formularz
       renderGoal();
       userProfile.goalName = name;
@@ -1907,8 +1953,9 @@
     window.removeGoal = async () => {
       if (!await confirmDialog(i18next.t('goal.confirmRemove'))) return;
       await updateDoc(doc(db, 'users', currentUser.uid), {
-        goalName: deleteField(), goalAmountZl: deleteField(), goalCelebrated: deleteField(),
+        goalName: deleteField(), goalType: deleteField(), goalAmount: deleteField(), goalCelebrated: deleteField(),
       });
+      goalTypeChoice = null;
       await loadProfile();
       renderGoal();
     };

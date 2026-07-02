@@ -237,6 +237,15 @@ input:focus, select:focus { border-color: var(--accent); }
   padding: 20px;
 }
 
+/* Pionowy odstęp między kartami ułożonymi jedna pod drugą na stronie (bez zmiany
+   szerokości niczego). Celowo ograniczone do BEZPOŚREDNICH dzieci .page, żeby nie
+   dublować odstępów w Ustawieniach — tam karty są w kontenerze flex z gap.
+   .action-row ma już własny margin-bottom (app.html), nie trzeba go tu powtarzać. */
+.page.active > .card,
+.page.active > .level-card {
+  margin-bottom: 20px;
+}
+
 .btn-primary {
   background: var(--accent);
   color: #fff;
