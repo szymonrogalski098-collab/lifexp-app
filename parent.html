@@ -56,6 +56,9 @@
     .activity-pts { font-size: 14px; font-weight: 700; color: var(--accent2); font-family: var(--mono); }
     .purchase-item { justify-content: space-between; }
 
+    .pg-wrap { background: var(--bg3); border-radius: 6px; height: 8px; overflow: hidden; }
+    .pg-bar { height: 100%; background: var(--accent); border-radius: 6px; }
+
     .child-select { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; }
     .child-select select { max-width: 260px; }
     h3.sec { font-size: 15px; margin-bottom: 14px; }
@@ -225,6 +228,16 @@
       const chorePts = choreSnap.docs.reduce((s, d) => s + (d.data().points || 0), 0);
       const choreOutstanding = (chorePts * 0.45).toFixed(2).replace('.', ',') + ' zł';
 
+      // Money tracker: rodzic widzi TYLKO saldo (money/balance) i cele (moneyGoals) —
+      // transakcje i kategorie są owner-only w regułach Firestore.
+      let moneyCurrent = null, moneyGoals = [];
+      try {
+        const mbSnap = await getDoc(doc(db, 'users', child.uid, 'money', 'balance'));
+        if (mbSnap.exists()) moneyCurrent = mbSnap.data().current || 0;
+        const mgSnap = await getDocs(collection(db, 'users', child.uid, 'moneyGoals'));
+        moneyGoals = mgSnap.docs.map(d => d.data());
+      } catch (e) { /* moduł Money jeszcze nie używany lub reguły nie wgrane — sekcja się nie pokaże */ }
+
       const total = child.points?.total || 0;
       const labels = days.map(d => d.slice(5));
 
@@ -250,6 +263,16 @@
           <div class="text2" style="margin-bottom:8px">Historia wypłat:</div>
           ${payoutSnap.empty ? '<p class="text2">Brak wypłat.</p>' : payoutSnap.docs.map(d => payoutRow(d.data())).join('')}
         </div>
+
+        ${(moneyCurrent === null && moneyGoals.length === 0) ? '' : `
+        <div class="card" style="margin-bottom:16px">
+          <h3 class="sec">💰 Money — saldo i cele oszczędnościowe</h3>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+            <div style="font-size:30px;font-weight:700;font-family:var(--mono);color:var(--accent2)">${fmtMoney(moneyCurrent || 0)}</div>
+            <div class="text2">saldo money trackera</div>
+          </div>
+          ${moneyGoals.length === 0 ? '<p class="text2">Brak celów oszczędnościowych.</p>' : moneyGoals.map(moneyGoalRow).join('')}
+        </div>`}
 
         <div class="card" style="margin-bottom:16px">
           <h3 class="sec">Punkty — ostatnie 7 dni</h3>
@@ -309,6 +332,21 @@
       return `<div class="purchase-item">
         <div><div style="font-size:14px;font-weight:500">${escapeHtml(p.description)}</div><div class="text2">${dateStr}</div></div>
         <div style="text-align:right"><div style="font-weight:700;color:var(--warn)">-${p.pointsCost} pkt</div><div class="text2">${(p.amount).toFixed(2).replace('.', ',')} zł</div></div>
+      </div>`;
+    }
+
+    const fmtMoney = (v) => (Number(v) || 0).toFixed(2).replace('.', ',') + ' zł';
+
+    function moneyGoalRow(g) {
+      const saved = g.savedAmount || 0, target = g.targetAmount || 1;
+      const pct = Math.min(100, (saved / target) * 100);
+      const done = saved >= target;
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+          <span style="font-weight:600;font-size:14px">🎯 ${escapeHtml(g.name || '')}${done ? ' ✅' : ''}</span>
+          <span class="text2">${fmtMoney(saved)} / ${fmtMoney(target)} · ${pct.toFixed(0)}%</span>
+        </div>
+        <div class="pg-wrap"><div class="pg-bar" style="width:${pct}%${done ? ';background:var(--accent2)' : ''}"></div></div>
       </div>`;
     }
 

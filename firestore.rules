@@ -34,10 +34,22 @@ service cloud.firestore {
       allow update: if isOwner(uid);
       allow delete: if isOwner(uid);
 
-      // Wszystkie podkolekcje: activities, dailyLog, gamingSessions, purchases
-      match /{document=**} {
-        allow read:  if isOwner(uid) || isParentOf(uid);
+      // Wszystkie podkolekcje (activities, dailyLog, gamingSessions, purchases,
+      // chores, chorePayouts, choreDefs, activityDefs, money, moneyGoals, ...).
+      // Rodzic (read-only) widzi wszystko OPRÓCZ prywatnych danych money trackera:
+      // transakcje, kategorie i ustawienia limitu są tylko dla właściciela.
+      // Z modułu Money rodzic czyta wyłącznie saldo (money/balance) i cele (moneyGoals).
+      // Uwaga: to celowo NIE jest wildcard {document=**} — wildcard dawałby unię
+      // uprawnień i nie dałoby się z niego wyciąć wyjątków dla money.
+      match /{col}/{docId} {
         allow write: if isOwner(uid);
+        allow read:  if isOwner(uid) || (
+          isParentOf(uid)
+          && col != 'moneyTransactions'
+          && col != 'moneyCategories'
+          && col != 'fcmTokens'
+          && !(col == 'money' && docId == 'settings')
+        );
       }
     }
   }

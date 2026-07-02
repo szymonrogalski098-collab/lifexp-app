@@ -470,6 +470,19 @@
       .fab { right: 16px; bottom: calc(72px + env(safe-area-inset-bottom) + 12px); }
     }
 
+    /* ── Money tracker ── */
+    .money-alert {
+      background: color-mix(in srgb, var(--warn) 12%, transparent);
+      border: 1px solid var(--warn);
+      color: var(--warn);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    .money-goal:last-of-type { border-bottom: none !important; }
+
     /* ── Mobile bottom nav ── */
     .bottom-nav {
       display: none;
@@ -561,6 +574,9 @@
       <div class="nav-item" data-page="shop" onclick="showPage('shop')">
         <span class="icon"><i class="ti ti-shopping-cart"></i></span> <span data-i18n="nav.shop">Wydatki</span>
       </div>
+      <div class="nav-item" data-page="money" onclick="showPage('money')">
+        <span class="icon"><i class="ti ti-wallet"></i></span> <span data-i18n="nav.money">Money</span>
+      </div>
       <div class="nav-item" data-page="chores" onclick="showPage('chores')">
         <span class="icon"><i class="ti ti-checklist"></i></span> <span data-i18n="nav.chores">Obowiązki</span>
       </div>
@@ -595,6 +611,9 @@
       </div>
       <div class="bn-item" data-page="shop" onclick="showPage('shop')">
         <span class="bn-icon"><i class="ti ti-shopping-cart"></i></span><span data-i18n="nav.shop">Wydatki</span>
+      </div>
+      <div class="bn-item" data-page="money" onclick="showPage('money')">
+        <span class="bn-icon"><i class="ti ti-wallet"></i></span><span data-i18n="nav.money">Money</span>
       </div>
       <div class="bn-item" data-page="history" onclick="showPage('history')">
         <span class="bn-icon"><i class="ti ti-history"></i></span><span data-i18n="nav.history">Historia</span>
@@ -792,6 +811,64 @@
           <div id="purchase-list">
             <p class="text2" data-i18n="shop.noPurchases">Brak zakupów.</p>
           </div>
+        </div>
+      </div>
+
+      <!-- MONEY -->
+      <div class="page" id="page-money">
+        <div class="balance-card">
+          <div class="balance-label" data-i18n="money.balanceLabel">Saldo</div>
+          <div class="balance-amount" id="money-balance">0,00 zł</div>
+          <div class="balance-pts" id="money-pending" style="display:none"></div>
+        </div>
+
+        <div class="money-alert" id="money-limit-alert" style="display:none"></div>
+
+        <div class="action-row">
+          <button class="btn-success" onclick="toggleMoneyTxForm()"><i class="ti ti-plus"></i> <span data-i18n="money.addTx">Dodaj transakcję</span></button>
+          <button class="btn-primary" id="money-withdraw-btn" style="display:none" onclick="withdrawMoneyPoints()"><i class="ti ti-cash"></i> <span data-i18n="money.withdraw">Wypłać punkty</span></button>
+        </div>
+
+        <div class="card" id="money-tx-form" style="display:none">
+          <div class="segmented" id="money-type-seg">
+            <button class="seg-btn active" data-type="expense" onclick="setMoneyTxType('expense')" data-i18n="money.txExpense">Wydatek</button>
+            <button class="seg-btn" data-type="income" onclick="setMoneyTxType('income')" data-i18n="money.txIncome">Przychód</button>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label data-i18n="money.amount">Kwota (PLN)</label>
+              <input type="number" id="mtx-amount" min="0.01" step="0.01" placeholder="np. 25.00" data-i18n-placeholder="money.amountPh">
+            </div>
+            <div class="form-group">
+              <label data-i18n="money.date">Data</label>
+              <input type="date" id="mtx-date">
+            </div>
+          </div>
+          <div class="form-group">
+            <label data-i18n="money.category">Kategoria</label>
+            <select id="mtx-category" onchange="onMoneyCatChange()"></select>
+          </div>
+          <div class="form-group" id="mtx-newcat-wrap" style="display:none">
+            <input type="text" id="mtx-newcat" placeholder="Nazwa nowej kategorii" data-i18n-placeholder="money.newCatPh">
+          </div>
+          <div class="form-group">
+            <label data-i18n="money.note">Notatka (opcjonalna)</label>
+            <input type="text" id="mtx-note" placeholder="np. od taty" data-i18n-placeholder="money.notePh">
+          </div>
+          <button class="btn-success" id="mtx-save-btn" onclick="saveMoneyTx()" style="width:100%" data-i18n="money.save">Zapisz transakcję</button>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:14px" data-i18n="money.goalsTitle">Cele oszczędnościowe</h3>
+          <div id="money-goals-list"></div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <h3 style="margin:0" data-i18n="money.txTitle">Transakcje</h3>
+            <select id="money-archive-select" onchange="setMoneyArchiveMonth(this.value)" style="width:auto;max-width:220px"></select>
+          </div>
+          <div id="money-tx-list"><p class="text2" data-i18n="money.noTx">Brak transakcji.</p></div>
         </div>
       </div>
 
@@ -1134,6 +1211,28 @@
           </div>
 
           <div class="settings-category">
+            <div class="settings-cat-label" data-i18n="settings.catMoney">Money</div>
+
+            <div class="card settings-section">
+              <h3 data-i18n="money.limitTitle">Miesięczny limit wydatków</h3>
+              <div class="settings-row">
+                <label data-i18n="money.monthlyLimit">Limit (PLN)</label>
+                <input type="number" id="set-money-limit" min="0" step="1" value="200" style="width:90px;text-align:center">
+              </div>
+              <button class="btn-secondary" style="margin-top:12px" onclick="saveMoneyLimit()" data-i18n="money.saveLimit">Zapisz limit</button>
+            </div>
+
+            <div class="card settings-section">
+              <h3 data-i18n="money.categories">Kategorie transakcji</h3>
+              <div id="money-cat-list" style="margin-bottom:12px"></div>
+              <div style="display:flex;gap:8px">
+                <input type="text" id="new-money-cat" placeholder="Nazwa kategorii..." data-i18n-placeholder="money.catPh" style="flex:1">
+                <button class="btn-primary" onclick="addMoneyCategory()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-category">
             <div class="settings-cat-label" data-i18n="settings.catChores">Obowiązki</div>
 
             <div class="card settings-section">
@@ -1283,7 +1382,7 @@
     // ── i18n (Faza 5: Dashboard + Ustawienia) ──────────────
     const I18N_RESOURCES = {
       en: { translation: {
-        nav: { dashboard: 'Dashboard', shop: 'Expenses', chores: 'Chores', history: 'History', stats: 'Stats', settings: 'Settings', logout: 'Log out', home: 'Home' },
+        nav: { dashboard: 'Dashboard', shop: 'Expenses', money: 'Money', chores: 'Chores', history: 'History', stats: 'Stats', settings: 'Settings', logout: 'Log out', home: 'Home' },
         dashboard: {
           streakSuffix: 'day streak', available: 'Available funds', points: 'points',
           level: 'Level {{n}}', xp: '{{cur}} / {{max}} XP',
@@ -1373,7 +1472,7 @@
         settings: {
           title: 'Settings',
           catAppearance: 'Appearance', catAccount: 'Account', catNotifications: 'Notifications',
-          catDashboard: 'Dashboard', catExpenses: 'Expenses', catChores: 'Chores', catGaming: 'Gaming', catActivities: 'Activities',
+          catDashboard: 'Dashboard', catExpenses: 'Expenses', catMoney: 'Money', catChores: 'Chores', catGaming: 'Gaming', catActivities: 'Activities',
           theme: 'Theme', font: 'Font', language: 'Language', english: 'English', polish: 'Polski',
           profile: 'Profile', name: 'Name', namePh: 'Your name',
           parentEmail: 'Parent email (weekly reports)', verified: 'Verified:', change: 'Change',
@@ -1416,9 +1515,31 @@
           reached: 'Goal reached! You have enough points 🎉',
           edit: 'Edit', remove: 'Remove', confirmRemove: 'Remove this goal?',
         },
+        money: {
+          balanceLabel: 'Balance',
+          pendingInfo: 'Available to withdraw from points: {{amount}}',
+          withdraw: 'Withdraw points', confirmWithdraw: 'Move {{amount}} from points to your balance?',
+          withdrawn: 'Withdrew {{amount}} to your balance.',
+          addTx: 'Add transaction', txIncome: 'Income', txExpense: 'Expense',
+          amount: 'Amount (PLN)', amountPh: 'e.g. 25.00', category: 'Category', addNewCat: 'Add new...',
+          newCatPh: 'New category name', note: 'Note (optional)', notePh: 'e.g. from dad', date: 'Date',
+          save: 'Save transaction',
+          enterAmount: 'Enter a valid amount.', chooseCategory: 'Choose a category.', catExists: 'This category already exists.',
+          txSaved: 'Transaction saved.', txDeleted: 'Transaction deleted.', confirmDeleteTx: 'Delete this transaction? The balance will be adjusted.',
+          txTitle: 'Transactions', last30: 'Last 30 days', noTx: 'No transactions.',
+          limitAlert: "You've exceeded your monthly spending limit ({{spent}} / {{limit}} PLN)",
+          goalsTitle: 'Savings goals', newGoal: 'New goal', goalNamePh: 'e.g. 2TB SSD', goalTargetPh: 'Target amount (PLN)',
+          goalAdd: 'Add goal', goalAdded: 'Goal added.', goalDeleted: 'Goal deleted.',
+          confirmDeleteGoal: 'Delete this goal? Deposited money stays in your transaction history.',
+          deposit: 'Deposit', depositPh: 'Amount (PLN)', depositSaved: 'Deposited {{amount}} to "{{name}}".',
+          goalDone: 'Goal reached! 🎉', noGoals: 'No goals yet. Add your first one!',
+          limitTitle: 'Monthly spending limit', monthlyLimit: 'Limit (PLN)', saveLimit: 'Save limit', limitSaved: 'Limit saved.',
+          categories: 'Transaction categories', catPh: 'Category name...', catAdded: 'Category added.', catDeleted: 'Category deleted.',
+          confirmDeleteCat: 'Delete this category? Existing transactions keep it.', noCats: 'No categories.',
+        },
       }},
       pl: { translation: {
-        nav: { dashboard: 'Dashboard', shop: 'Wydatki', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
+        nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
         dashboard: {
           streakSuffix: 'dni z rzędu', available: 'Dostępne środki', points: 'punktów',
           level: 'Poziom {{n}}', xp: '{{cur}} / {{max}} XP',
@@ -1508,7 +1629,7 @@
         settings: {
           title: 'Ustawienia',
           catAppearance: 'Wygląd', catAccount: 'Konto', catNotifications: 'Powiadomienia',
-          catDashboard: 'Dashboard', catExpenses: 'Wydatki', catChores: 'Obowiązki', catGaming: 'Granie', catActivities: 'Aktywności',
+          catDashboard: 'Dashboard', catExpenses: 'Wydatki', catMoney: 'Money', catChores: 'Obowiązki', catGaming: 'Granie', catActivities: 'Aktywności',
           theme: 'Motyw', font: 'Czcionka', language: 'Język', english: 'English', polish: 'Polski',
           profile: 'Profil', name: 'Imię', namePh: 'Twoje imię',
           parentEmail: 'Email rodzica (raporty tygodniowe)', verified: 'Zweryfikowany:', change: 'Zmień',
@@ -1550,6 +1671,28 @@
           set: 'Ustaw cel', missing: 'Brakuje {{zl}} zł', missingPts: 'Brakuje {{pts}} pkt',
           reached: 'Cel osiągnięty! Masz dość punktów 🎉',
           edit: 'Zmień', remove: 'Usuń', confirmRemove: 'Usunąć ten cel?',
+        },
+        money: {
+          balanceLabel: 'Saldo',
+          pendingInfo: 'Do wypłaty z punktów: {{amount}}',
+          withdraw: 'Wypłać punkty', confirmWithdraw: 'Przenieść {{amount}} z punktów do salda?',
+          withdrawn: 'Wypłacono {{amount}} do salda.',
+          addTx: 'Dodaj transakcję', txIncome: 'Przychód', txExpense: 'Wydatek',
+          amount: 'Kwota (PLN)', amountPh: 'np. 25.00', category: 'Kategoria', addNewCat: 'Dodaj nową...',
+          newCatPh: 'Nazwa nowej kategorii', note: 'Notatka (opcjonalna)', notePh: 'np. od taty', date: 'Data',
+          save: 'Zapisz transakcję',
+          enterAmount: 'Wpisz poprawną kwotę.', chooseCategory: 'Wybierz kategorię.', catExists: 'Taka kategoria już istnieje.',
+          txSaved: 'Transakcja zapisana.', txDeleted: 'Transakcja usunięta.', confirmDeleteTx: 'Usunąć tę transakcję? Saldo zostanie skorygowane.',
+          txTitle: 'Transakcje', last30: 'Ostatnie 30 dni', noTx: 'Brak transakcji.',
+          limitAlert: 'Przekroczyłeś miesięczny limit wydatków ({{spent}} / {{limit}} PLN)',
+          goalsTitle: 'Cele oszczędnościowe', newGoal: 'Nowy cel', goalNamePh: 'np. 2TB SSD', goalTargetPh: 'Kwota docelowa (PLN)',
+          goalAdd: 'Dodaj cel', goalAdded: 'Cel dodany.', goalDeleted: 'Cel usunięty.',
+          confirmDeleteGoal: 'Usunąć ten cel? Wpłacone pieniądze zostają w historii transakcji.',
+          deposit: 'Wpłać', depositPh: 'Kwota (PLN)', depositSaved: 'Wpłacono {{amount}} na „{{name}}".',
+          goalDone: 'Cel osiągnięty! 🎉', noGoals: 'Brak celów. Dodaj pierwszy!',
+          limitTitle: 'Miesięczny limit wydatków', monthlyLimit: 'Limit (PLN)', saveLimit: 'Zapisz limit', limitSaved: 'Limit zapisany.',
+          categories: 'Kategorie transakcji', catPh: 'Nazwa kategorii...', catAdded: 'Kategoria dodana.', catDeleted: 'Kategoria usunięta.',
+          confirmDeleteCat: 'Usunąć tę kategorię? Istniejące transakcje ją zachowają.', noCats: 'Brak kategorii.',
         },
       }},
     };
@@ -1601,6 +1744,7 @@
           if (document.getElementById('page-settings').classList.contains('active')) updateNotifStatus();
         }
         if (typeof activityDefs !== 'undefined' && activityDefs.length) renderActivityTypeSelect();
+        if (document.getElementById('page-money').classList.contains('active') && moneyBalance) renderMoney();
       } catch (e) { /* dashboard jeszcze nie załadowany — nic nie robimy */ }
     }
 
@@ -1784,12 +1928,14 @@
 
       if (id === 'stats') loadStats();
       if (id === 'shop') loadPurchases();
+      if (id === 'money') loadMoney();
       if (id === 'log-gaming') { updateGameSelect(); loadGamingHistory(); }
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
       if (id === 'settings') {
         loadChoreDefs().then(renderChoreDefsSettings);
         loadActivityDefs().then(renderActivityDefsSettings);
+        loadMoneySettingsUI();
         updateNotifStatus();
         const rToggle = document.getElementById('auto-report-toggle');
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
@@ -2414,6 +2560,9 @@
           'points.earnedAllTime': newEarned
         });
 
+        // Money tracker: cofnij też niewypłacone środki z punktów (clamped w środku).
+        await creditMoneyPending(-pts);
+
         await loadProfile();
         await loadDashboard();
         if (document.getElementById('page-history').classList.contains('active')) await loadHistory();
@@ -2573,6 +2722,9 @@
           'points.total': increment(actualEarned),
           'points.earnedAllTime': increment(actualEarned)
         });
+
+        // Money tracker: punkty generują "wirtualną kasę" do wypłaty (pendingPoints w PLN)
+        await creditMoneyPending(actualEarned);
 
         await loadProfile();
         document.getElementById('act-type').value = '';
@@ -3799,6 +3951,547 @@
         renderNotifHours();
         toast(`Usunięto godzinę ${h}:00.`);
       } catch (e) { toast('Błąd zapisu.', 'error'); }
+    };
+
+    // ── Money Tracker ─────────────────────────────────────
+    // Osobny moduł budżetu (saldo PLN, transakcje, kategorie, cele oszczędnościowe).
+    // Punkty z aktywności NIE znikają z LifeXP — generują pendingPoints (PLN) w
+    // money/balance, które ręcznym "Wypłać punkty" przenosi się do salda current.
+    // Dane: users/{uid}/money/{settings,balance} + users/{uid}/moneyTransactions,
+    // moneyCategories, moneyGoals (płasko, jak reszta podkolekcji — patrz firestore.rules:
+    // rodzic czyta tylko money/balance i moneyGoals).
+    const MONEY_LIMIT_DEFAULT = 200;
+    let moneySettings = null;
+    let moneyBalance = null;
+    let moneyCategories = [];
+    let moneyGoals = [];
+    let moneyTx = [];
+    let moneyTxType = 'expense';
+    let moneyArchiveMonth = '';     // '' = ostatnie 30 dni, 'YYYY-MM' = archiwum miesiąca
+    let moneyGoalFormOpen = false;
+    let moneyDepositGoalId = null;
+    let moneyCatSeeded = false;
+
+    const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+    const fmtMoney = (v) => round2(v).toFixed(2).replace('.', ',') + ' zł';
+    const moneyDocRef = (name) => doc(db, 'users', currentUser.uid, 'money', name);
+    const currentMonthKey = () => monthKeys().cur;
+
+    async function loadMoneyDocs() {
+      const [sSnap, bSnap] = await Promise.all([getDoc(moneyDocRef('settings')), getDoc(moneyDocRef('balance'))]);
+      if (sSnap.exists()) {
+        moneySettings = sSnap.data();
+      } else {
+        moneySettings = { monthlyLimit: MONEY_LIMIT_DEFAULT, currency: 'PLN' };
+        await setDoc(moneyDocRef('settings'), moneySettings);
+      }
+      if (bSnap.exists()) {
+        moneyBalance = bSnap.data();
+      } else {
+        moneyBalance = { current: 0, pendingPoints: 0 };
+        await setDoc(moneyDocRef('balance'), moneyBalance);
+      }
+    }
+
+    // Hook systemu punktów: deltaPts (może być ujemna przy usuwaniu aktywności)
+    // przeliczana na PLN kursem ogólnym (domyślnie 10 pkt = 1 zł), clamp na 0.
+    async function creditMoneyPending(deltaPts) {
+      try {
+        const ref = doc(db, 'users', currentUser.uid, 'money', 'balance');
+        const snap = await getDoc(ref);
+        const cur = snap.exists() ? (snap.data().pendingPoints || 0) : 0;
+        const next = Math.max(0, round2(cur + deltaPts * rateGeneral()));
+        if (snap.exists()) await updateDoc(ref, { pendingPoints: next });
+        else await setDoc(ref, { current: 0, pendingPoints: next });
+        if (moneyBalance) moneyBalance.pendingPoints = next;
+      } catch (e) { console.error('creditMoneyPending failed:', e); }
+    }
+
+    async function updateMoneyCurrent(delta) {
+      const ref = moneyDocRef('balance');
+      const snap = await getDoc(ref);
+      if (snap.exists()) await updateDoc(ref, { current: round2((snap.data().current || 0) + delta) });
+      else await setDoc(ref, { current: round2(delta), pendingPoints: 0 });
+    }
+
+    const MONEY_CAT_COLORS = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b', '#00d2d3', '#ff9f43', '#feca57', '#8a8fa8'];
+
+    async function loadMoneyCategories() {
+      const colRef = collection(db, 'users', currentUser.uid, 'moneyCategories');
+      let snap = await getDocs(colRef);
+      if (snap.empty && !moneyCatSeeded) {
+        moneyCatSeeded = true;
+        const seed = ['kieszonkowe', 'gry', 'jedzenie', 'szkoła', 'inne'];
+        for (let i = 0; i < seed.length; i++) {
+          await addDoc(colRef, { name: seed[i], color: MONEY_CAT_COLORS[i % MONEY_CAT_COLORS.length], icon: '' });
+        }
+        snap = await getDocs(colRef);
+      }
+      moneyCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pl'));
+    }
+
+    async function loadMoneyGoals() {
+      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'moneyGoals'));
+      moneyGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+    }
+
+    async function loadMoneyTx() {
+      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'moneyTransactions'));
+      moneyTx = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '')
+          || (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    }
+
+    window.loadMoney = async () => {
+      try {
+        await loadMoneyDocs();
+        await Promise.all([loadMoneyCategories(), loadMoneyGoals(), loadMoneyTx()]);
+        renderMoney();
+      } catch (e) {
+        console.error('loadMoney failed:', e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    function renderMoney() {
+      animateCount(document.getElementById('money-balance'), moneyBalance?.current || 0, fmtMoney);
+
+      const pending = moneyBalance?.pendingPoints || 0;
+      const pendEl = document.getElementById('money-pending');
+      const wBtn = document.getElementById('money-withdraw-btn');
+      if (pending >= 0.01) {
+        pendEl.textContent = i18next.t('money.pendingInfo', { amount: fmtMoney(pending), interpolation: { escapeValue: false } });
+        pendEl.style.display = 'block';
+        wBtn.style.display = '';
+      } else {
+        pendEl.style.display = 'none';
+        wBtn.style.display = 'none';
+      }
+
+      renderMoneyLimitAlert();
+      renderMoneyCatSelect();
+      renderMoneyGoalsList();
+      renderMoneyArchiveSelect();
+      renderMoneyTxList();
+    }
+
+    function renderMoneyLimitAlert() {
+      const el = document.getElementById('money-limit-alert');
+      const limit = moneySettings?.monthlyLimit ?? MONEY_LIMIT_DEFAULT;
+      const mk = currentMonthKey();
+      const spent = moneyTx
+        .filter(t => t.type === 'expense' && (t.date || '').startsWith(mk))
+        .reduce((s, t) => s + (t.amount || 0), 0);
+      if (limit > 0 && spent > limit) {
+        el.textContent = '⚠️ ' + i18next.t('money.limitAlert', {
+          spent: round2(spent).toFixed(2).replace('.', ','), limit,
+          interpolation: { escapeValue: false },
+        });
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+
+    // ── Formularz transakcji ──
+    window.toggleMoneyTxForm = () => {
+      const f = document.getElementById('money-tx-form');
+      const willOpen = f.style.display === 'none';
+      f.style.display = willOpen ? 'block' : 'none';
+      if (willOpen) {
+        document.getElementById('mtx-date').value = todayStr();
+        renderMoneyCatSelect();
+        document.getElementById('mtx-amount').focus();
+      }
+    };
+
+    window.setMoneyTxType = (type) => {
+      moneyTxType = type;
+      document.querySelectorAll('#money-type-seg .seg-btn')
+        .forEach(b => b.classList.toggle('active', b.dataset.type === type));
+    };
+
+    function renderMoneyCatSelect() {
+      const sel = document.getElementById('mtx-category');
+      if (!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = `<option value="">${i18next.t('logActivity.choose')}</option>`
+        + moneyCategories.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('')
+        + `<option value="__new__">➕ ${i18next.t('money.addNewCat')}</option>`;
+      if (cur && cur !== '__new__') sel.value = cur;
+    }
+
+    window.onMoneyCatChange = () => {
+      document.getElementById('mtx-newcat-wrap').style.display =
+        document.getElementById('mtx-category').value === '__new__' ? 'block' : 'none';
+    };
+
+    async function addMoneyCategoryByName(name) {
+      const exists = moneyCategories.find(c => (c.name || '').toLowerCase() === name.toLowerCase());
+      if (exists) return exists.name;
+      const color = MONEY_CAT_COLORS[moneyCategories.length % MONEY_CAT_COLORS.length];
+      await addDoc(collection(db, 'users', currentUser.uid, 'moneyCategories'), { name, color, icon: '' });
+      await loadMoneyCategories();
+      return name;
+    }
+
+    window.saveMoneyTx = async () => {
+      const amount = round2(parseFloat(document.getElementById('mtx-amount').value));
+      if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
+
+      let category = document.getElementById('mtx-category').value;
+      if (category === '__new__') {
+        const newName = document.getElementById('mtx-newcat').value.trim();
+        if (!newName) return toast(i18next.t('money.chooseCategory'), 'error');
+        category = await addMoneyCategoryByName(newName);
+      }
+      if (!category) return toast(i18next.t('money.chooseCategory'), 'error');
+
+      const note = document.getElementById('mtx-note').value.trim();
+      const date = document.getElementById('mtx-date').value || todayStr();
+
+      const btn = document.getElementById('mtx-save-btn');
+      btn.disabled = true;
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
+          type: moneyTxType, amount, category, note, date, source: 'manual', createdAt: new Date(),
+        });
+        await updateMoneyCurrent(moneyTxType === 'income' ? amount : -amount);
+
+        document.getElementById('mtx-amount').value = '';
+        document.getElementById('mtx-note').value = '';
+        document.getElementById('mtx-newcat').value = '';
+        document.getElementById('mtx-newcat-wrap').style.display = 'none';
+        document.getElementById('mtx-category').value = '';
+        document.getElementById('money-tx-form').style.display = 'none';
+
+        await loadMoney();
+        pulseEl(document.querySelector('#page-money .balance-card'));
+        toast(i18next.t('money.txSaved'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+      btn.disabled = false;
+    };
+
+    window.deleteMoneyTx = async (id) => {
+      if (!await confirmDialog(i18next.t('money.confirmDeleteTx'))) return;
+      try {
+        const ref = doc(db, 'users', currentUser.uid, 'moneyTransactions', id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const t = snap.data();
+        await deleteDoc(ref);
+
+        // Cofnij wpływ transakcji na saldo.
+        await updateMoneyCurrent(t.type === 'income' ? -(t.amount || 0) : (t.amount || 0));
+
+        // Usunięta wypłata punktów wraca do "do wypłaty".
+        if (t.source === 'points_withdrawal') {
+          const bSnap = await getDoc(moneyDocRef('balance'));
+          const cur = bSnap.exists() ? (bSnap.data().pendingPoints || 0) : 0;
+          await updateDoc(moneyDocRef('balance'), { pendingPoints: round2(cur + (t.amount || 0)) });
+        }
+
+        // Usunięta wpłata na cel cofa savedAmount (i ewentualne ukończenie).
+        if (t.goalId) {
+          const gRef = doc(db, 'users', currentUser.uid, 'moneyGoals', t.goalId);
+          const gSnap = await getDoc(gRef);
+          if (gSnap.exists()) {
+            const g = gSnap.data();
+            const saved = Math.max(0, round2((g.savedAmount || 0) - (t.amount || 0)));
+            await updateDoc(gRef, {
+              savedAmount: saved,
+              completedAt: saved >= (g.targetAmount || 0) ? (g.completedAt || null) : null,
+            });
+          }
+        }
+
+        await loadMoney();
+        toast(i18next.t('money.txDeleted'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    // ── Wypłata punktów ──
+    window.withdrawMoneyPoints = async () => {
+      const snap = await getDoc(moneyDocRef('balance'));
+      const pending = snap.exists() ? (snap.data().pendingPoints || 0) : 0;
+      if (pending < 0.01) return;
+      const amount = round2(pending);
+      const msg = i18next.t('money.confirmWithdraw', { amount: fmtMoney(amount), interpolation: { escapeValue: false } });
+      if (!await confirmDialog(msg, i18next.t('money.withdraw'))) return;
+      try {
+        await updateDoc(moneyDocRef('balance'), { current: round2((snap.data().current || 0) + amount), pendingPoints: 0 });
+        await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
+          type: 'income', amount, category: 'punkty LifeXP', note: '', date: todayStr(),
+          source: 'points_withdrawal', createdAt: new Date(),
+        });
+        await loadMoney();
+        confettiBurst();
+        pulseEl(document.querySelector('#page-money .balance-card'));
+        toast(i18next.t('money.withdrawn', { amount: fmtMoney(amount), interpolation: { escapeValue: false } }));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    // ── Cele oszczędnościowe ──
+    function renderMoneyGoalsList() {
+      const el = document.getElementById('money-goals-list');
+      if (!el) return;
+      const t = (k, o) => i18next.t(k, o);
+      let html = '';
+
+      if (moneyGoals.length === 0 && !moneyGoalFormOpen) {
+        html += `<p class="text2">${t('money.noGoals')}</p>`;
+      }
+
+      html += moneyGoals.map(g => {
+        const saved = g.savedAmount || 0, target = g.targetAmount || 1;
+        const pct = Math.min(100, (saved / target) * 100);
+        const done = saved >= target;
+        const depositForm = moneyDepositGoalId === g.id ? `
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input type="number" id="goal-deposit-amount" min="0.01" step="0.01" placeholder="${t('money.depositPh')}" style="flex:1">
+            <button class="btn-primary btn-sm" onclick="saveMoneyDeposit('${g.id}')">${t('money.deposit')}</button>
+            <button class="btn-ghost btn-sm" onclick="openMoneyDeposit(null)">✕</button>
+          </div>` : '';
+        return `
+          <div class="money-goal" style="padding:12px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+              <span style="font-weight:600;font-size:14px">🎯 ${escapeHtml(g.name)}${done ? ' ✅' : ''}</span>
+              <div style="display:flex;gap:6px">
+                ${done ? '' : `<button class="btn-secondary btn-sm" onclick="openMoneyDeposit('${g.id}')">${t('money.deposit')}</button>`}
+                <button class="btn-ghost btn-sm" onclick="deleteMoneyGoal('${g.id}')">${t('goal.remove')}</button>
+              </div>
+            </div>
+            <div class="progress-bar-wrap" style="margin-bottom:6px">
+              <div class="progress-bar" style="width:${pct}%;${done ? 'background:var(--accent2)' : ''}"></div>
+            </div>
+            <span class="text2">${fmtMoney(saved)} / ${fmtMoney(target)} · <strong>${pct.toFixed(0)}%</strong></span>
+            ${depositForm}
+          </div>`;
+      }).join('');
+
+      if (moneyGoalFormOpen) {
+        html += `
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+            <input type="text" id="money-goal-name" placeholder="${t('money.goalNamePh')}" style="flex:2;min-width:150px">
+            <input type="number" id="money-goal-target" min="1" step="0.01" placeholder="${t('money.goalTargetPh')}" style="flex:1;min-width:120px">
+            <button class="btn-primary" onclick="saveMoneyGoal()">${t('money.goalAdd')}</button>
+            <button class="btn-ghost" onclick="toggleMoneyGoalForm()">${t('settings.cancel')}</button>
+          </div>`;
+      } else {
+        html += `<button class="btn-secondary btn-sm" style="margin-top:12px" onclick="toggleMoneyGoalForm()">＋ ${t('money.newGoal')}</button>`;
+      }
+
+      el.innerHTML = html;
+    }
+
+    window.toggleMoneyGoalForm = () => { moneyGoalFormOpen = !moneyGoalFormOpen; renderMoneyGoalsList(); };
+    window.openMoneyDeposit = (id) => {
+      moneyDepositGoalId = id;
+      renderMoneyGoalsList();
+      if (id) document.getElementById('goal-deposit-amount')?.focus();
+    };
+
+    window.saveMoneyGoal = async () => {
+      const name = document.getElementById('money-goal-name').value.trim();
+      const target = round2(parseFloat(document.getElementById('money-goal-target').value));
+      if (!name) return toast(i18next.t('money.goalNamePh'), 'error');
+      if (!target || target <= 0) return toast(i18next.t('money.enterAmount'), 'error');
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'moneyGoals'), {
+          name, targetAmount: target, savedAmount: 0, createdAt: new Date(), completedAt: null,
+        });
+        moneyGoalFormOpen = false;
+        await loadMoneyGoals();
+        renderMoneyGoalsList();
+        toast(i18next.t('money.goalAdded'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    window.deleteMoneyGoal = async (id) => {
+      if (!await confirmDialog(i18next.t('money.confirmDeleteGoal'))) return;
+      try {
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'moneyGoals', id));
+        await loadMoneyGoals();
+        renderMoneyGoalsList();
+        toast(i18next.t('money.goalDeleted'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    window.saveMoneyDeposit = async (goalId) => {
+      const amount = round2(parseFloat(document.getElementById('goal-deposit-amount').value));
+      if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
+      const g = moneyGoals.find(x => x.id === goalId);
+      if (!g) return;
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
+          type: 'expense', amount, category: `oszczędności - ${g.name}`, note: '', date: todayStr(),
+          source: 'manual', goalId, createdAt: new Date(),
+        });
+        await updateMoneyCurrent(-amount);
+
+        const newSaved = round2((g.savedAmount || 0) + amount);
+        const done = newSaved >= (g.targetAmount || 0);
+        await updateDoc(doc(db, 'users', currentUser.uid, 'moneyGoals', goalId), {
+          savedAmount: newSaved,
+          completedAt: done ? (g.completedAt || new Date()) : (g.completedAt || null),
+        });
+
+        moneyDepositGoalId = null;
+        await loadMoney();
+        if (done && !g.completedAt) {
+          confettiBurst();
+          toast(i18next.t('money.goalDone'));
+        } else {
+          toast(i18next.t('money.depositSaved', { amount: fmtMoney(amount), name: g.name, interpolation: { escapeValue: false } }));
+        }
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    // ── Lista transakcji (30 dni + archiwum po miesiącu) ──
+    function monthLabelLocale(mk) {
+      const [y, m] = mk.split('-').map(Number);
+      const loc = i18next.language === 'pl' ? 'pl-PL' : 'en-US';
+      const s = new Date(y, m - 1, 1).toLocaleDateString(loc, { month: 'long', year: 'numeric' });
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function renderMoneyArchiveSelect() {
+      const sel = document.getElementById('money-archive-select');
+      if (!sel) return;
+      const months = [...new Set(moneyTx.map(t => (t.date || '').slice(0, 7)).filter(Boolean))].sort().reverse();
+      sel.innerHTML = `<option value="">${i18next.t('money.last30')}</option>`
+        + months.map(mk => `<option value="${mk}">${monthLabelLocale(mk)}</option>`).join('');
+      sel.value = months.includes(moneyArchiveMonth) ? moneyArchiveMonth : '';
+      moneyArchiveMonth = sel.value;
+    }
+
+    window.setMoneyArchiveMonth = (mk) => { moneyArchiveMonth = mk; renderMoneyTxList(); };
+
+    function renderMoneyTxList() {
+      const el = document.getElementById('money-tx-list');
+      if (!el) return;
+      let list;
+      if (moneyArchiveMonth) {
+        list = moneyTx.filter(t => (t.date || '').startsWith(moneyArchiveMonth));
+      } else {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+        const cutISO = dateISOLocal(cutoff);
+        list = moneyTx.filter(t => (t.date || '') >= cutISO);
+      }
+      if (list.length === 0) {
+        el.innerHTML = `<p class="text2">${i18next.t('money.noTx')}</p>`;
+        return;
+      }
+      el.innerHTML = list.map(t => {
+        const inc = t.type === 'income';
+        const cat = moneyCategories.find(c => c.name === t.category);
+        const dotColor = cat?.color || (inc ? 'var(--accent2)' : 'var(--warn)');
+        const [yy, mm, dd] = (t.date || '--').split('-');
+        const note = t.note ? ` · ${escapeHtml(t.note)}` : '';
+        return `<div class="purchase-item">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <span style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0"></span>
+            <div style="min-width:0">
+              <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.category || '—')}${note}</div>
+              <div class="text2">${dd}.${mm}.${yy}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+            <span style="font-weight:700;font-family:var(--mono);color:${inc ? 'var(--accent2)' : 'var(--warn)'}">${inc ? '+' : '−'}${fmtMoney(t.amount)}</span>
+            <button class="activity-del" onclick="deleteMoneyTx('${t.id}')" title="Usuń">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Money w Ustawieniach: limit + kategorie ──
+    async function loadMoneySettingsUI() {
+      try {
+        if (!moneySettings) await loadMoneyDocs();
+        if (moneyCategories.length === 0) await loadMoneyCategories();
+        const inp = document.getElementById('set-money-limit');
+        if (inp) inp.value = moneySettings?.monthlyLimit ?? MONEY_LIMIT_DEFAULT;
+        renderMoneyCatSettings();
+      } catch (e) { console.error('loadMoneySettingsUI failed:', e); }
+    }
+
+    function renderMoneyCatSettings() {
+      const el = document.getElementById('money-cat-list');
+      if (!el) return;
+      if (moneyCategories.length === 0) {
+        el.innerHTML = `<p class="text2">${i18next.t('money.noCats')}</p>`;
+        return;
+      }
+      el.innerHTML = moneyCategories.map(c => `
+        <div class="preset-item" style="margin-bottom:6px">
+          <span class="preset-info"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color || 'var(--accent)'};margin-right:8px"></span>${escapeHtml(c.name)}</span>
+          <button class="btn-secondary" onclick="deleteMoneyCategory('${c.id}')" style="padding:4px 10px;font-size:12px">${i18next.t('shop.delete')}</button>
+        </div>`).join('');
+    }
+
+    window.saveMoneyLimit = async () => {
+      const v = parseFloat(document.getElementById('set-money-limit').value);
+      const limit = (isNaN(v) || v < 0) ? MONEY_LIMIT_DEFAULT : round2(v);
+      try {
+        await setDoc(moneyDocRef('settings'), { monthlyLimit: limit, currency: 'PLN' }, { merge: true });
+        moneySettings = { ...(moneySettings || {}), monthlyLimit: limit, currency: 'PLN' };
+        toast(i18next.t('money.limitSaved'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    window.addMoneyCategory = async () => {
+      const input = document.getElementById('new-money-cat');
+      const name = input.value.trim();
+      if (!name) return;
+      if (moneyCategories.some(c => (c.name || '').toLowerCase() === name.toLowerCase())) {
+        return toast(i18next.t('money.catExists'), 'error');
+      }
+      try {
+        await addMoneyCategoryByName(name);
+        input.value = '';
+        renderMoneyCatSettings();
+        toast(i18next.t('money.catAdded'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    window.deleteMoneyCategory = async (id) => {
+      if (!await confirmDialog(i18next.t('money.confirmDeleteCat'))) return;
+      try {
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'moneyCategories', id));
+        await loadMoneyCategories();
+        renderMoneyCatSettings();
+        toast(i18next.t('money.catDeleted'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
     };
 
   </script>

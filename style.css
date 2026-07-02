@@ -216,6 +216,13 @@ button:hover { opacity: .85; }
 button:active { transform: scale(.97); }
 button:disabled { opacity: .4; cursor: not-allowed; }
 
+/* Fix: przeglądarki rysują domyślny outline (niebieski prostokąt-"hitbox")
+   na fokusowanym przycisku po kliknięciu — wyłączamy globalnie. */
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
 input, select {
   background: var(--bg3);
   border: 1px solid var(--border);
