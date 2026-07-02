@@ -1091,35 +1091,6 @@
             </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catActivities">Aktywności</div>
-
-            <div class="card settings-section">
-              <h3 style="margin-bottom:16px" data-i18n="settings.manageActivities">Zarządzaj aktywnościami</h3>
-              <div id="activity-defs-list" style="margin-bottom:14px"></div>
-
-              <div class="form-group">
-                <label data-i18n="settings.activityName">Nazwa</label>
-                <input type="text" id="ad-name" placeholder="Np. Gra na gitarze" data-i18n-placeholder="settings.activityNamePh">
-              </div>
-              <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.pointsPerHour">Punkty za godzinę</label>
-                <input type="number" id="ad-points" min="1" placeholder="30" style="max-width:140px">
-              </div>
-              <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.icon">Ikona</label>
-                <input type="hidden" id="ad-icon" value="">
-                <div id="ad-icon-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-              </div>
-              <div class="form-group">
-                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.color">Kolor</label>
-                <input type="hidden" id="ad-color" value="">
-                <div id="ad-color-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-              </div>
-              <button class="btn-primary" onclick="addActivityDef()" data-i18n="settings.addActivity">Dodaj aktywność</button>
-            </div>
-          </div>
-
           </div>
           <div class="settings-col">
 
@@ -1183,6 +1154,35 @@
                 <input type="checkbox" id="cd-onetime" style="width:auto"> <span data-i18n="settings.oneTime">Jednorazowy (zniknie po wykonaniu)</span>
               </label>
               <button class="btn-primary" onclick="addChoreDef()" data-i18n="settings.addChore">Dodaj obowiązek</button>
+            </div>
+          </div>
+
+          <div class="settings-category">
+            <div class="settings-cat-label" data-i18n="settings.catActivities">Aktywności</div>
+
+            <div class="card settings-section">
+              <h3 style="margin-bottom:16px" data-i18n="settings.manageActivities">Zarządzaj aktywnościami</h3>
+              <div id="activity-defs-list" style="margin-bottom:14px"></div>
+
+              <div class="form-group">
+                <label data-i18n="settings.activityName">Nazwa</label>
+                <input type="text" id="ad-name" placeholder="Np. Gra na gitarze" data-i18n-placeholder="settings.activityNamePh">
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.pointsPerHour">Punkty za godzinę</label>
+                <input type="number" id="ad-points" min="1" placeholder="30" style="max-width:140px">
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.icon">Ikona</label>
+                <input type="hidden" id="ad-icon" value="">
+                <div id="ad-icon-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+              </div>
+              <div class="form-group">
+                <label style="font-size:12px;color:var(--text2)" data-i18n="settings.color">Kolor</label>
+                <input type="hidden" id="ad-color" value="">
+                <div id="ad-color-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+              </div>
+              <button class="btn-primary" onclick="addActivityDef()" data-i18n="settings.addActivity">Dodaj aktywność</button>
             </div>
           </div>
 
@@ -3411,19 +3411,22 @@
     // ── Strefa czasowa (wykryta z przeglądarki, tylko etykieta) ──
     function detectedTimezone() {
       try {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const offsetMin = -new Date().getTimezoneOffset();
         const sign = offsetMin >= 0 ? '+' : '-';
         const abs = Math.abs(offsetMin);
         const h = Math.floor(abs / 60), m = abs % 60;
-        return `${tz}, UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
+        return `UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
       } catch (e) {
-        return 'local time';
+        return 'UTC';
       }
     }
     function renderNotifHoursInfo() {
       const el = document.getElementById('notif-hours-info');
-      if (el) el.textContent = i18next.t('settings.notifHoursInfo', { tz: detectedTimezone() });
+      if (!el) return;
+      // escapeValue:false tylko tu — tz to nasz własny string (nigdy dane usera),
+      // domyślne globalne escapowanie zostaje włączone (chroni np. facts.favoriteActivity
+      // które trafia do innerHTML z nazwą aktywności edytowalną przez użytkownika).
+      el.textContent = i18next.t('settings.notifHoursInfo', { tz: detectedTimezone(), interpolation: { escapeValue: false } });
     }
     i18nReady.then(renderNotifHoursInfo);
 
