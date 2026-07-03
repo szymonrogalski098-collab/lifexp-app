@@ -228,15 +228,15 @@
       const chorePts = choreSnap.docs.reduce((s, d) => s + (d.data().points || 0), 0);
       const choreOutstanding = (chorePts * 0.45).toFixed(2).replace('.', ',') + ' zł';
 
-      // Money tracker: rodzic widzi TYLKO saldo (money/balance) i cele (moneyGoals) —
-      // transakcje i kategorie są owner-only w regułach Firestore.
-      let moneyCurrent = null, moneyGoals = [];
+      // Money tracker: rodzic widzi TYLKO saldo (money/balance). Cele oszczędnościowe
+      // to teraz cele z dashboardu (pole users/{uid}.goals) — transakcje, kategorie
+      // i pożyczki są owner-only w regułach Firestore.
+      const goals = Array.isArray(child.goals) ? child.goals : [];
+      let moneyCurrent = null;
       try {
         const mbSnap = await getDoc(doc(db, 'users', child.uid, 'money', 'balance'));
         if (mbSnap.exists()) moneyCurrent = mbSnap.data().current || 0;
-        const mgSnap = await getDocs(collection(db, 'users', child.uid, 'moneyGoals'));
-        moneyGoals = mgSnap.docs.map(d => d.data());
-      } catch (e) { /* moduł Money jeszcze nie używany lub reguły nie wgrane — sekcja się nie pokaże */ }
+      } catch (e) { /* moduł Money jeszcze nie używany lub reguły nie wgrane — saldo się nie pokaże */ }
 
       const total = child.points?.total || 0;
       const labels = days.map(d => d.slice(5));
@@ -264,14 +264,14 @@
           ${payoutSnap.empty ? '<p class="text2">Brak wypłat.</p>' : payoutSnap.docs.map(d => payoutRow(d.data())).join('')}
         </div>
 
-        ${(moneyCurrent === null && moneyGoals.length === 0) ? '' : `
+        ${(moneyCurrent === null && goals.length === 0) ? '' : `
         <div class="card" style="margin-bottom:16px">
-          <h3 class="sec">💰 Money — saldo i cele oszczędnościowe</h3>
+          <h3 class="sec">💰 Money — saldo i cele</h3>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
             <div style="font-size:30px;font-weight:700;font-family:var(--mono);color:var(--accent2)">${fmtMoney(moneyCurrent || 0)}</div>
             <div class="text2">saldo money trackera</div>
           </div>
-          ${moneyGoals.length === 0 ? '<p class="text2">Brak celów oszczędnościowych.</p>' : moneyGoals.map(moneyGoalRow).join('')}
+          ${goals.length === 0 ? '<p class="text2">Brak celów.</p>' : goals.map(g => dashGoalRow(g, moneyCurrent, total)).join('')}
         </div>`}
 
         <div class="card" style="margin-bottom:16px">
@@ -337,14 +337,19 @@
 
     const fmtMoney = (v) => (Number(v) || 0).toFixed(2).replace('.', ',') + ' zł';
 
-    function moneyGoalRow(g) {
-      const saved = g.savedAmount || 0, target = g.targetAmount || 1;
-      const pct = Math.min(100, (saved / target) * 100);
-      const done = saved >= target;
+    // Cel z dashboardu (users/{uid}.goals): typ 'money' mierzy saldo Money,
+    // typ 'points' mierzy punkty LifeXP. Kwota docelowa to pole `amount`.
+    function dashGoalRow(g, moneyCurrent, pointsTotal) {
+      const isMoney = g.type === 'money';
+      const cur = isMoney ? (moneyCurrent || 0) : (pointsTotal || 0);
+      const target = g.amount || 1;
+      const pct = Math.min(100, (cur / target) * 100);
+      const done = cur >= target;
+      const fmt = (n) => isMoney ? fmtMoney(n) : Math.round(n) + ' pkt';
       return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap">
           <span style="font-weight:600;font-size:14px">🎯 ${escapeHtml(g.name || '')}${done ? ' ✅' : ''}</span>
-          <span class="text2">${fmtMoney(saved)} / ${fmtMoney(target)} · ${pct.toFixed(0)}%</span>
+          <span class="text2">${fmt(cur)} / ${fmt(target)} · ${pct.toFixed(0)}%</span>
         </div>
         <div class="pg-wrap"><div class="pg-bar" style="width:${pct}%${done ? ';background:var(--accent2)' : ''}"></div></div>
       </div>`;

@@ -853,8 +853,12 @@
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:14px" data-i18n="money.goalsTitle">Cele oszczędnościowe</h3>
-          <div id="money-goals-list"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <h3 style="margin:0" data-i18n="loan.title">Pożyczki</h3>
+            <button class="btn-secondary btn-sm" onclick="toggleLoanForm()">＋ <span data-i18n="loan.new">Nowa pożyczka</span></button>
+          </div>
+          <div id="loan-form" style="display:none;margin-bottom:14px"></div>
+          <div id="loans-list"></div>
         </div>
 
         <div class="card">
@@ -1309,6 +1313,17 @@
 
   <div id="toast"></div>
 
+  <!-- Co nowego? (What's new — raz na nową wersję) -->
+  <div class="modal-overlay" id="whatsnew-modal">
+    <div class="modal" style="max-width:460px">
+      <div style="text-align:center;font-size:40px;margin-bottom:6px">✨</div>
+      <h3 style="text-align:center;margin-bottom:4px" data-i18n="whatsnew.title">Co nowego?</h3>
+      <p class="text2" style="text-align:center;margin-bottom:18px" id="whatsnew-version"></p>
+      <div id="whatsnew-list" style="margin-bottom:22px"></div>
+      <button class="btn-primary" style="width:100%" onclick="closeWhatsNew()" data-i18n="whatsnew.cta">Super!</button>
+    </div>
+  </div>
+
   <!-- Level-up celebration -->
   <div class="modal-overlay" id="levelup-modal">
     <div class="modal" style="text-align:center">
@@ -1530,6 +1545,7 @@
           limitTitle: 'Monthly spending limit', monthlyLimit: 'Limit (PLN)', saveLimit: 'Save limit', limitSaved: 'Limit saved.',
           categories: 'Transaction categories', catPh: 'Category name...', catAdded: 'Category added.', catDeleted: 'Category deleted.',
           confirmDeleteCat: 'Delete this category? Existing transactions keep it.', noCats: 'No categories.',
+          notEnoughBalance: 'Not enough balance.', txSavedPts: 'Transaction saved. -{{pts}} pts',
         },
         common: {
           cancel: 'Cancel', delete: 'Delete', reset: 'Reset', settle: 'Settle', close: 'Close',
@@ -1548,6 +1564,20 @@
           settled: 'Settled {{amount}} 🎉', settleError: 'Settlement error.',
           incomeCategory: 'Household chores',
         },
+        loan: {
+          title: 'Loans', new: 'New loan',
+          iLent: 'I lend', iBorrowed: 'I borrow',
+          person: 'Person', personPh: 'e.g. Dad', amount: 'Amount (PLN)',
+          save: 'Add loan', added: 'Loan added.', deleted: 'Loan deleted.',
+          confirmDelete: 'Delete this loan? The outstanding amount is reversed on your balance.',
+          cantDeleteNegative: "Can't delete — repay it first (balance would go negative).",
+          repay: 'Repay', repayPh: 'Amount (PLN)', repaid: 'Repaid {{amount}}.',
+          settled: 'Loan with {{person}} settled! 🎉',
+          theyOwe: '{{person}} owes you', youOwe: 'You owe {{person}}',
+          owedToMe: 'Owed to me', iOwe: 'I owe', none: 'No loans yet.',
+          enterPerson: 'Enter a name.',
+        },
+        whatsnew: { title: "What's new?", version: 'Version {{v}}', cta: 'Got it!' },
       }},
       pl: { translation: {
         nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
@@ -1704,6 +1734,7 @@
           limitTitle: 'Miesięczny limit wydatków', monthlyLimit: 'Limit (PLN)', saveLimit: 'Zapisz limit', limitSaved: 'Limit zapisany.',
           categories: 'Kategorie transakcji', catPh: 'Nazwa kategorii...', catAdded: 'Kategoria dodana.', catDeleted: 'Kategoria usunięta.',
           confirmDeleteCat: 'Usunąć tę kategorię? Istniejące transakcje ją zachowają.', noCats: 'Brak kategorii.',
+          notEnoughBalance: 'Za mało środków na saldzie.', txSavedPts: 'Transakcja zapisana. -{{pts}} pkt',
         },
         common: {
           cancel: 'Anuluj', delete: 'Usuń', reset: 'Wyzeruj', settle: 'Rozlicz', close: 'Zamknij',
@@ -1722,6 +1753,20 @@
           settled: 'Rozliczono {{amount}} 🎉', settleError: 'Błąd rozliczenia.',
           incomeCategory: 'Obowiązki domowe',
         },
+        loan: {
+          title: 'Pożyczki', new: 'Nowa pożyczka',
+          iLent: 'Pożyczam komuś', iBorrowed: 'Pożyczam od kogoś',
+          person: 'Osoba', personPh: 'np. Tata', amount: 'Kwota (PLN)',
+          save: 'Dodaj pożyczkę', added: 'Pożyczka dodana.', deleted: 'Pożyczka usunięta.',
+          confirmDelete: 'Usunąć tę pożyczkę? Niespłacona kwota zostanie cofnięta z salda.',
+          cantDeleteNegative: 'Nie można usunąć — najpierw spłać (saldo zeszłoby poniżej zera).',
+          repay: 'Spłać', repayPh: 'Kwota (PLN)', repaid: 'Spłacono {{amount}}.',
+          settled: 'Pożyczka z {{person}} rozliczona! 🎉',
+          theyOwe: '{{person}} jest Ci winien', youOwe: 'Jesteś winien {{person}}',
+          owedToMe: 'Winni mi', iOwe: 'Ja jestem winien', none: 'Brak pożyczek.',
+          enterPerson: 'Podaj osobę.',
+        },
+        whatsnew: { title: 'Co nowego?', version: 'Wersja {{v}}', cta: 'Super!' },
       }},
     };
 
@@ -1895,6 +1940,9 @@
         console.error('loadDashboard failed:', e);
         toast('Błąd ładowania danych. Odśwież stronę.', 'error');
       }
+
+      // Po załadowaniu apki — pokaż „Co nowego?" raz na nową wersję.
+      maybeShowWhatsNew();
     });
 
     async function loadProfile() {
@@ -3994,22 +4042,24 @@
     };
 
     // ── Money Tracker ─────────────────────────────────────
-    // Osobny moduł budżetu (saldo PLN, transakcje, kategorie, cele oszczędnościowe).
+    // Osobny moduł budżetu (saldo PLN, transakcje, kategorie, pożyczki).
     // Punkty z aktywności NIE znikają z LifeXP — generują pendingPoints (PLN) w
     // money/balance, które ręcznym "Wypłać punkty" przenosi się do salda current.
+    // Wydatki (zakupy) DODATKOWO odejmują punkty LifeXP (jak dawny sklep).
     // Dane: users/{uid}/money/{settings,balance} + users/{uid}/moneyTransactions,
-    // moneyCategories, moneyGoals (płasko, jak reszta podkolekcji — patrz firestore.rules:
-    // rodzic czyta tylko money/balance i moneyGoals).
+    // moneyCategories, moneyLoans (płasko; w firestore.rules transakcje/kategorie/
+    // pożyczki/ustawienia są owner-only, rodzic czyta tylko money/balance).
     const MONEY_LIMIT_DEFAULT = 200;
     let moneySettings = null;
     let moneyBalance = null;
     let moneyCategories = [];
-    let moneyGoals = [];
+    let moneyLoans = [];
     let moneyTx = [];
     let moneyTxType = 'expense';
     let moneyArchiveMonth = '';     // '' = ostatnie 30 dni, 'YYYY-MM' = archiwum miesiąca
-    let moneyGoalFormOpen = false;
-    let moneyDepositGoalId = null;
+    let loanFormOpen = false;
+    let loanDir = 'lent';           // 'lent' = ja pożyczam komuś; 'borrowed' = ktoś pożycza mnie
+    let loanRepayId = null;
     let moneyCatSeeded = false;
 
     const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
@@ -4071,9 +4121,9 @@
         .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pl'));
     }
 
-    async function loadMoneyGoals() {
-      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'moneyGoals'));
-      moneyGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    async function loadMoneyLoans() {
+      const snap = await getDocs(collection(db, 'users', currentUser.uid, 'moneyLoans'));
+      moneyLoans = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
     }
 
@@ -4087,7 +4137,7 @@
     window.loadMoney = async () => {
       try {
         await loadMoneyDocs();
-        await Promise.all([loadMoneyCategories(), loadMoneyGoals(), loadMoneyTx()]);
+        await Promise.all([loadMoneyCategories(), loadMoneyLoans(), loadMoneyTx()]);
         renderMoney();
       } catch (e) {
         console.error('loadMoney failed:', e);
@@ -4112,11 +4162,12 @@
 
       renderMoneyLimitAlert();
       renderMoneyCatSelect();
-      renderMoneyGoalsList();
+      renderLoanForm();
+      renderLoansList();
       renderMoneyArchiveSelect();
       renderMoneyTxList();
-      // Cel pieniężny na dashboardzie (ukryty widok) — odśwież, by po powrocie był aktualny.
-      if ((userProfile?.goals || []).some(g => g.type === 'money')) renderGoal();
+      // Cele na dashboardzie (ukryty widok) — odśwież, by po zmianie salda/punktów były aktualne.
+      if ((userProfile?.goals || []).length) renderGoal();
     }
 
     function renderMoneyLimitAlert() {
@@ -4183,6 +4234,11 @@
       const amount = round2(parseFloat(document.getElementById('mtx-amount').value));
       if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
 
+      // Blokada ujemnego salda — wydatek nie może zejść poniżej zera.
+      if (moneyTxType === 'expense' && (moneyBalance?.current || 0) - amount < 0) {
+        return toast(i18next.t('money.notEnoughBalance'), 'error');
+      }
+
       let category = document.getElementById('mtx-category').value;
       if (category === '__new__') {
         const newName = document.getElementById('mtx-newcat').value.trim();
@@ -4197,10 +4253,28 @@
       const btn = document.getElementById('mtx-save-btn');
       btn.disabled = true;
       try {
+        // Zakup (wydatek) odejmuje też punkty LifeXP — jak dawny sklep. Clamp na 0
+        // (saldo PLN jest bramką, punktów nie schodzimy poniżej zera). pointsCost
+        // zapisujemy przy transakcji, żeby przy usunięciu dokładnie je zwrócić.
+        let pointsCost = 0;
+        if (moneyTxType === 'expense') {
+          const wanted = Math.ceil(amount / rateGeneral());
+          pointsCost = Math.min(wanted, userProfile.points?.total || 0);
+        }
+
         await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
-          type: moneyTxType, amount, category, note, date, source: 'manual', createdAt: new Date(),
+          type: moneyTxType, amount, category, note, date, source: 'manual', pointsCost, createdAt: new Date(),
         });
         await updateMoneyCurrent(moneyTxType === 'income' ? amount : -amount);
+
+        if (pointsCost > 0) {
+          await updateDoc(doc(db, 'users', currentUser.uid), {
+            'points.total': increment(-pointsCost),
+            'points.spentAllTime': increment(pointsCost),
+          });
+          await loadProfile();
+          refreshDashboardBalances();
+        }
 
         document.getElementById('mtx-amount').value = '';
         document.getElementById('mtx-note').value = '';
@@ -4211,7 +4285,7 @@
 
         await loadMoney();
         pulseEl(document.querySelector('#page-money .balance-card'));
-        toast(i18next.t('money.txSaved'));
+        toast(pointsCost > 0 ? i18next.t('money.txSavedPts', { pts: pointsCost }) : i18next.t('money.txSaved'));
       } catch (e) {
         console.error(e);
         toast(i18next.t('shop.saveError'), 'error');
@@ -4238,18 +4312,14 @@
           await updateDoc(moneyDocRef('balance'), { pendingPoints: round2(cur + (t.amount || 0)) });
         }
 
-        // Usunięta wpłata na cel cofa savedAmount (i ewentualne ukończenie).
-        if (t.goalId) {
-          const gRef = doc(db, 'users', currentUser.uid, 'moneyGoals', t.goalId);
-          const gSnap = await getDoc(gRef);
-          if (gSnap.exists()) {
-            const g = gSnap.data();
-            const saved = Math.max(0, round2((g.savedAmount || 0) - (t.amount || 0)));
-            await updateDoc(gRef, {
-              savedAmount: saved,
-              completedAt: saved >= (g.targetAmount || 0) ? (g.completedAt || null) : null,
-            });
-          }
+        // Zwróć punkty pobrane przy zakupie (wydatek z pointsCost).
+        if ((t.pointsCost || 0) > 0) {
+          await updateDoc(doc(db, 'users', currentUser.uid), {
+            'points.total': increment(t.pointsCost),
+            'points.spentAllTime': increment(-t.pointsCost),
+          });
+          await loadProfile();
+          refreshDashboardBalances();
         }
 
         await loadMoney();
@@ -4284,130 +4354,186 @@
       }
     };
 
-    // ── Cele oszczędnościowe ──
-    function renderMoneyGoalsList() {
-      const el = document.getElementById('money-goals-list');
+    // ── Pożyczki (Loans) ──
+    // 'lent'     = ja pożyczam komuś → oni winni mi; tworzenie ZMNIEJSZA saldo, spłata je zwiększa.
+    // 'borrowed' = ktoś pożycza mnie → ja winien; tworzenie ZWIĘKSZA saldo, spłata je zmniejsza.
+    // Pożyczki ruszają money/balance.current (jak transakcje), ale mają własny rejestr
+    // (moneyLoans), NIE tworzą wpisów w liście transakcji i NIE odejmują punktów.
+    window.toggleLoanForm = () => {
+      loanFormOpen = !loanFormOpen;
+      if (loanFormOpen) loanDir = 'lent';
+      renderLoanForm();
+    };
+
+    window.setLoanDir = (d) => {
+      loanDir = d;
+      document.querySelectorAll('#loan-dir-seg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.dir === d));
+    };
+
+    function renderLoanForm() {
+      const el = document.getElementById('loan-form');
       if (!el) return;
       const t = (k, o) => i18next.t(k, o);
-      let html = '';
+      if (!loanFormOpen) { el.style.display = 'none'; el.innerHTML = ''; return; }
+      el.style.display = 'block';
+      el.innerHTML = `
+        <div class="segmented" id="loan-dir-seg">
+          <button class="seg-btn ${loanDir === 'lent' ? 'active' : ''}" data-dir="lent" onclick="setLoanDir('lent')">${t('loan.iLent')}</button>
+          <button class="seg-btn ${loanDir === 'borrowed' ? 'active' : ''}" data-dir="borrowed" onclick="setLoanDir('borrowed')">${t('loan.iBorrowed')}</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>${t('loan.person')}</label><input type="text" id="loan-person" maxlength="40" placeholder="${t('loan.personPh')}"></div>
+          <div class="form-group"><label>${t('loan.amount')}</label><input type="number" id="loan-amount" min="0.01" max="1000000" step="0.01" placeholder="np. 50.00"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>${t('money.date')}</label><input type="date" id="loan-date"></div>
+          <div class="form-group"><label>${t('money.note')}</label><input type="text" id="loan-note" maxlength="100" placeholder="${t('money.notePh')}"></div>
+        </div>
+        <button class="btn-success" style="width:100%" onclick="saveLoan()">${t('loan.save')}</button>`;
+      document.getElementById('loan-date').value = todayStr();
+      document.getElementById('loan-person').focus();
+    }
 
-      if (moneyGoals.length === 0 && !moneyGoalFormOpen) {
-        html += `<p class="text2">${t('money.noGoals')}</p>`;
-      }
+    function renderLoansList() {
+      const el = document.getElementById('loans-list');
+      if (!el) return;
+      const t = (k, o) => i18next.t(k, o);
 
-      html += moneyGoals.map(g => {
-        const saved = g.savedAmount || 0, target = g.targetAmount || 1;
-        const pct = Math.min(100, (saved / target) * 100);
-        const done = saved >= target;
-        const depositForm = moneyDepositGoalId === g.id ? `
+      if (moneyLoans.length === 0) { el.innerHTML = `<p class="text2">${t('loan.none')}</p>`; return; }
+
+      const outstanding = (l) => Math.max(0, round2((l.amount || 0) - (l.repaidAmount || 0)));
+      const owedToMe = moneyLoans.filter(l => l.direction === 'lent').reduce((s, l) => s + outstanding(l), 0);
+      const iOwe     = moneyLoans.filter(l => l.direction === 'borrowed').reduce((s, l) => s + outstanding(l), 0);
+      const summary = `
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="text2">${t('loan.owedToMe')}: <strong style="color:var(--accent2)">${fmtMoney(owedToMe)}</strong></span>
+          <span class="text2">${t('loan.iOwe')}: <strong style="color:var(--warn)">${fmtMoney(iOwe)}</strong></span>
+        </div>`;
+
+      const rows = moneyLoans.map(l => {
+        const repaid = l.repaidAmount || 0, total = l.amount || 1;
+        const pct = Math.min(100, (repaid / total) * 100);
+        const done = repaid >= total;
+        const isLent = l.direction === 'lent';
+        const label = isLent ? t('loan.theyOwe', { person: l.person }) : t('loan.youOwe', { person: l.person });
+        const note = l.note ? ` · ${escapeHtml(l.note)}` : '';
+        const repayForm = loanRepayId === l.id ? `
           <div style="display:flex;gap:8px;margin-top:10px">
-            <input type="number" id="goal-deposit-amount" min="0.01" max="1000000" step="0.01" placeholder="${t('money.depositPh')}" style="flex:1">
-            <button class="btn-primary btn-sm" onclick="saveMoneyDeposit('${g.id}')">${t('money.deposit')}</button>
-            <button class="btn-ghost btn-sm" onclick="openMoneyDeposit(null)">✕</button>
+            <input type="number" id="loan-repay-amount" min="0.01" max="1000000" step="0.01" placeholder="${t('loan.repayPh')}" style="flex:1">
+            <button class="btn-primary btn-sm" onclick="saveLoanRepay('${l.id}')">${t('loan.repay')}</button>
+            <button class="btn-ghost btn-sm" onclick="openLoanRepay(null)">✕</button>
           </div>` : '';
         return `
-          <div class="money-goal" style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <div class="money-loan" style="padding:12px 0;border-bottom:1px solid var(--border)">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
-              <span style="font-weight:600;font-size:14px">🎯 ${escapeHtml(g.name)}${done ? ' ✅' : ''}</span>
+              <span style="font-weight:600;font-size:14px">${isLent ? '💸' : '🤝'} ${label}${done ? ' ✅' : ''}</span>
               <div style="display:flex;gap:6px">
-                ${done ? '' : `<button class="btn-secondary btn-sm" onclick="openMoneyDeposit('${g.id}')">${t('money.deposit')}</button>`}
-                <button class="btn-ghost btn-sm" onclick="deleteMoneyGoal('${g.id}')">${t('goal.remove')}</button>
+                ${done ? '' : `<button class="btn-secondary btn-sm" onclick="openLoanRepay('${l.id}')">${t('loan.repay')}</button>`}
+                <button class="btn-ghost btn-sm" onclick="deleteLoan('${l.id}')">${t('goal.remove')}</button>
               </div>
             </div>
             <div class="progress-bar-wrap" style="margin-bottom:6px">
               <div class="progress-bar" style="width:${pct}%;${done ? 'background:var(--accent2)' : ''}"></div>
             </div>
-            <span class="text2">${fmtMoney(saved)} / ${fmtMoney(target)} · <strong>${pct.toFixed(0)}%</strong></span>
-            ${depositForm}
+            <span class="text2">${fmtMoney(repaid)} / ${fmtMoney(total)} · <strong>${pct.toFixed(0)}%</strong>${note}</span>
+            ${repayForm}
           </div>`;
       }).join('');
 
-      if (moneyGoalFormOpen) {
-        html += `
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-            <input type="text" id="money-goal-name" maxlength="50" placeholder="${t('money.goalNamePh')}" style="flex:2;min-width:150px">
-            <input type="number" id="money-goal-target" min="1" max="10000000" step="0.01" placeholder="${t('money.goalTargetPh')}" style="flex:1;min-width:120px">
-            <button class="btn-primary" onclick="saveMoneyGoal()">${t('money.goalAdd')}</button>
-            <button class="btn-ghost" onclick="toggleMoneyGoalForm()">${t('settings.cancel')}</button>
-          </div>`;
-      } else {
-        html += `<button class="btn-secondary btn-sm" style="margin-top:12px" onclick="toggleMoneyGoalForm()">＋ ${t('money.newGoal')}</button>`;
-      }
-
-      el.innerHTML = html;
+      el.innerHTML = summary + rows;
     }
 
-    window.toggleMoneyGoalForm = () => { moneyGoalFormOpen = !moneyGoalFormOpen; renderMoneyGoalsList(); };
-    window.openMoneyDeposit = (id) => {
-      moneyDepositGoalId = id;
-      renderMoneyGoalsList();
-      if (id) document.getElementById('goal-deposit-amount')?.focus();
+    window.openLoanRepay = (id) => {
+      loanRepayId = (loanRepayId === id) ? null : id;
+      renderLoansList();
+      if (loanRepayId) document.getElementById('loan-repay-amount')?.focus();
     };
 
-    window.saveMoneyGoal = async () => {
-      const name = document.getElementById('money-goal-name').value.trim();
-      const target = round2(parseFloat(document.getElementById('money-goal-target').value));
-      if (!name) return toast(i18next.t('money.goalNamePh'), 'error');
-      if (!target || target <= 0) return toast(i18next.t('money.enterAmount'), 'error');
-      try {
-        await addDoc(collection(db, 'users', currentUser.uid, 'moneyGoals'), {
-          name, targetAmount: target, savedAmount: 0, createdAt: new Date(), completedAt: null,
-        });
-        moneyGoalFormOpen = false;
-        await loadMoneyGoals();
-        renderMoneyGoalsList();
-        toast(i18next.t('money.goalAdded'));
-      } catch (e) {
-        console.error(e);
-        toast(i18next.t('shop.saveError'), 'error');
-      }
-    };
-
-    window.deleteMoneyGoal = async (id) => {
-      if (!await confirmDialog(i18next.t('money.confirmDeleteGoal'))) return;
-      try {
-        await deleteDoc(doc(db, 'users', currentUser.uid, 'moneyGoals', id));
-        await loadMoneyGoals();
-        renderMoneyGoalsList();
-        toast(i18next.t('money.goalDeleted'));
-      } catch (e) {
-        console.error(e);
-        toast(i18next.t('shop.saveError'), 'error');
-      }
-    };
-
-    window.saveMoneyDeposit = async (goalId) => {
-      const amount = round2(parseFloat(document.getElementById('goal-deposit-amount').value));
+    window.saveLoan = async () => {
+      const person = document.getElementById('loan-person').value.trim();
+      const amount = round2(parseFloat(document.getElementById('loan-amount').value));
+      const date = document.getElementById('loan-date').value || todayStr();
+      const note = document.getElementById('loan-note').value.trim();
+      if (!person) return toast(i18next.t('loan.enterPerson'), 'error');
       if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
-      const g = moneyGoals.find(x => x.id === goalId);
-      if (!g) return;
+      // 'lent' zmniejsza saldo — nie pozwól zejść poniżej zera.
+      if (loanDir === 'lent' && (moneyBalance?.current || 0) - amount < 0) {
+        return toast(i18next.t('money.notEnoughBalance'), 'error');
+      }
       try {
-        await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
-          type: 'expense', amount, category: `oszczędności - ${g.name}`, note: '', date: todayStr(),
-          source: 'manual', goalId, createdAt: new Date(),
+        await addDoc(collection(db, 'users', currentUser.uid, 'moneyLoans'), {
+          person, amount, repaidAmount: 0, direction: loanDir, note, date, createdAt: new Date(), completedAt: null,
         });
-        await updateMoneyCurrent(-amount);
-
-        const newSaved = round2((g.savedAmount || 0) + amount);
-        const done = newSaved >= (g.targetAmount || 0);
-        await updateDoc(doc(db, 'users', currentUser.uid, 'moneyGoals', goalId), {
-          savedAmount: newSaved,
-          completedAt: done ? (g.completedAt || new Date()) : (g.completedAt || null),
-        });
-
-        moneyDepositGoalId = null;
+        await updateMoneyCurrent(loanDir === 'borrowed' ? amount : -amount);
+        loanFormOpen = false;
         await loadMoney();
-        if (done && !g.completedAt) {
-          confettiBurst();
-          toast(i18next.t('money.goalDone'));
-        } else {
-          toast(i18next.t('money.depositSaved', { amount: fmtMoney(amount), name: g.name, interpolation: { escapeValue: false } }));
-        }
+        pulseEl(document.querySelector('#page-money .balance-card'));
+        toast(i18next.t('loan.added'));
       } catch (e) {
         console.error(e);
         toast(i18next.t('shop.saveError'), 'error');
       }
     };
+
+    window.saveLoanRepay = async (id) => {
+      const l = moneyLoans.find(x => x.id === id);
+      if (!l) return;
+      const outstanding = Math.max(0, round2((l.amount || 0) - (l.repaidAmount || 0)));
+      let amount = round2(parseFloat(document.getElementById('loan-repay-amount').value));
+      if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
+      if (amount > outstanding) amount = outstanding;   // nie spłacaj więcej niż zostało
+      // Spłata pożyczki 'borrowed' = ja oddaję → saldo maleje; nie pozwól zejść poniżej zera.
+      if (l.direction === 'borrowed' && (moneyBalance?.current || 0) - amount < 0) {
+        return toast(i18next.t('money.notEnoughBalance'), 'error');
+      }
+      try {
+        const newRepaid = round2((l.repaidAmount || 0) + amount);
+        const done = newRepaid >= (l.amount || 0);
+        await updateDoc(doc(db, 'users', currentUser.uid, 'moneyLoans', id), {
+          repaidAmount: newRepaid,
+          completedAt: done ? (l.completedAt || new Date()) : null,
+        });
+        await updateMoneyCurrent(l.direction === 'borrowed' ? -amount : amount);
+        loanRepayId = null;
+        await loadMoney();
+        if (done) { confettiBurst(); toast(i18next.t('loan.settled', { person: l.person, interpolation: { escapeValue: false } })); }
+        else toast(i18next.t('loan.repaid', { amount: fmtMoney(amount), interpolation: { escapeValue: false } }));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    window.deleteLoan = async (id) => {
+      const l = moneyLoans.find(x => x.id === id);
+      if (!l) return;
+      const outstanding = Math.max(0, round2((l.amount || 0) - (l.repaidAmount || 0)));
+      // Usunięcie cofa niespłaconą część z salda. Dla 'borrowed' to odjęcie —
+      // zablokuj, jeśli saldo zeszłoby poniżej zera (najpierw trzeba spłacić).
+      if (l.direction === 'borrowed' && (moneyBalance?.current || 0) - outstanding < 0) {
+        return toast(i18next.t('loan.cantDeleteNegative'), 'error');
+      }
+      if (!await confirmDialog(i18next.t('loan.confirmDelete'))) return;
+      try {
+        await updateMoneyCurrent(l.direction === 'borrowed' ? -outstanding : outstanding);
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'moneyLoans', id));
+        await loadMoney();
+        toast(i18next.t('loan.deleted'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    // Odświeża liczby salda punktów na (ukrytym) dashboardzie po zmianie punktów w Money.
+    function refreshDashboardBalances() {
+      if (!userProfile) return;
+      const totalPts = userProfile.points?.total || 0;
+      const set = (id, val, fmt) => { const el = document.getElementById(id); if (el) animateCount(el, val, fmt); };
+      set('dash-pln', totalPts, formatPLN);
+      set('dash-pts-num', totalPts, v => Math.round(v).toString());
+      set('dash-spent', userProfile.points?.spentAllTime || 0, formatPLN);
+    }
 
     // ── Lista transakcji (30 dni + archiwum po miesiącu) ──
     function monthLabelLocale(mk) {
@@ -4535,6 +4661,38 @@
         toast(i18next.t('shop.saveError'), 'error');
       }
     };
+
+    // ── „Co nowego?" / „What's new?" ──────────────────────
+    // Pokazuje się RAZ po wejściu na nową wersję (guard w localStorage). Przy każdym
+    // update'u: podbij APP_VERSION i dopisz punkty do CHANGELOG (dwujęzyczne pl/en).
+    const APP_VERSION = '2026.07.03';
+    const CHANGELOG = [
+      { pl: '💰 Nowa zakładka Money — budżet, transakcje i kategorie', en: '💰 New Money tab — budget, transactions and categories' },
+      { pl: '🤝 Pożyczki — śledź komu pożyczasz i kto pożycza Tobie (z częściową spłatą)', en: '🤝 Loans — track who you lend to and who lends to you (with partial repayment)' },
+      { pl: '🛒 Zakupy w Money odejmują też punkty LifeXP', en: '🛒 Money purchases also deduct LifeXP points' },
+      { pl: '🚫 Saldo Money nie może już zejść poniżej zera', en: '🚫 Money balance can no longer go below zero' },
+      { pl: '🎯 Cel pieniężny na dashboardzie liczy realne saldo Money', en: '🎯 Dashboard money goal now tracks your real Money balance' },
+      { pl: '💵 Rozliczenie obowiązków trafia na saldo Money', en: '💵 Chore payouts now land on your Money balance' },
+      { pl: '🌐 Okna potwierdzeń po polsku i angielsku + limity długości pól', en: '🌐 Bilingual confirmation dialogs + input length limits' },
+    ];
+
+    window.closeWhatsNew = () => {
+      document.getElementById('whatsnew-modal').classList.remove('open');
+      try { localStorage.setItem('lifexp-seen-version', APP_VERSION); } catch (e) {}
+    };
+
+    function maybeShowWhatsNew() {
+      try {
+        if (localStorage.getItem('lifexp-seen-version') === APP_VERSION) return;
+        const lng = (i18next.language === 'pl') ? 'pl' : 'en';
+        document.getElementById('whatsnew-version').textContent = i18next.t('whatsnew.version', { v: APP_VERSION });
+        document.getElementById('whatsnew-list').innerHTML = CHANGELOG.map(c => `
+          <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <p style="margin:0;font-size:14px;line-height:1.5">${c[lng]}</p>
+          </div>`).join('');
+        document.getElementById('whatsnew-modal').classList.add('open');
+      } catch (e) { console.error('maybeShowWhatsNew failed:', e); }
+    }
 
   </script>
 </body>

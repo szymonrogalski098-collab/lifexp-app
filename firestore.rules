@@ -47,6 +47,7 @@ service cloud.firestore {
           isParentOf(uid)
           && col != 'moneyTransactions'
           && col != 'moneyCategories'
+          && col != 'moneyLoans'
           && col != 'fcmTokens'
           && !(col == 'money' && docId == 'settings')
         );
