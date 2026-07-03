@@ -71,6 +71,19 @@
       padding: 8px 12px;
       border-radius: 8px;
     }
+    .bug-report-btn {
+      margin-left: auto;
+      flex-shrink: 0;
+      width: 30px; height: 30px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      padding: 0;
+    }
+    .bug-report-btn:hover { border-color: var(--warn); color: var(--warn); }
     .user-avatar {
       width: 32px; height: 32px;
       background: var(--accent);
@@ -591,6 +604,9 @@
         <div class="user-chip">
           <div class="user-avatar" id="user-avatar">?</div>
           <div class="user-name" id="user-name">Ładowanie...</div>
+          <button class="bug-report-btn" onclick="showPage('report-bug')" title="Zgłoś błąd" data-i18n-title="bugReport.reportBtn">
+            <i class="ti ti-bug"></i>
+          </button>
         </div>
         <div class="nav-item" onclick="logout()" style="margin-top:4px">
           <span class="icon"><i class="ti ti-door-exit"></i></span> <span data-i18n="nav.logout">Wyloguj</span>
@@ -870,6 +886,60 @@
         </div>
       </div>
 
+      <!-- ZGŁOŚ BŁĄD -->
+      <div class="page" id="page-report-bug">
+        <h2 style="margin-bottom:20px" data-i18n="bugReport.title">Zgłoś błąd</h2>
+
+        <!-- Widok zgłaszającego -->
+        <div id="bug-submit-view">
+          <div class="card" style="margin-bottom:16px">
+            <div class="form-group">
+              <label data-i18n="bugReport.fieldTitle">Tytuł</label>
+              <input type="text" id="bug-title" maxlength="80" placeholder="np. Saldo pokazuje złą kwotę" data-i18n-placeholder="bugReport.titlePh">
+            </div>
+            <div class="form-group">
+              <label data-i18n="bugReport.fieldArea">Gdzie się zdarzyło?</label>
+              <select id="bug-area"></select>
+            </div>
+            <div class="form-group">
+              <label data-i18n="bugReport.fieldDesc">Opis</label>
+              <textarea id="bug-desc" maxlength="400" rows="5" style="width:100%;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px" placeholder="Opisz co się stało, czego się spodziewałeś i jak to powtórzyć..." data-i18n-placeholder="bugReport.descPh" oninput="updateBugCharCount()"></textarea>
+              <div class="text2" id="bug-char-count" style="text-align:right;margin-top:4px;font-size:12px">0 / 400</div>
+            </div>
+            <p class="text2" id="bug-rate-note" style="display:none;color:var(--warn);margin-bottom:10px" data-i18n="bugReport.rateLimited">Możesz wysłać tylko 1 zgłoszenie dziennie. Spróbuj jutro.</p>
+            <button class="btn-primary" id="bug-submit-btn" style="width:100%" onclick="submitBugReport()" data-i18n="bugReport.submit">Wyślij zgłoszenie</button>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:14px" data-i18n="bugReport.myReports">Moje zgłoszenia</h3>
+            <div id="my-bug-reports"><p class="text2" data-i18n="bugReport.noReports">Brak zgłoszeń.</p></div>
+          </div>
+        </div>
+
+        <!-- Widok admina (szymonrogalski098@gmail.com) -->
+        <div id="bug-admin-view" style="display:none">
+          <div class="segmented" id="bug-admin-tabs">
+            <button class="seg-btn active" data-tab="new" onclick="setBugAdminTab('new')" data-i18n="bugReport.tabNew">Nowe</button>
+            <button class="seg-btn" data-tab="spam" onclick="setBugAdminTab('spam')" data-i18n="bugReport.tabSpam">Spam</button>
+            <button class="seg-btn" data-tab="postponed" onclick="setBugAdminTab('postponed')" data-i18n="bugReport.tabPostponed">Odłożone</button>
+            <button class="seg-btn" data-tab="history" onclick="setBugAdminTab('history')" data-i18n="bugReport.tabHistory">Historia</button>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div id="bug-admin-list"></div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:6px" data-i18n="bugReport.keywordsTitle">Filtr spamu — wymagane słowa</h3>
+            <p class="text2" style="margin-bottom:14px" data-i18n="bugReport.keywordsInfo">Zgłoszenie trafia do Spamu, jeśli opis nie zawiera żadnego z tych słów.</p>
+            <div id="bug-keywords-list" style="margin-bottom:12px"></div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="new-bug-keyword" maxlength="30" placeholder="Dodaj słowo..." data-i18n-placeholder="bugReport.addKeyword" style="flex:1">
+              <button class="btn-primary" onclick="addBugKeyword()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- GENERATOR -->
       <div class="page" id="page-generator">
         <div class="card generator-card">
@@ -1120,6 +1190,16 @@
                   <input type="checkbox" id="auto-report-toggle" onchange="toggleAutoReport(this.checked)">
                   <span class="toggle-slider"></span>
                 </label>
+              </div>
+            </div>
+
+            <div class="card settings-section">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+                <div>
+                  <h3 data-i18n="bugReport.title">Zgłoś błąd</h3>
+                  <p class="text2" style="font-size:13px;margin-top:4px" data-i18n="bugReport.settingsHint">Znalazłeś błąd w aplikacji? Zgłoś go tutaj.</p>
+                </div>
+                <button class="btn-secondary" onclick="showPage('report-bug')" data-i18n="bugReport.reportBtn">Zgłoś błąd</button>
               </div>
             </div>
           </div>
@@ -1577,6 +1657,30 @@
           owedToMe: 'Owed to me', iOwe: 'I owe', none: 'No loans yet.',
           enterPerson: 'Enter a name.',
         },
+        bugReport: {
+          reportBtn: 'Report a bug', title: 'Report a bug', settingsHint: 'Found a bug in the app? Report it here.',
+          fieldTitle: 'Title', titlePh: 'e.g. Balance shows the wrong amount',
+          fieldArea: 'Where did it happen?', areaOther: 'Other',
+          fieldDesc: 'Description', descPh: 'Describe what happened, what you expected, and how to reproduce it...',
+          charCount: '{{cur}} / {{max}}',
+          submit: 'Send report', sent: 'Bug report sent. Thanks!',
+          enterTitle: 'Enter a title.', chooseArea: 'Choose where it happened.', enterDesc: 'Describe the bug.',
+          rateLimited: 'You can only send 1 report per day. Try again tomorrow.',
+          myReports: 'My reports', noReports: 'No reports yet.',
+          statusNew: 'New', statusReview: 'Under review', statusAccepted: 'Accepted',
+          statusRejected: 'Rejected', statusPostponed: 'Postponed',
+          tabNew: 'New', tabSpam: 'Spam', tabPostponed: 'Postponed', tabHistory: 'History',
+          noneInTab: 'Nothing here.',
+          accept: 'Accept', reject: 'Reject', postpone: 'Postpone', delete: 'Delete', notSpam: 'Not spam',
+          confirmDelete: 'Delete this report permanently?',
+          spamExpires: 'Auto-deletes in {{h}}h if left untouched.',
+          keywordsTitle: 'Spam filter — required keywords',
+          keywordsInfo: 'A report is flagged as spam if its description contains none of these words.',
+          addKeyword: 'Add keyword...', keywordAdded: 'Keyword added.', keywordDeleted: 'Keyword deleted.',
+          confirmDeleteKeyword: 'Remove this keyword?',
+          accepted_: 'Accepted.', rejected_: 'Rejected.', postponed_: 'Postponed.', deleted_: 'Deleted.',
+          rescued: 'Marked as not spam — moved to New.',
+        },
         whatsnew: { title: "What's new?", version: 'Version {{v}}', cta: 'Got it!' },
       }},
       pl: { translation: {
@@ -1766,6 +1870,30 @@
           owedToMe: 'Winni mi', iOwe: 'Ja jestem winien', none: 'Brak pożyczek.',
           enterPerson: 'Podaj osobę.',
         },
+        bugReport: {
+          reportBtn: 'Zgłoś błąd', title: 'Zgłoś błąd', settingsHint: 'Znalazłeś błąd w aplikacji? Zgłoś go tutaj.',
+          fieldTitle: 'Tytuł', titlePh: 'np. Saldo pokazuje złą kwotę',
+          fieldArea: 'Gdzie się zdarzyło?', areaOther: 'Inne',
+          fieldDesc: 'Opis', descPh: 'Opisz co się stało, czego się spodziewałeś i jak to powtórzyć...',
+          charCount: '{{cur}} / {{max}}',
+          submit: 'Wyślij zgłoszenie', sent: 'Zgłoszenie wysłane. Dzięki!',
+          enterTitle: 'Wpisz tytuł.', chooseArea: 'Wybierz gdzie się zdarzyło.', enterDesc: 'Opisz błąd.',
+          rateLimited: 'Możesz wysłać tylko 1 zgłoszenie dziennie. Spróbuj jutro.',
+          myReports: 'Moje zgłoszenia', noReports: 'Brak zgłoszeń.',
+          statusNew: 'Nowe', statusReview: 'Sprawdzane', statusAccepted: 'Przyjęte',
+          statusRejected: 'Odrzucone', statusPostponed: 'Odłożone',
+          tabNew: 'Nowe', tabSpam: 'Spam', tabPostponed: 'Odłożone', tabHistory: 'Historia',
+          noneInTab: 'Nic tu nie ma.',
+          accept: 'Przyjmij', reject: 'Odrzuć', postpone: 'Odłóż', delete: 'Usuń', notSpam: 'To nie spam',
+          confirmDelete: 'Usunąć to zgłoszenie na stałe?',
+          spamExpires: 'Zniknie automatycznie za {{h}}h, jeśli nic nie klikniesz.',
+          keywordsTitle: 'Filtr spamu — wymagane słowa',
+          keywordsInfo: 'Zgłoszenie trafia do Spamu, jeśli opis nie zawiera żadnego z tych słów.',
+          addKeyword: 'Dodaj słowo...', keywordAdded: 'Słowo dodane.', keywordDeleted: 'Słowo usunięte.',
+          confirmDeleteKeyword: 'Usunąć to słowo?',
+          accepted_: 'Przyjęto.', rejected_: 'Odrzucono.', postponed_: 'Odłożono.', deleted_: 'Usunięto.',
+          rescued: 'Oznaczono jako niespam — przeniesiono do Nowych.',
+        },
         whatsnew: { title: 'Co nowego?', version: 'Wersja {{v}}', cta: 'Super!' },
       }},
     };
@@ -1786,6 +1914,9 @@
       });
       document.querySelectorAll('[data-i18n-html]').forEach(el => {
         el.innerHTML = i18next.t(el.getAttribute('data-i18n-html'));
+      });
+      document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        el.title = i18next.t(el.getAttribute('data-i18n-title'));
       });
     }
 
@@ -1818,6 +1949,10 @@
         }
         if (typeof activityDefs !== 'undefined' && activityDefs.length) renderActivityTypeSelect();
         if (document.getElementById('page-money').classList.contains('active') && moneyBalance) renderMoney();
+        if (document.getElementById('page-report-bug').classList.contains('active')) {
+          if (isBugAdmin) { renderBugKeywordsSettings(); renderAdminBugList(); }
+          else { renderBugAreaSelect(); renderMyBugReports(); }
+        }
       } catch (e) { /* dashboard jeszcze nie załadowany — nic nie robimy */ }
     }
 
@@ -2005,6 +2140,7 @@
       if (id === 'stats') loadStats();
       if (id === 'shop') loadPurchases();
       if (id === 'money') loadMoney();
+      if (id === 'report-bug') loadBugReportPage();
       if (id === 'log-gaming') { updateGameSelect(); loadGamingHistory(); }
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
@@ -4661,6 +4797,309 @@
         toast(i18next.t('shop.saveError'), 'error');
       }
     };
+
+    // ── Zgłaszanie błędów (Bug Reports) ───────────────────
+    // Zgłoszenia trafiają do TOP-LEVEL kolekcji `bugReports` (nie pod users/{uid}),
+    // bo panel admina (konto o emailu BUG_ADMIN_EMAIL) musi widzieć zgłoszenia
+    // wszystkich kont. Limit 1 zgłoszenie/dzień per konto: users/{uid}.lastBugReportAt
+    // (ten sam wzorzec co lastReportSent przy raporcie tygodniowym).
+    // Filtr spamu: opis MUSI zawierać co najmniej jedno słowo z listy `bugReportsConfig/
+    // keywords` (edytowalnej przez admina) — inaczej zgłoszenie trafia do zakładki Spam.
+    // Spam bez akcji admina ("To nie spam") kasuje się samo po 12h — sprawdzane leniwie
+    // (przy każdym wejściu admina na stronę), bo apka nie ma backendu/cron poza raportem
+    // tygodniowym.
+    const BUG_ADMIN_EMAIL = 'szymonrogalski098@gmail.com';
+    const BUG_AREAS = ['dashboard', 'money', 'chores', 'history', 'stats', 'settings', 'other'];
+    const BUG_SPAM_TTL_MS = 12 * 60 * 60 * 1000;
+    const BUG_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
+
+    let isBugAdmin = false;
+    let myBugReports = [];
+    let adminBugReports = [];
+    let bugSpamKeywords = [];
+    let bugAdminTab = 'new'; // 'new' | 'spam' | 'postponed' | 'history'
+
+    function bugAreaLabel(key) {
+      const map = {
+        dashboard: 'nav.dashboard', money: 'nav.money', chores: 'nav.chores',
+        history: 'nav.history', stats: 'nav.stats', settings: 'nav.settings', other: 'bugReport.areaOther',
+      };
+      return i18next.t(map[key] || 'bugReport.areaOther');
+    }
+
+    function bugStatusLabel(status) {
+      const map = {
+        new: 'bugReport.statusNew', spam: 'bugReport.statusReview', accepted: 'bugReport.statusAccepted',
+        rejected: 'bugReport.statusRejected', postponed: 'bugReport.statusPostponed',
+      };
+      return i18next.t(map[status] || 'bugReport.statusNew');
+    }
+
+    function renderBugAreaSelect() {
+      const sel = document.getElementById('bug-area');
+      if (!sel) return;
+      sel.innerHTML = `<option value="">${i18next.t('logActivity.choose')}</option>`
+        + BUG_AREAS.map(a => `<option value="${a}">${escapeHtml(bugAreaLabel(a))}</option>`).join('');
+    }
+
+    async function loadBugKeywords() {
+      const ref = doc(db, 'bugReportsConfig', 'keywords');
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        bugSpamKeywords = snap.data().words || [];
+      } else {
+        bugSpamKeywords = ['błąd', 'nie działa', 'bug', 'error', 'powinno', 'pokazuje', 'strona',
+          'zakładka', 'przycisk', 'punkty', 'saldo', 'zapis', 'wyświetla', 'crash', 'literówka'];
+        await setDoc(ref, { words: bugSpamKeywords });
+      }
+    }
+
+    // Zgłoszenie jest spamem, jeśli opis NIE zawiera żadnego słowa z listy.
+    function bugLooksLikeSpam(text) {
+      const t = (text || '').toLowerCase();
+      if (bugSpamKeywords.length === 0) return false;
+      return !bugSpamKeywords.some(w => t.includes(w.toLowerCase()));
+    }
+
+    window.updateBugCharCount = () => {
+      const el = document.getElementById('bug-desc');
+      const counter = document.getElementById('bug-char-count');
+      if (el && counter) counter.textContent = i18next.t('bugReport.charCount', { cur: el.value.length, max: 400 });
+    };
+
+    function updateBugRateLimitUI() {
+      const btn = document.getElementById('bug-submit-btn');
+      const note = document.getElementById('bug-rate-note');
+      const last = userProfile?.lastBugReportAt;
+      const blocked = !!last && (Date.now() - new Date(last).getTime()) < BUG_RATE_LIMIT_MS;
+      if (btn) btn.disabled = blocked;
+      if (note) note.style.display = blocked ? 'block' : 'none';
+    }
+
+    async function loadMyBugReports() {
+      const snap = await getDocs(query(collection(db, 'bugReports'), where('reporterUid', '==', currentUser.uid)));
+      myBugReports = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      renderMyBugReports();
+    }
+
+    function renderMyBugReports() {
+      const el = document.getElementById('my-bug-reports');
+      if (!el) return;
+      if (myBugReports.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('bugReport.noReports')}</p>`; return; }
+      el.innerHTML = myBugReports.map(r => {
+        const badgeColor = { accepted: 'var(--accent2)', rejected: 'var(--warn)' }[r.status] || 'var(--text2)';
+        return `<div class="purchase-item">
+          <div style="min-width:0">
+            <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.title)}</div>
+            <div class="text2">${escapeHtml(bugAreaLabel(r.area))}</div>
+          </div>
+          <span class="tag" style="background:${badgeColor}22;color:${badgeColor}">${bugStatusLabel(r.status)}</span>
+        </div>`;
+      }).join('');
+    }
+
+    window.submitBugReport = async () => {
+      const title = document.getElementById('bug-title').value.trim();
+      const area = document.getElementById('bug-area').value;
+      const desc = document.getElementById('bug-desc').value.trim();
+      if (!title) return toast(i18next.t('bugReport.enterTitle'), 'error');
+      if (!area) return toast(i18next.t('bugReport.chooseArea'), 'error');
+      if (!desc) return toast(i18next.t('bugReport.enterDesc'), 'error');
+
+      const last = userProfile?.lastBugReportAt;
+      if (last && (Date.now() - new Date(last).getTime()) < BUG_RATE_LIMIT_MS) {
+        return toast(i18next.t('bugReport.rateLimited'), 'error');
+      }
+
+      const status = bugLooksLikeSpam(desc) ? 'spam' : 'new';
+      const btn = document.getElementById('bug-submit-btn');
+      btn.disabled = true;
+      try {
+        await addDoc(collection(db, 'bugReports'), {
+          reporterUid: currentUser.uid, reporterName: userProfile.name || 'Użytkownik',
+          title, area, description: desc, status, createdAt: new Date(),
+        });
+        await updateDoc(doc(db, 'users', currentUser.uid), { lastBugReportAt: new Date().toISOString() });
+        userProfile.lastBugReportAt = new Date().toISOString();
+
+        document.getElementById('bug-title').value = '';
+        document.getElementById('bug-area').value = '';
+        document.getElementById('bug-desc').value = '';
+        updateBugCharCount();
+
+        await loadMyBugReports();
+        updateBugRateLimitUI();
+        toast(i18next.t('bugReport.sent'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+      btn.disabled = false;
+    };
+
+    // ── Panel admina ──
+    function bugTimeLeftLabel(r) {
+      const created = r.createdAt?.toDate ? r.createdAt.toDate().getTime() : new Date(r.createdAt).getTime();
+      const hoursLeft = Math.max(0, Math.ceil((BUG_SPAM_TTL_MS - (Date.now() - created)) / 3600000));
+      return i18next.t('bugReport.spamExpires', { h: hoursLeft });
+    }
+
+    function syncBugAdminTabs() {
+      document.querySelectorAll('#bug-admin-tabs .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === bugAdminTab));
+    }
+
+    async function loadAdminBugReports() {
+      const snap = await getDocs(collection(db, 'bugReports'));
+      adminBugReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Leniwe czyszczenie: spam starszy niż 12h i nieuratowany ("To nie spam") — kasujemy.
+      const now = Date.now();
+      const stale = adminBugReports.filter(r => r.status === 'spam' &&
+        (now - (r.createdAt?.toDate ? r.createdAt.toDate().getTime() : new Date(r.createdAt).getTime())) > BUG_SPAM_TTL_MS);
+      for (const r of stale) {
+        try { await deleteDoc(doc(db, 'bugReports', r.id)); } catch (_) {}
+      }
+      if (stale.length) adminBugReports = adminBugReports.filter(r => !stale.includes(r));
+
+      adminBugReports.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      renderBugKeywordsSettings();
+      syncBugAdminTabs();
+      renderAdminBugList();
+    }
+
+    window.setBugAdminTab = (tab) => { bugAdminTab = tab; syncBugAdminTabs(); renderAdminBugList(); };
+
+    function renderAdminBugList() {
+      const el = document.getElementById('bug-admin-list');
+      if (!el) return;
+      const list = bugAdminTab === 'history'
+        ? adminBugReports.filter(r => r.status === 'accepted' || r.status === 'rejected')
+        : adminBugReports.filter(r => r.status === bugAdminTab);
+
+      if (list.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('bugReport.noneInTab')}</p>`; return; }
+
+      el.innerHTML = list.map(r => {
+        const date = r.createdAt?.toDate ? r.createdAt.toDate() : new Date(r.createdAt);
+        const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        let actions = '';
+        if (r.status === 'spam') {
+          actions = `<button class="btn-secondary btn-sm" onclick="bugAdminRescue('${r.id}')">${i18next.t('bugReport.notSpam')}</button>`;
+        } else if (r.status === 'new' || r.status === 'postponed') {
+          actions = `
+            <button class="btn-success btn-sm" onclick="bugAdminAccept('${r.id}')">${i18next.t('bugReport.accept')}</button>
+            <button class="btn-danger btn-sm" onclick="bugAdminReject('${r.id}')">${i18next.t('bugReport.reject')}</button>
+            ${r.status !== 'postponed' ? `<button class="btn-secondary btn-sm" onclick="bugAdminPostpone('${r.id}')">${i18next.t('bugReport.postpone')}</button>` : ''}
+            <button class="btn-ghost btn-sm" onclick="bugAdminDelete('${r.id}')">${i18next.t('bugReport.delete')}</button>`;
+        } else {
+          actions = `<button class="btn-ghost btn-sm" onclick="bugAdminDelete('${r.id}')">${i18next.t('bugReport.delete')}</button>`;
+        }
+        const statusBadge = r.status === 'accepted'
+          ? `<span class="tag" style="background:var(--accent2)22;color:var(--accent2)">${i18next.t('bugReport.statusAccepted')}</span>`
+          : r.status === 'rejected'
+          ? `<span class="tag" style="background:var(--warn)22;color:var(--warn)">${i18next.t('bugReport.statusRejected')}</span>` : '';
+        return `
+          <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+              <span style="font-weight:600;font-size:14px">${escapeHtml(r.title)}</span>
+              ${statusBadge}
+            </div>
+            <div class="text2" style="margin-bottom:6px">${escapeHtml(r.reporterName || '—')} · ${escapeHtml(bugAreaLabel(r.area))} · ${dateStr}</div>
+            <p style="font-size:14px;line-height:1.6;margin-bottom:10px">${escapeHtml(r.description)}</p>
+            ${r.status === 'spam' ? `<p class="text2" style="margin-bottom:8px">${bugTimeLeftLabel(r)}</p>` : ''}
+            <div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div>
+          </div>`;
+      }).join('');
+    }
+
+    window.bugAdminAccept = async (id) => {
+      await updateDoc(doc(db, 'bugReports', id), { status: 'accepted' });
+      await loadAdminBugReports();
+      toast(i18next.t('bugReport.accepted_'));
+    };
+    window.bugAdminReject = async (id) => {
+      await updateDoc(doc(db, 'bugReports', id), { status: 'rejected' });
+      await loadAdminBugReports();
+      toast(i18next.t('bugReport.rejected_'));
+    };
+    window.bugAdminPostpone = async (id) => {
+      await updateDoc(doc(db, 'bugReports', id), { status: 'postponed' });
+      await loadAdminBugReports();
+      toast(i18next.t('bugReport.postponed_'));
+    };
+    window.bugAdminRescue = async (id) => {
+      await updateDoc(doc(db, 'bugReports', id), { status: 'new' });
+      await loadAdminBugReports();
+      toast(i18next.t('bugReport.rescued'));
+    };
+    window.bugAdminDelete = async (id) => {
+      if (!await confirmDialog(i18next.t('bugReport.confirmDelete'))) return;
+      await deleteDoc(doc(db, 'bugReports', id));
+      await loadAdminBugReports();
+      toast(i18next.t('bugReport.deleted_'));
+    };
+
+    // ── Filtr spamu: lista wymaganych słów (edytowalna przez admina) ──
+    function renderBugKeywordsSettings() {
+      const el = document.getElementById('bug-keywords-list');
+      if (!el) return;
+      if (bugSpamKeywords.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('money.noCats')}</p>`; return; }
+      el.innerHTML = bugSpamKeywords.map((w, i) => `
+        <span class="tag" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0">
+          ${escapeHtml(w)}
+          <span onclick="deleteBugKeyword(${i})" style="cursor:pointer;opacity:.7">×</span>
+        </span>`).join('');
+    }
+
+    window.addBugKeyword = async () => {
+      const input = document.getElementById('new-bug-keyword');
+      const w = input.value.trim();
+      if (!w) return;
+      if (bugSpamKeywords.some(k => k.toLowerCase() === w.toLowerCase())) return toast(i18next.t('money.catExists'), 'error');
+      try {
+        bugSpamKeywords = [...bugSpamKeywords, w];
+        await setDoc(doc(db, 'bugReportsConfig', 'keywords'), { words: bugSpamKeywords });
+        input.value = '';
+        renderBugKeywordsSettings();
+        toast(i18next.t('bugReport.keywordAdded'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    window.deleteBugKeyword = async (i) => {
+      if (!await confirmDialog(i18next.t('bugReport.confirmDeleteKeyword'))) return;
+      try {
+        bugSpamKeywords = bugSpamKeywords.filter((_, idx) => idx !== i);
+        await setDoc(doc(db, 'bugReportsConfig', 'keywords'), { words: bugSpamKeywords });
+        renderBugKeywordsSettings();
+        toast(i18next.t('bugReport.keywordDeleted'));
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
+
+    async function loadBugReportPage() {
+      isBugAdmin = currentUser?.email === BUG_ADMIN_EMAIL;
+      document.getElementById('bug-submit-view').style.display = isBugAdmin ? 'none' : 'block';
+      document.getElementById('bug-admin-view').style.display = isBugAdmin ? 'block' : 'none';
+      try {
+        await loadBugKeywords();
+        if (isBugAdmin) {
+          await loadAdminBugReports();
+        } else {
+          renderBugAreaSelect();
+          await loadMyBugReports();
+          updateBugRateLimitUI();
+          updateBugCharCount();
+        }
+      } catch (e) {
+        console.error('loadBugReportPage failed:', e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    }
 
     // ── „Co nowego?" / „What's new?" ──────────────────────
     // Pokazuje się RAZ po wejściu na nową wersję (guard w localStorage). Przy każdym

@@ -28,6 +28,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(uid)).data.parentEmail == request.auth.token.email;
     }
 
+    // Admin systemu zgłoszeń błędów — jedyne konto, które widzi WSZYSTKIE bugReports
+    // (właściciel danego zgłoszenia i tak widzi swoje własne, patrz reguła niżej).
+    function isBugAdmin() {
+      return isSignedIn() && request.auth.token.email == 'szymonrogalski098@gmail.com';
+    }
+
     match /users/{uid} {
       allow read:   if isOwner(uid) || isParentOfDoc();
       allow create: if isOwner(uid);
@@ -35,10 +41,11 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
 
       // Wszystkie podkolekcje (activities, dailyLog, gamingSessions, purchases,
-      // chores, chorePayouts, choreDefs, activityDefs, money, moneyGoals, ...).
+      // chores, chorePayouts, choreDefs, activityDefs, money, moneyLoans, ...).
       // Rodzic (read-only) widzi wszystko OPRÓCZ prywatnych danych money trackera:
-      // transakcje, kategorie i ustawienia limitu są tylko dla właściciela.
-      // Z modułu Money rodzic czyta wyłącznie saldo (money/balance) i cele (moneyGoals).
+      // transakcje, kategorie, pożyczki i ustawienia limitu są tylko dla właściciela.
+      // Z modułu Money rodzic czyta wyłącznie saldo (money/balance). Cele oszczędnościowe
+      // to teraz cele z dashboardu (pole users/{uid}.goals, czytane wyżej z całym users/{uid}).
       // Uwaga: to celowo NIE jest wildcard {document=**} — wildcard dawałby unię
       // uprawnień i nie dałoby się z niego wyciąć wyjątków dla money.
       match /{col}/{docId} {
@@ -52,6 +59,25 @@ service cloud.firestore {
           && !(col == 'money' && docId == 'settings')
         );
       }
+    }
+
+    // Zgłoszenia błędów — TOP-LEVEL (nie pod users/{uid}), bo panel admina musi
+    // widzieć zgłoszenia wszystkich kont jedną kolekcją. Zgłaszający widzi tylko
+    // swoje własne; tylko admin widzi wszystkie i może zmieniać status/kasować.
+    match /bugReports/{id} {
+      allow create: if isSignedIn()
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.status in ['new', 'spam'];
+      allow read:   if isSignedIn() && (resource.data.reporterUid == request.auth.uid || isBugAdmin());
+      allow update, delete: if isBugAdmin();
+    }
+
+    // Lista słów wymaganych w opisie zgłoszenia (filtr spamu) — każdy zalogowany
+    // może odczytać (potrzebne w przeglądarce zgłaszającego, żeby sklasyfikować
+    // zgłoszenie przy wysyłce), edytować może tylko admin.
+    match /bugReportsConfig/{id} {
+      allow read:  if isSignedIn();
+      allow write: if isBugAdmin();
     }
   }
 }
