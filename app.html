@@ -571,9 +571,6 @@
       <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
         <span class="icon"><i class="ti ti-home"></i></span> <span data-i18n="nav.dashboard">Dashboard</span>
       </div>
-      <div class="nav-item" data-page="shop" onclick="showPage('shop')">
-        <span class="icon"><i class="ti ti-shopping-cart"></i></span> <span data-i18n="nav.shop">Wydatki</span>
-      </div>
       <div class="nav-item" data-page="money" onclick="showPage('money')">
         <span class="icon"><i class="ti ti-wallet"></i></span> <span data-i18n="nav.money">Money</span>
       </div>
@@ -608,9 +605,6 @@
       </div>
       <div class="bn-item" data-page="chores" onclick="showPage('chores')">
         <span class="bn-icon"><i class="ti ti-checklist"></i></span><span data-i18n="nav.chores">Obowiązki</span>
-      </div>
-      <div class="bn-item" data-page="shop" onclick="showPage('shop')">
-        <span class="bn-icon"><i class="ti ti-shopping-cart"></i></span><span data-i18n="nav.shop">Wydatki</span>
       </div>
       <div class="bn-item" data-page="money" onclick="showPage('money')">
         <span class="bn-icon"><i class="ti ti-wallet"></i></span><span data-i18n="nav.money">Money</span>
@@ -734,7 +728,7 @@
             </div>
             <div class="form-group">
               <label data-i18n="logActivity.descOpt">Opis (opcjonalne)</label>
-              <input type="text" id="act-desc" placeholder="np. rozdział 3 z JS" data-i18n-placeholder="logActivity.descPh">
+              <input type="text" id="act-desc" maxlength="100" placeholder="np. rozdział 3 z JS" data-i18n-placeholder="logActivity.descPh">
             </div>
           </div>
 
@@ -763,13 +757,13 @@
 
           <div id="game-custom-wrap" style="display:none" class="form-group">
             <label data-i18n="logGaming.gameName">Nazwa gry</label>
-            <input type="text" id="game-custom" placeholder="np. Valorant" data-i18n-placeholder="logGaming.gameNamePh">
+            <input type="text" id="game-custom" maxlength="40" placeholder="np. Valorant" data-i18n-placeholder="logGaming.gameNamePh">
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label data-i18n="logGaming.minutes">Czas (minuty)</label>
-              <input type="number" id="game-minutes" min="1" placeholder="np. 90" data-i18n-placeholder="logGaming.minutesPh">
+              <input type="number" id="game-minutes" min="1" max="1440" placeholder="np. 90" data-i18n-placeholder="logGaming.minutesPh">
             </div>
             <div class="form-group">
               <label data-i18n="logGaming.date">Data</label>
@@ -793,11 +787,11 @@
           <h3 style="margin-bottom:16px" data-i18n="shop.register">Zarejestruj zakup</h3>
           <div class="form-group">
             <label data-i18n="shop.desc">Opis zakupu</label>
-            <input type="text" id="shop-desc" placeholder="np. gra na Steamie" data-i18n-placeholder="shop.descPh">
+            <input type="text" id="shop-desc" maxlength="80" placeholder="np. gra na Steamie" data-i18n-placeholder="shop.descPh">
           </div>
           <div class="form-group">
             <label data-i18n="shop.amount">Kwota (PLN)</label>
-            <input type="number" id="shop-amount" min="0.01" step="0.01" placeholder="np. 49.99" data-i18n-placeholder="shop.amountPh" oninput="updateShopPreview()">
+            <input type="number" id="shop-amount" min="0.01" max="1000000" step="0.01" placeholder="np. 49.99" data-i18n-placeholder="shop.amountPh" oninput="updateShopPreview()">
           </div>
           <div class="points-preview" id="shop-preview" style="display:block;border-color:var(--warn)">
             <span data-i18n="shop.cost">Koszt:</span> <span id="shop-pts-val" style="color:var(--warn)">0</span> <span data-i18n="logActivity.pkt">pkt</span>
@@ -837,7 +831,7 @@
           <div class="form-row">
             <div class="form-group">
               <label data-i18n="money.amount">Kwota (PLN)</label>
-              <input type="number" id="mtx-amount" min="0.01" step="0.01" placeholder="np. 25.00" data-i18n-placeholder="money.amountPh">
+              <input type="number" id="mtx-amount" min="0.01" max="1000000" step="0.01" placeholder="np. 25.00" data-i18n-placeholder="money.amountPh">
             </div>
             <div class="form-group">
               <label data-i18n="money.date">Data</label>
@@ -849,11 +843,11 @@
             <select id="mtx-category" onchange="onMoneyCatChange()"></select>
           </div>
           <div class="form-group" id="mtx-newcat-wrap" style="display:none">
-            <input type="text" id="mtx-newcat" placeholder="Nazwa nowej kategorii" data-i18n-placeholder="money.newCatPh">
+            <input type="text" id="mtx-newcat" maxlength="30" placeholder="Nazwa nowej kategorii" data-i18n-placeholder="money.newCatPh">
           </div>
           <div class="form-group">
             <label data-i18n="money.note">Notatka (opcjonalna)</label>
-            <input type="text" id="mtx-note" placeholder="np. od taty" data-i18n-placeholder="money.notePh">
+            <input type="text" id="mtx-note" maxlength="100" placeholder="np. od taty" data-i18n-placeholder="money.notePh">
           </div>
           <button class="btn-success" id="mtx-save-btn" onclick="saveMoneyTx()" style="width:100%" data-i18n="money.save">Zapisz transakcję</button>
         </div>
@@ -1084,7 +1078,7 @@
               <h3 data-i18n="settings.profile">Profil</h3>
               <div class="form-group">
                 <label data-i18n="settings.name">Imię</label>
-                <input type="text" id="set-name" placeholder="Twoje imię" data-i18n-placeholder="settings.namePh">
+                <input type="text" id="set-name" maxlength="30" placeholder="Twoje imię" data-i18n-placeholder="settings.namePh">
               </div>
               <div class="form-group">
                 <label data-i18n="settings.parentEmail">Email rodzica (raporty tygodniowe)</label>
@@ -1096,7 +1090,7 @@
                 <div id="parent-email-input-row">
                   <p class="text2" id="parent-email-reverify-warn" style="display:none;color:var(--warn);margin-bottom:8px;" data-i18n="settings.reverifyWarn">Ten email nie przeszedł jeszcze weryfikacji kodem — wyślij kod, aby go potwierdzić.</p>
                   <div style="display:flex;gap:8px;">
-                    <input type="email" id="set-parent-email" placeholder="rodzic@email.com" style="flex:1;">
+                    <input type="email" id="set-parent-email" maxlength="254" placeholder="rodzic@email.com" style="flex:1;">
                     <button class="btn-secondary" style="white-space:nowrap;" onclick="sendParentEmailVerification()" data-i18n="settings.sendCode">Wyślij kod</button>
                   </div>
                 </div>
@@ -1183,7 +1177,7 @@
               <h3 data-i18n="settings.gamesList">Lista gier</h3>
               <div id="games-list" style="margin-bottom:12px"></div>
               <div style="display:flex;gap:8px">
-                <input type="text" id="new-game-input" placeholder="Dodaj grę..." style="flex:1" data-i18n-placeholder="settings.addGame">
+                <input type="text" id="new-game-input" maxlength="40" placeholder="Dodaj grę..." style="flex:1" data-i18n-placeholder="settings.addGame">
                 <button class="btn-primary" onclick="addGame()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
               </div>
             </div>
@@ -1200,9 +1194,9 @@
               <div class="form-group">
                 <label data-i18n="settings.ratePrompt">Ile złotych za ile punktów (dashboard, sklep)</label>
                 <div style="display:flex;align-items:center;gap:8px">
-                  <input type="number" id="econ-general-zl" step="0.01" min="0.01" style="width:90px" placeholder="1">
+                  <input type="number" id="econ-general-zl" step="0.01" min="0.01" max="100000" style="width:90px" placeholder="1">
                   <span class="text2" data-i18n="settings.zlFor">zł za</span>
-                  <input type="number" id="econ-general-pts" step="1" min="1" style="width:90px" placeholder="10">
+                  <input type="number" id="econ-general-pts" step="1" min="1" max="100000" style="width:90px" placeholder="10">
                   <span class="text2" data-i18n="settings.pts">pkt</span>
                 </div>
               </div>
@@ -1217,7 +1211,7 @@
               <h3 data-i18n="money.limitTitle">Miesięczny limit wydatków</h3>
               <div class="settings-row">
                 <label data-i18n="money.monthlyLimit">Limit (PLN)</label>
-                <input type="number" id="set-money-limit" min="0" step="1" value="200" style="width:90px;text-align:center">
+                <input type="number" id="set-money-limit" min="0" max="1000000" step="1" value="200" style="width:90px;text-align:center">
               </div>
               <button class="btn-secondary" style="margin-top:12px" onclick="saveMoneyLimit()" data-i18n="money.saveLimit">Zapisz limit</button>
             </div>
@@ -1226,7 +1220,7 @@
               <h3 data-i18n="money.categories">Kategorie transakcji</h3>
               <div id="money-cat-list" style="margin-bottom:12px"></div>
               <div style="display:flex;gap:8px">
-                <input type="text" id="new-money-cat" placeholder="Nazwa kategorii..." data-i18n-placeholder="money.catPh" style="flex:1">
+                <input type="text" id="new-money-cat" maxlength="30" placeholder="Nazwa kategorii..." data-i18n-placeholder="money.catPh" style="flex:1">
                 <button class="btn-primary" onclick="addMoneyCategory()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
               </div>
             </div>
@@ -1240,9 +1234,9 @@
               <div class="form-group">
                 <label data-i18n="settings.ratePromptChores">Ile złotych za ile punktów</label>
                 <div style="display:flex;align-items:center;gap:8px">
-                  <input type="number" id="econ-chore-zl" step="0.01" min="0.01" style="width:90px" placeholder="0.45">
+                  <input type="number" id="econ-chore-zl" step="0.01" min="0.01" max="100000" style="width:90px" placeholder="0.45">
                   <span class="text2" data-i18n="settings.zlFor">zł za</span>
-                  <input type="number" id="econ-chore-pts" step="1" min="1" style="width:90px" placeholder="1">
+                  <input type="number" id="econ-chore-pts" step="1" min="1" max="100000" style="width:90px" placeholder="1">
                   <span class="text2" data-i18n="settings.pts">pkt</span>
                 </div>
               </div>
@@ -1255,15 +1249,15 @@
 
               <div class="form-group">
                 <label data-i18n="settings.activityName">Nazwa</label>
-                <input type="text" id="cd-name" placeholder="Np. Wyniesienie śmieci" data-i18n-placeholder="settings.choreNamePh">
+                <input type="text" id="cd-name" maxlength="60" placeholder="Np. Wyniesienie śmieci" data-i18n-placeholder="settings.choreNamePh">
               </div>
               <div class="form-group">
                 <label data-i18n="settings.descOpt">Opis (opcjonalny)</label>
-                <input type="text" id="cd-desc" placeholder="Szczegóły..." data-i18n-placeholder="settings.descPh">
+                <input type="text" id="cd-desc" maxlength="100" placeholder="Szczegóły..." data-i18n-placeholder="settings.descPh">
               </div>
               <div class="form-group">
                 <label style="font-size:12px;color:var(--text2)" data-i18n="settings.points">Punkty</label>
-                <input type="number" id="cd-points" min="1" placeholder="10" style="max-width:140px">
+                <input type="number" id="cd-points" min="1" max="10000" placeholder="10" style="max-width:140px">
               </div>
               <div class="form-group">
                 <label style="font-size:12px;color:var(--text2)" data-i18n="settings.emojiOpt">Emoji (opcjonalnie)</label>
@@ -1286,11 +1280,11 @@
 
               <div class="form-group">
                 <label data-i18n="settings.activityName">Nazwa</label>
-                <input type="text" id="ad-name" placeholder="Np. Gra na gitarze" data-i18n-placeholder="settings.activityNamePh">
+                <input type="text" id="ad-name" maxlength="60" placeholder="Np. Gra na gitarze" data-i18n-placeholder="settings.activityNamePh">
               </div>
               <div class="form-group">
                 <label style="font-size:12px;color:var(--text2)" data-i18n="settings.pointsPerHour">Punkty za godzinę</label>
-                <input type="number" id="ad-points" min="1" placeholder="30" style="max-width:140px">
+                <input type="number" id="ad-points" min="1" max="10000" placeholder="30" style="max-width:140px">
               </div>
               <div class="form-group">
                 <label style="font-size:12px;color:var(--text2)" data-i18n="settings.icon">Ikona</label>
@@ -1537,6 +1531,23 @@
           categories: 'Transaction categories', catPh: 'Category name...', catAdded: 'Category added.', catDeleted: 'Category deleted.',
           confirmDeleteCat: 'Delete this category? Existing transactions keep it.', noCats: 'No categories.',
         },
+        common: {
+          cancel: 'Cancel', delete: 'Delete', reset: 'Reset', settle: 'Settle', close: 'Close',
+        },
+        confirm: {
+          deleteActivity: 'Delete this activity? Points will be deducted.',
+          resetToday: "Reset today's point counter? Balance and overall stats stay unchanged.",
+          deleteSession: 'Delete this session?',
+          settleChores: 'Settle {{amount}} ({{pts}} pts)? Entries move to payout history and disappear from the calendar.',
+          deleteEntry: 'Delete this entry?',
+          deleteChoreDef: 'Remove this chore from the list? Completion history is kept.',
+          deleteActivityDef: 'Remove this activity from the list? Completion history is kept.',
+          deleteGame: 'Remove this game from the list?',
+        },
+        choreMsg: {
+          settled: 'Settled {{amount}} 🎉', settleError: 'Settlement error.',
+          incomeCategory: 'Household chores',
+        },
       }},
       pl: { translation: {
         nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
@@ -1693,6 +1704,23 @@
           limitTitle: 'Miesięczny limit wydatków', monthlyLimit: 'Limit (PLN)', saveLimit: 'Zapisz limit', limitSaved: 'Limit zapisany.',
           categories: 'Kategorie transakcji', catPh: 'Nazwa kategorii...', catAdded: 'Kategoria dodana.', catDeleted: 'Kategoria usunięta.',
           confirmDeleteCat: 'Usunąć tę kategorię? Istniejące transakcje ją zachowają.', noCats: 'Brak kategorii.',
+        },
+        common: {
+          cancel: 'Anuluj', delete: 'Usuń', reset: 'Wyzeruj', settle: 'Rozlicz', close: 'Zamknij',
+        },
+        confirm: {
+          deleteActivity: 'Usunąć tę aktywność? Punkty zostaną odjęte.',
+          resetToday: 'Wyzerować dzisiejszy licznik punktów? Saldo i statystyki łączne pozostaną bez zmian.',
+          deleteSession: 'Usunąć tę sesję?',
+          settleChores: 'Rozliczyć {{amount}} ({{pts}} pkt)? Wpisy trafią do historii wypłat i znikną z kalendarza.',
+          deleteEntry: 'Usunąć ten wpis?',
+          deleteChoreDef: 'Usunąć ten obowiązek z listy? Historia wykonań nie zostanie ruszona.',
+          deleteActivityDef: 'Usunąć tę aktywność z listy? Historia wykonań nie zostanie ruszona.',
+          deleteGame: 'Usunąć tę grę z listy?',
+        },
+        choreMsg: {
+          settled: 'Rozliczono {{amount}} 🎉', settleError: 'Błąd rozliczenia.',
+          incomeCategory: 'Obowiązki domowe',
         },
       }},
     };
@@ -2063,6 +2091,8 @@
       await loadRecentActivities();
       loadStatsSection();
       checkAchievements({ streak });
+      // Saldo Money potrzebne do celów pieniężnych na dashboardzie (money/balance).
+      try { await loadMoneyDocs(); } catch (e) { console.error('loadMoneyDocs (dashboard) failed:', e); }
       renderGoal();
 
       // Ustaw toggle raportu
@@ -2093,7 +2123,9 @@
     function goalCardHTML(g) {
       const t = (k, o) => i18next.t(k, o);
       const isMoney = g.type === 'money';
-      const balance = isMoney ? (userProfile.points?.total || 0) * rateGeneral() : (userProfile.points?.total || 0);
+      // Cel pieniężny mierzy realne saldo Money trackera (money/balance.current),
+      // cel punktowy — punkty LifeXP. moneyBalance ładowane jest w loadDashboard.
+      const balance = isMoney ? (moneyBalance?.current || 0) : (userProfile.points?.total || 0);
       const pct = Math.min(100, (balance / g.amount) * 100);
       const missing = Math.max(0, g.amount - balance);
       const reached = balance >= g.amount;
@@ -2145,8 +2177,8 @@
         <div class="card goal-item">
           <h3 style="margin-bottom:14px">🎯 ${t('goal.title')}</h3>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <input type="text" id="goal-name-input" placeholder="${t('goal.namePh')}" style="flex:2;min-width:150px">
-            <input type="number" id="goal-amount-input" min="1" step="${isMoney ? '0.01' : '1'}" placeholder="${isMoney ? t('goal.amountLabel') : t('goal.amountLabelPts')}" style="flex:1;min-width:90px">
+            <input type="text" id="goal-name-input" maxlength="50" placeholder="${t('goal.namePh')}" style="flex:2;min-width:150px">
+            <input type="number" id="goal-amount-input" min="1" max="10000000" step="${isMoney ? '0.01' : '1'}" placeholder="${isMoney ? t('goal.amountLabel') : t('goal.amountLabelPts')}" style="flex:1;min-width:90px">
             <button class="btn-primary" onclick="saveGoal()">${t('goal.set')}</button>
           </div>
           <button class="btn-ghost btn-sm" style="margin-top:8px" onclick="cancelGoalType()">${t('settings.cancel')}</button>
@@ -2532,7 +2564,7 @@
 
     // Delete an activity and roll back its points from totals + that day's log.
     window.deleteActivity = async (id) => {
-      if (!await confirmDialog('Usunąć tę aktywność? Punkty zostaną odjęte.')) return;
+      if (!await confirmDialog(i18next.t('confirm.deleteActivity'))) return;
       try {
         const ref = doc(db, 'users', currentUser.uid, 'activities', id);
         const snap = await getDoc(ref);
@@ -2622,7 +2654,7 @@
 
     // ── Daily reset (test tool) ───────────────────────────
     window.resetToday = async () => {
-      if (!await confirmDialog('Wyzerować dzisiejszy licznik punktów? Saldo i statystyki łączne pozostaną bez zmian.', 'Wyzeruj')) return;
+      if (!await confirmDialog(i18next.t('confirm.resetToday'), i18next.t('common.reset'))) return;
       try {
         const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', todayStr());
         const daySnap = await getDoc(dayRef);
@@ -2841,7 +2873,7 @@
     };
 
     window.deleteGamingSession = async (id, date, duration) => {
-      if (!await confirmDialog('Usunąć tę sesję?')) return;
+      if (!await confirmDialog(i18next.t('confirm.deleteSession'))) return;
       try {
         await deleteDoc(doc(db, 'users', currentUser.uid, 'gamingSessions', id));
         if (date) {
@@ -3247,9 +3279,8 @@
     window.settleChores = async () => {
       const pts = choreEntries.reduce((s, e) => s + (e.points || 0), 0);
       if (pts === 0) return;
-      const amount = pts * rateChores();
-      const amountStr = amount.toFixed(2).replace('.', ',');
-      if (!await confirmDialog(`Rozliczyć ${amountStr} zł (${pts} pkt)? Wpisy trafią do historii wypłat i znikną z kalendarza.`, 'Rozlicz')) return;
+      const amount = round2(pts * rateChores());
+      if (!await confirmDialog(i18next.t('confirm.settleChores', { amount: fmtMoney(amount), pts, interpolation: { escapeValue: false } }), i18next.t('common.settle'))) return;
 
       const btn = document.getElementById('chore-settle-btn');
       btn.disabled = true;
@@ -3263,14 +3294,22 @@
         for (const e of choreEntries) {
           try { await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', e.id)); } catch (_) {}
         }
+
+        // Rozliczona kwota trafia na saldo Money jako przychód (osobny wpis transakcji).
+        await updateMoneyCurrent(amount);
+        await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
+          type: 'income', amount, category: i18next.t('choreMsg.incomeCategory'), note: '',
+          date: todayStr(), source: 'chore_payout', createdAt: new Date(),
+        });
+
         choreSelectedDay = null;
         await loadChores();
         confettiBurst();
         pulseEl(document.querySelector('#page-chores .payout-card'));
-        toast(`Rozliczono ${amountStr} zł 🎉`);
+        toast(i18next.t('choreMsg.settled', { amount: fmtMoney(amount), interpolation: { escapeValue: false } }));
       } catch (e) {
         console.error(e);
-        toast('Błąd rozliczenia.', 'error');
+        toast(i18next.t('choreMsg.settleError'), 'error');
         btn.disabled = false;
       }
     };
@@ -3366,13 +3405,14 @@
     }
 
     // Uniwersalny modal potwierdzenia → Promise<boolean> (zamiennik window.confirm)
-    function confirmDialog(message, okLabel = 'Usuń') {
+    function confirmDialog(message, okLabel) {
       return new Promise(resolve => {
         const modal = document.getElementById('confirm-modal');
         document.getElementById('confirm-modal-text').textContent = message;
         const ok = document.getElementById('confirm-modal-ok');
         const cancel = document.getElementById('confirm-modal-cancel');
-        ok.textContent = okLabel;
+        ok.textContent = okLabel || i18next.t('common.delete');
+        cancel.textContent = i18next.t('common.cancel');
         modal.classList.add('open');
         const finish = (val) => { modal.classList.remove('open'); ok.onclick = null; cancel.onclick = null; resolve(val); };
         ok.onclick = () => finish(true);
@@ -3417,7 +3457,7 @@
     }
 
     window.deleteChoreEntry = async (id) => {
-      if (!await confirmDialog('Usunąć ten wpis?')) return;
+      if (!await confirmDialog(i18next.t('confirm.deleteEntry'))) return;
       try {
         await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', id));
         await loadChores();
@@ -3518,7 +3558,7 @@
     renderChoreEmojiPicker();
 
     window.deleteChoreDef = async (id) => {
-      if (!await confirmDialog('Usunąć ten obowiązek z listy? Historia wykonań nie zostanie ruszona.')) return;
+      if (!await confirmDialog(i18next.t('confirm.deleteChoreDef'))) return;
       await deleteDoc(doc(db, 'users', currentUser.uid, 'choreDefs', id));
       await loadChoreDefs();
       renderChoreDefsSettings();
@@ -3560,7 +3600,7 @@
     };
 
     window.deleteActivityDef = async (id) => {
-      if (!await confirmDialog('Usunąć tę aktywność z listy? Historia wykonań nie zostanie ruszona.')) return;
+      if (!await confirmDialog(i18next.t('confirm.deleteActivityDef'))) return;
       await deleteDoc(doc(db, 'users', currentUser.uid, 'activityDefs', id));
       await loadActivityDefs();
       renderActivityDefsSettings();
@@ -3755,7 +3795,7 @@
     };
 
     window.removeGame = async (i) => {
-      if (!await confirmDialog('Usunąć tę grę z listy?')) return;
+      if (!await confirmDialog(i18next.t('confirm.deleteGame'))) return;
       try {
         const games = [...(Array.isArray(userProfile?.games) ? userProfile.games : [])];
         games.splice(i, 1);
@@ -4075,6 +4115,8 @@
       renderMoneyGoalsList();
       renderMoneyArchiveSelect();
       renderMoneyTxList();
+      // Cel pieniężny na dashboardzie (ukryty widok) — odśwież, by po powrocie był aktualny.
+      if ((userProfile?.goals || []).some(g => g.type === 'money')) renderGoal();
     }
 
     function renderMoneyLimitAlert() {
@@ -4259,7 +4301,7 @@
         const done = saved >= target;
         const depositForm = moneyDepositGoalId === g.id ? `
           <div style="display:flex;gap:8px;margin-top:10px">
-            <input type="number" id="goal-deposit-amount" min="0.01" step="0.01" placeholder="${t('money.depositPh')}" style="flex:1">
+            <input type="number" id="goal-deposit-amount" min="0.01" max="1000000" step="0.01" placeholder="${t('money.depositPh')}" style="flex:1">
             <button class="btn-primary btn-sm" onclick="saveMoneyDeposit('${g.id}')">${t('money.deposit')}</button>
             <button class="btn-ghost btn-sm" onclick="openMoneyDeposit(null)">✕</button>
           </div>` : '';
@@ -4283,8 +4325,8 @@
       if (moneyGoalFormOpen) {
         html += `
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-            <input type="text" id="money-goal-name" placeholder="${t('money.goalNamePh')}" style="flex:2;min-width:150px">
-            <input type="number" id="money-goal-target" min="1" step="0.01" placeholder="${t('money.goalTargetPh')}" style="flex:1;min-width:120px">
+            <input type="text" id="money-goal-name" maxlength="50" placeholder="${t('money.goalNamePh')}" style="flex:2;min-width:150px">
+            <input type="number" id="money-goal-target" min="1" max="10000000" step="0.01" placeholder="${t('money.goalTargetPh')}" style="flex:1;min-width:120px">
             <button class="btn-primary" onclick="saveMoneyGoal()">${t('money.goalAdd')}</button>
             <button class="btn-ghost" onclick="toggleMoneyGoalForm()">${t('settings.cancel')}</button>
           </div>`;
