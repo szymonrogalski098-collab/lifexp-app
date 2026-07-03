@@ -968,44 +968,44 @@
 
       <!-- HISTORY -->
       <div class="page" id="page-history">
-        <h2 style="margin-bottom:20px">Pełna historia aktywności</h2>
+        <h2 style="margin-bottom:20px" data-i18n="history.title">Pełna historia aktywności</h2>
         <div class="card">
           <div id="history-list">
-            <p class="text2">Ładowanie…</p>
+            <p class="text2" data-i18n="dashboard.loading">Ładowanie...</p>
           </div>
           <div class="pager" id="history-pager" style="display:none">
-            <button class="btn-secondary" id="history-prev" onclick="historyPrev()">← Poprzednia</button>
+            <button class="btn-secondary" id="history-prev" onclick="historyPrev()" data-i18n="history.prev">← Poprzednia</button>
             <span class="text2" id="history-page-info">Strona 1</span>
-            <button class="btn-secondary" id="history-next" onclick="historyNext()">Następna →</button>
+            <button class="btn-secondary" id="history-next" onclick="historyNext()" data-i18n="history.next">Następna →</button>
           </div>
         </div>
       </div>
 
       <!-- STATS -->
       <div class="page" id="page-stats">
-        <h2 style="margin-bottom:20px">Statystyki</h2>
+        <h2 style="margin-bottom:20px" data-i18n="stats.title">Statystyki</h2>
 
         <div class="chart-wrap">
-          <h3 style="margin-bottom:16px;font-size:15px">Punkty — ostatnie 7 dni</h3>
+          <h3 style="margin-bottom:16px;font-size:15px" data-i18n="dashboard.weekChart">Punkty — ostatnie 7 dni</h3>
           <div class="bar-chart" id="pts-chart"></div>
         </div>
 
         <div class="chart-wrap">
-          <h3 style="margin-bottom:16px;font-size:15px">Czas grania — ostatnie 7 dni (minuty)</h3>
+          <h3 style="margin-bottom:16px;font-size:15px" data-i18n="stats.gamingChart">Czas grania — ostatnie 7 dni (minuty)</h3>
           <div class="bar-chart" id="gaming-chart"></div>
         </div>
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-label">Łącznie zarobione</div>
+            <div class="stat-label" data-i18n="stats.totalEarned">Łącznie zarobione</div>
             <div class="stat-value green" id="stats-earned">0</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Łącznie wydane (pkt)</div>
+            <div class="stat-label" data-i18n="stats.totalSpent">Łącznie wydane (pkt)</div>
             <div class="stat-value gold" id="stats-spent">0</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Czas grania łącznie</div>
+            <div class="stat-label" data-i18n="stats.totalGaming">Czas grania łącznie</div>
             <div class="stat-value purple" id="stats-gaming">0h</div>
           </div>
         </div>
@@ -1013,48 +1013,46 @@
 
       <!-- OBOWIĄZKI -->
       <div class="page" id="page-chores">
-        <h2 style="margin-bottom:6px">Obowiązki domowe</h2>
-        <p class="text2" style="margin-bottom:18px">Osobny rejestr — zarobek za prace domowe (<span id="chore-rate-label">1 pkt = 0,45 zł</span>).</p>
+        <h2 style="margin-bottom:6px" data-i18n="chores.title">Obowiązki domowe</h2>
+        <p class="text2" style="margin-bottom:18px" data-i18n-html="chores.subtitle">Osobny rejestr — zarobek za prace domowe (<span id="chore-rate-label">1 pkt = 0,45 zł</span>).</p>
 
         <div class="card payout-card">
           <div>
-            <div class="text2">Do wypłaty (nierozliczone)</div>
+            <div class="text2" data-i18n="chores.outstanding">Do wypłaty (nierozliczone)</div>
             <div class="chore-pln" id="chore-outstanding">0,00 zł</div>
-            <div class="text2"><span id="chore-outstanding-pts">0</span> pkt</div>
+            <div class="text2"><span id="chore-outstanding-pts">0</span> <span data-i18n="logActivity.pkt">pkt</span></div>
           </div>
-          <button class="btn-success" id="chore-settle-btn" onclick="settleChores()">Rozlicz wypłatę</button>
+          <button class="btn-success" id="chore-settle-btn" onclick="settleChores()" data-i18n="chores.settle">Rozlicz wypłatę</button>
         </div>
 
         <div class="segmented" id="chore-tabs">
-          <button class="seg-btn active" data-tab="current" onclick="selectChoreTab('current')">Bieżący miesiąc</button>
-          <button class="seg-btn" data-tab="prev" onclick="selectChoreTab('prev')">Poprzedni miesiąc</button>
+          <button class="seg-btn active" data-tab="current" onclick="selectChoreTab('current')" data-i18n="chores.tabCurrent">Bieżący miesiąc</button>
+          <button class="seg-btn" data-tab="prev" onclick="selectChoreTab('prev')" data-i18n="chores.tabPrev">Poprzedni miesiąc</button>
         </div>
 
         <div class="chore-summary card">
           <div>
             <div class="chore-month" id="chore-month-label">—</div>
-            <div class="text2">Zarobek miesiąca</div>
+            <div class="text2" data-i18n="chores.monthEarnings">Zarobek miesiąca</div>
           </div>
           <div style="text-align:right">
             <div class="chore-pln" id="chore-pln">0,00 zł</div>
-            <div class="text2"><span id="chore-pts">0</span> pkt</div>
+            <div class="text2"><span id="chore-pts">0</span> <span data-i18n="logActivity.pkt">pkt</span></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="cal-weekdays">
-            <span>Pn</span><span>Wt</span><span>Śr</span><span>Cz</span><span>Pt</span><span>So</span><span>Nd</span>
-          </div>
+          <div class="cal-weekdays" id="chore-weekdays"></div>
           <div class="cal-grid" id="chore-cal"></div>
           <div class="day-detail" id="chore-day-detail" style="display:none"></div>
         </div>
 
         <div class="card">
-          <h3 style="font-size:15px;margin-bottom:14px">Historia wypłat</h3>
-          <div id="chore-payout-list"><p class="text2">Brak wypłat.</p></div>
+          <h3 style="font-size:15px;margin-bottom:14px" data-i18n="chores.payoutHistory">Historia wypłat</h3>
+          <div id="chore-payout-list"><p class="text2" data-i18n="chores.noPayouts">Brak wypłat.</p></div>
         </div>
 
-        <button class="fab" id="chore-fab" onclick="openChoreSheet()" aria-label="Dodaj obowiązek" style="display:none">+</button>
+        <button class="fab" id="chore-fab" onclick="openChoreSheet()" aria-label="Dodaj obowiązek" data-i18n-aria="chores.addAria" style="display:none">+</button>
       </div>
 
       <!-- SETTINGS -->
@@ -1419,8 +1417,8 @@
   <div class="sheet-backdrop" id="chore-sheet" onclick="if(event.target===this)closeChoreSheet()">
     <div class="sheet">
       <div class="sheet-handle"></div>
-      <h3 style="margin-bottom:4px">Co zrobiłeś?</h3>
-      <p class="text2" style="margin-bottom:14px">Tapnij obowiązek, żeby dodać go na dziś.</p>
+      <h3 style="margin-bottom:4px" data-i18n="chores.sheetTitle">Co zrobiłeś?</h3>
+      <p class="text2" style="margin-bottom:14px" data-i18n="chores.sheetSubtitle">Tapnij obowiązek, żeby dodać go na dziś.</p>
       <div id="chore-sheet-list"></div>
     </div>
   </div>
@@ -1429,11 +1427,11 @@
   <div class="modal-overlay" id="chore-yesterday-modal">
     <div class="modal" style="text-align:center">
       <div style="font-size:40px;margin-bottom:8px">🗓️</div>
-      <h3 style="margin-bottom:10px">Kiedy to zrobiłeś?</h3>
+      <h3 style="margin-bottom:10px" data-i18n="chores.yesterdayTitle">Kiedy to zrobiłeś?</h3>
       <p class="text2" id="chore-yest-text" style="margin-bottom:20px"></p>
       <div style="display:flex;gap:10px">
-        <button class="btn-secondary" style="flex:1" id="chore-yest-no">Dzisiaj</button>
-        <button class="btn-primary" style="flex:1" id="chore-yest-yes">Wczoraj</button>
+        <button class="btn-secondary" style="flex:1" id="chore-yest-no" data-i18n="chores.today">Dzisiaj</button>
+        <button class="btn-primary" style="flex:1" id="chore-yest-yes" data-i18n="chores.yesterday">Wczoraj</button>
       </div>
     </div>
   </div>
@@ -1488,11 +1486,29 @@
           title: 'Log activity', type: 'Activity type', choose: '— choose —',
           minutes: 'Time (minutes)', minutesPh: 'e.g. 60', descOpt: 'Description (optional)', descPh: 'e.g. chapter 3 of JS',
           willEarn: "You'll earn:", pkt: 'pts', capNote: '(daily limit — will be capped)', capReached: '(daily limit reached — 0 pts)', save: 'Save activity',
+          deleted: 'Activity deleted. -{{pts}} pts', chooseType: 'Choose an activity type.', minMinutes: 'Minimum 5 minutes.',
+          dailyLimitHit: "You've hit your daily point limit!",
         },
         logGaming: {
           title: 'Log gaming session', game: 'Game', choose: '— choose —', otherGame: 'Other game...',
           gameName: 'Game name', gameNamePh: 'e.g. Valorant', minutes: 'Time (minutes)', minutesPh: 'e.g. 90',
           date: 'Date', save: 'Save session', history: 'Session history', noSessions: 'No sessions yet.',
+          enterGame: 'Choose or type a game.', enterDuration: 'Enter the session length.',
+          sessionTooLong: 'A single session cannot exceed 1440 minutes (24h).',
+          dailyLimitHit: "1440 min (24h) daily limit. You've already logged {{existing}} min today.",
+          saved: 'Saved {{time}} of {{game}}.', sessionDeleted: 'Session deleted.',
+        },
+        history: {
+          title: 'Full activity history', prev: '← Previous', next: 'Next →',
+          pageInfo: 'Page {{page}} / {{total}} · {{count}} activities',
+        },
+        stats: {
+          title: 'Stats', gamingChart: 'Gaming time — last 7 days (minutes)',
+          totalEarned: 'Total earned', totalSpent: 'Total spent (pts)', totalGaming: 'Total gaming time',
+        },
+        errors: {
+          connectionShort: 'Connection error', connection: 'No connection to the database. Check your internet and refresh.',
+          loadFailed: 'Failed to load data. Refresh the page.', resetFailed: 'Reset error.', saveRetry: 'Save error. Try again.',
         },
         generator: { title: 'What now?', subtitle: "Pick how much time you have and I'll roll something productive.", roll: 'Roll', doIt: 'Do it!' },
         levelup: { title: 'New level!', subtitle: 'You reached', cta: 'Awesome! 🚀' },
@@ -1587,6 +1603,22 @@
           notifOn: '🔔 Notifications enabled on this device.', notifOff: 'Notifications disabled.',
           notifBlocked: 'Notifications blocked in browser settings.', notifUnsupported: "This browser doesn't support notifications.",
           refreshToken: 'Refresh token', notifNoHours: 'No hours selected — notifications will not be sent.',
+          saved: 'Settings saved.', economyGeneralSaved: 'General economy saved.', economyChoresSaved: 'Chore economy saved.',
+          todayReset: "Today's point counter has been reset.",
+          noGames: 'No games yet. Add one below.', gameAdded: 'Game added: {{name}}', gameSaveError: 'Error saving the game.',
+          gameDeleted: 'Game removed.', gameDeleteError: 'Error removing the game.',
+          noActivityDefs: 'No activities defined yet.', ptsPerHourShort: 'pts/h',
+          activityAdded: 'Activity added: {{name}}', activityDeleted: 'Activity deleted.',
+          enterValidEmail: 'Enter a valid email address.', emailSendError: 'Error sending the email. Try again.',
+          codeSent: 'Verification code sent!', noPendingVerification: 'No pending verification.',
+          codeExpired: 'Code expired. Send a new one.', codeInvalid: 'Invalid code.',
+          parentEmailVerified: 'Parent email verified!',
+          notifNoVapid: 'Missing VAPID key — configure it in the code.', notifDenied: 'Notification permission was not granted.',
+          notifNoToken: 'Could not obtain a token.', notifEnabled: 'Notifications enabled! 🔔',
+          notifEnableError: 'Error enabling notifications.', newNotification: 'New notification',
+          weeklyReportOn: 'Weekly report enabled.', weeklyReportOff: 'Weekly report disabled.',
+          chooseHourToast: 'Choose an hour.', hourAlreadyAdded: 'This hour is already added.',
+          maxThreeHours: 'You can select up to 3 hours.', hourAdded: 'Added hour {{h}}:00.', hourRemoved: 'Removed hour {{h}}:00.',
         },
         shop: {
           title: 'Expenses', register: 'Register purchase', desc: 'Purchase description', descPh: 'e.g. a Steam game',
@@ -1629,6 +1661,8 @@
         },
         common: {
           cancel: 'Cancel', delete: 'Delete', reset: 'Reset', settle: 'Settle', close: 'Close',
+          deleteError: 'Delete error.', enterName: 'Enter a name.', enterPoints: 'Enter the points.',
+          pointsMustBePositive: 'The number of points must be greater than 0.',
         },
         confirm: {
           deleteActivity: 'Delete this activity? Points will be deducted.',
@@ -1643,6 +1677,20 @@
         choreMsg: {
           settled: 'Settled {{amount}} 🎉', settleError: 'Settlement error.',
           incomeCategory: 'Household chores',
+        },
+        chores: {
+          title: 'Household chores',
+          subtitle: 'Separate ledger — earnings for household chores (<span id="chore-rate-label">1 pt = 0.45 zł</span>).',
+          outstanding: 'To be paid out (unsettled)', settle: 'Settle payout',
+          tabCurrent: 'Current month', tabPrev: 'Previous month', monthEarnings: "Month's earnings",
+          payoutHistory: 'Payout history', noPayouts: 'No payouts yet.', addAria: 'Add chore',
+          sheetTitle: 'What did you do?', sheetSubtitle: "Tap a chore to add it for today.", sheetEmpty: 'No chores defined yet.',
+          yesterdayTitle: 'When did you do it?', today: 'Today', yesterday: 'Yesterday',
+          yesterdayText: '"{{name}}" is already marked for today. Did you do it yesterday ({{date}})?',
+          entryAdded: 'Added: {{name}} (+{{pts}} pts)', entrySaveError: 'Error saving the chore.', entryDeleted: 'Entry deleted.',
+          rateLabel: '1 pt = {{rate}} zł', noDefs: 'No chores defined yet.', oneTimeTag: 'one-time',
+          added: 'Chore added: {{name}}', defDeleted: 'Chore deleted.',
+          payoutPeriod: 'for {{from}}–{{to}}',
         },
         loan: {
           title: 'Loans', new: 'New loan',
@@ -1701,11 +1749,29 @@
           title: 'Zaloguj aktywność', type: 'Rodzaj aktywności', choose: '— wybierz —',
           minutes: 'Czas (minuty)', minutesPh: 'np. 60', descOpt: 'Opis (opcjonalne)', descPh: 'np. rozdział 3 z JS',
           willEarn: 'Zarobisz:', pkt: 'pkt', capNote: '(limit dzienny — zostanie obcięte)', capReached: '(limit dzienny osiągnięty — 0 pkt)', save: 'Zapisz aktywność',
+          deleted: 'Usunięto aktywność. -{{pts}} pkt', chooseType: 'Wybierz rodzaj aktywności.', minMinutes: 'Minimum 5 minut.',
+          dailyLimitHit: 'Osiągnąłeś dzienny limit punktów!',
         },
         logGaming: {
           title: 'Zaloguj sesję grania', game: 'Gra', choose: '— wybierz —', otherGame: 'Inna gra...',
           gameName: 'Nazwa gry', gameNamePh: 'np. Valorant', minutes: 'Czas (minuty)', minutesPh: 'np. 90',
           date: 'Data', save: 'Zapisz sesję', history: 'Historia sesji', noSessions: 'Brak sesji.',
+          enterGame: 'Wybierz lub wpisz grę.', enterDuration: 'Wpisz czas sesji.',
+          sessionTooLong: 'Jedna sesja nie może przekraczać 1440 minut (24h).',
+          dailyLimitHit: 'Limit 1440 min (24h) na dzień. Masz już zalogowane {{existing}} min tego dnia.',
+          saved: 'Zapisano {{time}} grania w {{game}}.', sessionDeleted: 'Sesja usunięta.',
+        },
+        history: {
+          title: 'Pełna historia aktywności', prev: '← Poprzednia', next: 'Następna →',
+          pageInfo: 'Strona {{page}} / {{total}} · {{count}} aktywności',
+        },
+        stats: {
+          title: 'Statystyki', gamingChart: 'Czas grania — ostatnie 7 dni (minuty)',
+          totalEarned: 'Łącznie zarobione', totalSpent: 'Łącznie wydane (pkt)', totalGaming: 'Czas grania łącznie',
+        },
+        errors: {
+          connectionShort: 'Błąd połączenia', connection: 'Brak połączenia z bazą danych. Sprawdź internet i odśwież.',
+          loadFailed: 'Błąd ładowania danych. Odśwież stronę.', resetFailed: 'Błąd resetu.', saveRetry: 'Błąd zapisu. Spróbuj ponownie.',
         },
         generator: { title: 'Co teraz?', subtitle: 'Wybierz ile masz czasu, a wylosuję coś produktywnego.', roll: 'Losuj', doIt: 'Zrób to!' },
         levelup: { title: 'Nowy poziom!', subtitle: 'Awansowałeś na', cta: 'Super! 🚀' },
@@ -1800,6 +1866,22 @@
           notifOn: '🔔 Powiadomienia włączone na tym urządzeniu.', notifOff: 'Powiadomienia wyłączone.',
           notifBlocked: 'Powiadomienia zablokowane w ustawieniach przeglądarki.', notifUnsupported: 'Ta przeglądarka nie obsługuje powiadomień.',
           refreshToken: 'Odśwież token', notifNoHours: 'Brak wybranych godzin — powiadomienia nie będą wysyłane.',
+          saved: 'Zapisano ustawienia.', economyGeneralSaved: 'Zapisano ekonomię ogólną.', economyChoresSaved: 'Zapisano ekonomię obowiązków.',
+          todayReset: 'Dzisiejszy licznik punktów wyzerowany.',
+          noGames: 'Brak gier. Dodaj poniżej.', gameAdded: 'Dodano grę: {{name}}', gameSaveError: 'Błąd zapisu gry.',
+          gameDeleted: 'Gra usunięta.', gameDeleteError: 'Błąd usuwania gry.',
+          noActivityDefs: 'Brak zdefiniowanych aktywności.', ptsPerHourShort: 'pkt/h',
+          activityAdded: 'Dodano aktywność: {{name}}', activityDeleted: 'Aktywność usunięta.',
+          enterValidEmail: 'Wpisz poprawny adres email.', emailSendError: 'Błąd wysyłania emaila. Spróbuj ponownie.',
+          codeSent: 'Wysłano kod weryfikacyjny!', noPendingVerification: 'Brak oczekującej weryfikacji.',
+          codeExpired: 'Kod wygasł. Wyślij nowy.', codeInvalid: 'Nieprawidłowy kod.',
+          parentEmailVerified: 'Email rodzica zweryfikowany!',
+          notifNoVapid: 'Brak klucza VAPID — skonfiguruj w kodzie.', notifDenied: 'Nie udzielono zgody na powiadomienia.',
+          notifNoToken: 'Nie udało się uzyskać tokenu.', notifEnabled: 'Powiadomienia włączone! 🔔',
+          notifEnableError: 'Błąd włączania powiadomień.', newNotification: 'Nowe powiadomienie',
+          weeklyReportOn: 'Raport tygodniowy włączony.', weeklyReportOff: 'Raport tygodniowy wyłączony.',
+          chooseHourToast: 'Wybierz godzinę.', hourAlreadyAdded: 'Ta godzina jest już dodana.',
+          maxThreeHours: 'Możesz wybrać maksymalnie 3 godziny.', hourAdded: 'Dodano godzinę {{h}}:00.', hourRemoved: 'Usunięto godzinę {{h}}:00.',
         },
         shop: {
           title: 'Wydatki', register: 'Zarejestruj zakup', desc: 'Opis zakupu', descPh: 'np. gra na Steamie',
@@ -1842,6 +1924,8 @@
         },
         common: {
           cancel: 'Anuluj', delete: 'Usuń', reset: 'Wyzeruj', settle: 'Rozlicz', close: 'Zamknij',
+          deleteError: 'Błąd usuwania.', enterName: 'Wpisz nazwę.', enterPoints: 'Wpisz punkty.',
+          pointsMustBePositive: 'Liczba punktów musi być większa od 0.',
         },
         confirm: {
           deleteActivity: 'Usunąć tę aktywność? Punkty zostaną odjęte.',
@@ -1856,6 +1940,20 @@
         choreMsg: {
           settled: 'Rozliczono {{amount}} 🎉', settleError: 'Błąd rozliczenia.',
           incomeCategory: 'Obowiązki domowe',
+        },
+        chores: {
+          title: 'Obowiązki domowe',
+          subtitle: 'Osobny rejestr — zarobek za prace domowe (<span id="chore-rate-label">1 pkt = 0,45 zł</span>).',
+          outstanding: 'Do wypłaty (nierozliczone)', settle: 'Rozlicz wypłatę',
+          tabCurrent: 'Bieżący miesiąc', tabPrev: 'Poprzedni miesiąc', monthEarnings: 'Zarobek miesiąca',
+          payoutHistory: 'Historia wypłat', noPayouts: 'Brak wypłat.', addAria: 'Dodaj obowiązek',
+          sheetTitle: 'Co zrobiłeś?', sheetSubtitle: 'Tapnij obowiązek, żeby dodać go na dziś.', sheetEmpty: 'Lista obowiązków jeszcze nie zdefiniowana.',
+          yesterdayTitle: 'Kiedy to zrobiłeś?', today: 'Dzisiaj', yesterday: 'Wczoraj',
+          yesterdayText: '„{{name}}" jest już zaznaczony na dziś. Czy zrobiłeś to wczoraj ({{date}})?',
+          entryAdded: 'Dodano: {{name}} (+{{pts}} pkt)', entrySaveError: 'Błąd zapisu obowiązku.', entryDeleted: 'Wpis usunięty.',
+          rateLabel: '1 pkt = {{rate}} zł', noDefs: 'Brak zdefiniowanych obowiązków.', oneTimeTag: 'jednorazowy',
+          added: 'Dodano obowiązek: {{name}}', defDeleted: 'Obowiązek usunięty.',
+          payoutPeriod: 'za {{from}}–{{to}}',
         },
         loan: {
           title: 'Pożyczki', new: 'Nowa pożyczka',
@@ -1918,6 +2016,9 @@
       document.querySelectorAll('[data-i18n-title]').forEach(el => {
         el.title = i18next.t(el.getAttribute('data-i18n-title'));
       });
+      document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+        el.setAttribute('aria-label', i18next.t(el.getAttribute('data-i18n-aria')));
+      });
     }
 
     window.applyLang = (lang) => {
@@ -1952,6 +2053,12 @@
         if (document.getElementById('page-report-bug').classList.contains('active')) {
           if (isBugAdmin) { renderBugKeywordsSettings(); renderAdminBugList(); }
           else { renderBugAreaSelect(); renderMyBugReports(); }
+        }
+        if (document.getElementById('page-chores').classList.contains('active') && typeof choreDefs !== 'undefined' && choreDefs.length) renderChores();
+        if (document.getElementById('page-settings').classList.contains('active')) {
+          if (typeof choreDefs !== 'undefined' && choreDefs.length) renderChoreDefsSettings();
+          if (typeof activityDefs !== 'undefined' && activityDefs.length) renderActivityDefsSettings();
+          renderGamesList();
         }
       } catch (e) { /* dashboard jeszcze nie załadowany — nic nie robimy */ }
     }
@@ -2047,8 +2154,8 @@
         await loadProfile();
       } catch (e) {
         console.error('loadProfile failed:', e);
-        document.getElementById('user-name').textContent = 'Błąd połączenia';
-        toast('Brak połączenia z bazą danych. Sprawdź internet i odśwież.', 'error');
+        document.getElementById('user-name').textContent = i18next.t('errors.connectionShort');
+        toast(i18next.t('errors.connection'), 'error');
         return;
       }
 
@@ -2073,7 +2180,7 @@
         await loadDashboard();
       } catch (e) {
         console.error('loadDashboard failed:', e);
-        toast('Błąd ładowania danych. Odśwież stronę.', 'error');
+        toast(i18next.t('errors.loadFailed'), 'error');
       }
 
       // Po załadowaniu apki — pokaż „Co nowego?" raz na nową wersję.
@@ -2782,10 +2889,10 @@
         await loadProfile();
         await loadDashboard();
         if (document.getElementById('page-history').classList.contains('active')) await loadHistory();
-        toast(`Usunięto aktywność. -${pts} pkt`);
+        toast(i18next.t('logActivity.deleted', { pts }));
       } catch (e) {
         console.error(e);
-        toast('Błąd usuwania.', 'error');
+        toast(i18next.t('common.deleteError'), 'error');
       }
     };
 
@@ -2796,7 +2903,7 @@
 
     async function loadHistory() {
       const el = document.getElementById('history-list');
-      el.innerHTML = '<p class="text2">Ładowanie…</p>';
+      el.innerHTML = `<p class="text2">${i18next.t('dashboard.loading')}</p>`;
       const q = query(
         collection(db, 'users', currentUser.uid, 'activities'),
         orderBy('timestamp', 'desc')
@@ -2825,8 +2932,9 @@
       el.innerHTML = slice.map(d => activityRowHTML(d.id, d.data())).join('');
 
       pager.style.display = totalPages > 1 ? 'flex' : 'none';
-      document.getElementById('history-page-info').textContent =
-        `Strona ${historyPage + 1} / ${totalPages} · ${historyDocs.length} aktywności`;
+      document.getElementById('history-page-info').textContent = i18next.t('history.pageInfo', {
+        page: historyPage + 1, total: totalPages, count: historyDocs.length,
+      });
       document.getElementById('history-prev').disabled = historyPage === 0;
       document.getElementById('history-next').disabled = historyPage >= totalPages - 1;
     }
@@ -2848,10 +2956,10 @@
           await setDoc(dayRef, { pointsEarned: 0, gamingMinutes: 0 });
         }
         await loadDashboard();
-        toast('Dzisiejszy licznik punktów wyzerowany.');
+        toast(i18next.t('settings.todayReset'));
       } catch (e) {
         console.error(e);
-        toast('Błąd resetu.', 'error');
+        toast(i18next.t('errors.resetFailed'), 'error');
       }
     };
 
@@ -2893,8 +3001,8 @@
       const min = parseInt(document.getElementById('act-minutes').value);
       const desc = document.getElementById('act-desc').value.trim();
 
-      if (!type) return toast('Wybierz rodzaj aktywności.', 'error');
-      if (!min || min < 5) return toast('Minimum 5 minut.', 'error');
+      if (!type) return toast(i18next.t('logActivity.chooseType'), 'error');
+      if (!min || min < 5) return toast(i18next.t('logActivity.minMinutes'), 'error');
 
       const opt = document.querySelector(`#act-type option[value="${type}"]`);
       const ptsPerH = parseInt(opt?.dataset.pts || 0);
@@ -2907,7 +3015,7 @@
       const actualEarned = Math.min(earned, Math.max(0, remaining));
 
       if (actualEarned === 0) {
-        return toast('Osiągnąłeś dzienny limit punktów!', 'error');
+        return toast(i18next.t('logActivity.dailyLimitHit'), 'error');
       }
 
       const btn = document.querySelector('#page-log-activity button');
@@ -2961,7 +3069,7 @@
           confettiBurst();
         }
       } catch (e) {
-        toast('Błąd zapisu. Spróbuj ponownie.', 'error');
+        toast(i18next.t('errors.saveRetry'), 'error');
         console.error(e);
       }
       btn.disabled = false;
@@ -2974,8 +3082,8 @@
       const defaults = ['Minecraft', 'Geometry Dash', 'Inna'];
       const all = [...new Set([...defaults, ...games])];
 
-      sel.innerHTML = '<option value="">— wybierz —</option>' +
-        all.map(g => `<option value="${g}">${g}</option>`).join('');
+      sel.innerHTML = `<option value="">${i18next.t('logGaming.choose')}</option>` +
+        all.map(g => `<option value="${g}">${g === 'Inna' ? escapeHtml(i18next.t('logGaming.otherGame')) : escapeHtml(g)}</option>`).join('');
 
       // Set today's date as default
       document.getElementById('game-date').value = todayStr();
@@ -2991,9 +3099,9 @@
       const min = parseInt(document.getElementById('game-minutes').value);
       const date = document.getElementById('game-date').value || todayStr();
 
-      if (!game) return toast('Wybierz lub wpisz grę.', 'error');
-      if (!min || min < 1) return toast('Wpisz czas sesji.', 'error');
-      if (min > 1440) return toast('Jedna sesja nie może przekraczać 1440 minut (24h).', 'error');
+      if (!game) return toast(i18next.t('logGaming.enterGame'), 'error');
+      if (!min || min < 1) return toast(i18next.t('logGaming.enterDuration'), 'error');
+      if (min > 1440) return toast(i18next.t('logGaming.sessionTooLong'), 'error');
 
       const btn = document.querySelector('#page-log-gaming button');
       btn.disabled = true;
@@ -3003,7 +3111,7 @@
         const daySnap = await getDoc(dayRef);
         const existingMin = daySnap.exists() ? (daySnap.data().gamingMinutes || 0) : 0;
         if (existingMin + min > 1440) {
-          toast(`Limit 1440 min (24h) na dzień. Masz już zalogowane ${existingMin} min tego dnia.`, 'error');
+          toast(i18next.t('logGaming.dailyLimitHit', { existing: existingMin }), 'error');
           btn.disabled = false;
           return;
         }
@@ -3020,14 +3128,14 @@
 
         await loadDashboard();
         await loadGamingHistory();
-        toast(`Zapisano ${formatMinutes(min)} grania w ${game}.`);
+        toast(i18next.t('logGaming.saved', { time: formatMinutes(min), game, interpolation: { escapeValue: false } }));
         document.getElementById('game-select').value = '';
         document.getElementById('game-minutes').value = '';
         document.getElementById('game-custom').value = '';
         document.getElementById('game-custom-wrap').style.display = 'none';
         document.getElementById('game-minutes').value = '';
       } catch (e) {
-        toast('Błąd zapisu.', 'error');
+        toast(i18next.t('shop.saveError'), 'error');
         console.error(e);
       }
       btn.disabled = false;
@@ -3070,9 +3178,9 @@
         }
         await loadDashboard();
         await loadGamingHistory();
-        toast('Sesja usunięta.');
+        toast(i18next.t('logGaming.sessionDeleted'));
       } catch (e) {
-        toast('Błąd usuwania.', 'error');
+        toast(i18next.t('common.deleteError'), 'error');
         console.error(e);
       }
     };
@@ -3371,7 +3479,6 @@
     let choreSelectedDay = null;  // dateISO rozwiniętego dnia
     let chorePicking = false;
 
-    const MONTHS_PL = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
     function dateISOLocal(d = new Date()) {
       const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
       return `${y}-${m}-${day}`;
@@ -3384,10 +3491,18 @@
       const prev = `${p.getFullYear()}-${String(p.getMonth() + 1).padStart(2, '0')}`;
       return { cur, prev };
     }
-    function monthLabel(mk) { const [y, m] = mk.split('-').map(Number); return `${MONTHS_PL[m - 1]} ${y}`; }
+    // monthLabelLocale() jest zdefiniowana niżej (sekcja Money) — reużywana też tutaj,
+    // deklaracje function są hoistowane więc kolejność w pliku nie ma znaczenia.
+    const monthLabel = (mk) => monthLabelLocale(mk);
     const selectedMonthKey = () => { const { cur, prev } = monthKeys(); return choreTab === 'current' ? cur : prev; };
     function syncChoreTabs() {
       document.querySelectorAll('#chore-tabs .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === choreTab));
+    }
+    function renderChoreWeekdayHeader() {
+      const el = document.getElementById('chore-weekdays');
+      if (!el) return;
+      const days = i18next.t('dayNamesShort', { returnObjects: true }); // [Nd,Pn,Wt,Śr,Cz,Pt,Sb] — niedziela=0
+      el.innerHTML = [1, 2, 3, 4, 5, 6, 0].map(i => `<span>${days[i]}</span>`).join('');
     }
 
     async function loadChores() {
@@ -3413,8 +3528,9 @@
     };
 
     function renderChores() {
+      renderChoreWeekdayHeader();
       const rateLabel = document.getElementById('chore-rate-label');
-      if (rateLabel) rateLabel.textContent = `1 pkt = ${rateChores().toFixed(2).replace('.', ',')} zł`;
+      if (rateLabel) rateLabel.textContent = i18next.t('chores.rateLabel', { rate: rateChores().toFixed(2).replace('.', ',') });
 
       const mk = selectedMonthKey();
       const monthEntries = choreEntries.filter(e => e.monthKey === mk);
@@ -3442,19 +3558,20 @@
 
     function renderPayouts() {
       const el = document.getElementById('chore-payout-list');
-      if (chorePayouts.length === 0) { el.innerHTML = '<p class="text2">Brak wypłat.</p>'; return; }
+      if (chorePayouts.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('chores.noPayouts')}</p>`; return; }
+      const loc = i18next.language === 'pl' ? 'pl-PL' : 'en-US';
       el.innerHTML = chorePayouts.map(p => {
         const d = p.createdAt?.toDate ? p.createdAt.toDate() : new Date(p.createdAt);
-        const ds = d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+        const ds = d.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
         const period = (p.fromISO && p.toISO)
-          ? ` · za ${p.fromISO.slice(8)}.${p.fromISO.slice(5, 7)}–${p.toISO.slice(8)}.${p.toISO.slice(5, 7)}`
+          ? ' · ' + i18next.t('chores.payoutPeriod', { from: `${p.fromISO.slice(8)}.${p.fromISO.slice(5, 7)}`, to: `${p.toISO.slice(8)}.${p.toISO.slice(5, 7)}` })
           : '';
         return `<div class="payout-item">
           <div>
             <div class="pi-amount">${(p.amountPln || 0).toFixed(2).replace('.', ',')} zł</div>
             <div class="text2">${ds}${period}</div>
           </div>
-          <div class="pi-pts">${p.points} pkt</div>
+          <div class="pi-pts">${p.points} ${i18next.t('logActivity.pkt')}</div>
         </div>`;
       }).join('');
     }
@@ -3549,11 +3666,11 @@
     window.openChoreSheet = () => {
       const list = document.getElementById('chore-sheet-list');
       list.innerHTML = choreDefs.length === 0
-        ? '<div class="sheet-empty">Lista obowiązków jeszcze nie zdefiniowana.</div>'
+        ? `<div class="sheet-empty">${i18next.t('chores.sheetEmpty')}</div>`
         : choreDefs.map(c => `
           <div class="sheet-chore" onclick="pickChore('${c.id}', this)">
             <span class="sc-name">${c.emoji ? c.emoji + ' ' : ''}${escapeHtml(c.name)}</span>
-            <span class="sc-pts">+${c.points} pkt</span>
+            <span class="sc-pts">+${c.points} ${i18next.t('logActivity.pkt')}</span>
             <svg class="sc-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>
           </div>`).join('');
       document.getElementById('chore-sheet').classList.add('open');
@@ -3578,7 +3695,7 @@
         const modal = document.getElementById('chore-yesterday-modal');
         const [, mm, dd] = yesterdayISO.split('-');
         document.getElementById('chore-yest-text').textContent =
-          `„${choreName}" jest już zaznaczony na dziś. Czy zrobiłeś to wczoraj (${dd}.${mm})?`;
+          i18next.t('chores.yesterdayText', { name: choreName, date: `${dd}.${mm}`, interpolation: { escapeValue: false } });
         modal.classList.add('open');
         const yes = document.getElementById('chore-yest-yes');
         const no = document.getElementById('chore-yest-no');
@@ -3633,10 +3750,10 @@
         choreSelectedDay = dateISO;
         await loadChores();
         pulseEl(document.querySelector('#page-chores .chore-summary'));
-        toast(`Dodano: ${chore.name} (+${chore.points} pkt)`);
+        toast(i18next.t('chores.entryAdded', { name: chore.name, pts: chore.points, interpolation: { escapeValue: false } }));
       } catch (e) {
         console.error(e);
-        toast('Błąd zapisu obowiązku.', 'error');
+        toast(i18next.t('chores.entrySaveError'), 'error');
       }
     }
 
@@ -3646,10 +3763,10 @@
         await deleteDoc(doc(db, 'users', currentUser.uid, 'chores', id));
         await loadChores();
         pulseEl(document.querySelector('#page-chores .chore-summary'));
-        toast('Wpis usunięty.');
+        toast(i18next.t('chores.entryDeleted'));
       } catch (e) {
         console.error(e);
-        toast('Błąd usuwania.', 'error');
+        toast(i18next.t('common.deleteError'), 'error');
       }
     };
 
@@ -3659,42 +3776,42 @@
       const dailyLimit = parseInt(document.getElementById('set-daily-limit').value) || DAILY_LIMIT_DEFAULT;
       await updateDoc(doc(db, 'users', currentUser.uid), { name, dailyLimit });
       await loadProfile();
-      toast('Zapisano ustawienia.');
+      toast(i18next.t('settings.saved'));
     };
 
     window.saveEconomyGeneral = async () => {
       const genZl  = parseFloat(document.getElementById('econ-general-zl').value)  || RATE_GENERAL_ZL_DEFAULT;
       const genPts = parseFloat(document.getElementById('econ-general-pts').value) || RATE_GENERAL_PTS_DEFAULT;
-      if (genPts <= 0) return toast('Liczba punktów musi być większa od 0.', 'error');
+      if (genPts <= 0) return toast(i18next.t('common.pointsMustBePositive'), 'error');
 
       await updateDoc(doc(db, 'users', currentUser.uid), {
         pointsRateGeneralZl: genZl, pointsRateGeneralPts: genPts,
       });
       await loadProfile();
-      toast('Zapisano ekonomię ogólną.');
+      toast(i18next.t('settings.economyGeneralSaved'));
     };
 
     window.saveEconomyChores = async () => {
       const choZl  = parseFloat(document.getElementById('econ-chore-zl').value)  || RATE_CHORES_ZL_DEFAULT;
       const choPts = parseFloat(document.getElementById('econ-chore-pts').value) || RATE_CHORES_PTS_DEFAULT;
-      if (choPts <= 0) return toast('Liczba punktów musi być większa od 0.', 'error');
+      if (choPts <= 0) return toast(i18next.t('common.pointsMustBePositive'), 'error');
 
       await updateDoc(doc(db, 'users', currentUser.uid), {
         pointsRateChoresZl: choZl, pointsRateChoresPts: choPts,
       });
       await loadProfile();
       if (document.getElementById('page-chores').classList.contains('active')) renderChores();
-      toast('Zapisano ekonomię obowiązków.');
+      toast(i18next.t('settings.economyChoresSaved'));
     };
 
     function renderChoreDefsSettings() {
       const el = document.getElementById('chore-defs-list');
       if (!el) return;
-      if (choreDefs.length === 0) { el.innerHTML = '<p class="text2">Brak zdefiniowanych obowiązków.</p>'; return; }
+      if (choreDefs.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('chores.noDefs')}</p>`; return; }
       el.innerHTML = choreDefs.map(c => `
         <div class="preset-item" style="margin-bottom:6px">
-          <span class="preset-info">${c.emoji ? c.emoji + ' ' : ''}${escapeHtml(c.name)} — ${c.points} pkt${c.oneTime ? ' · jednorazowy' : ''}</span>
-          <button class="btn-secondary" onclick="deleteChoreDef('${c.id}')" style="padding:4px 10px;font-size:12px">Usuń</button>
+          <span class="preset-info">${c.emoji ? c.emoji + ' ' : ''}${escapeHtml(c.name)} — ${c.points} ${i18next.t('logActivity.pkt')}${c.oneTime ? ' · ' + i18next.t('chores.oneTimeTag') : ''}</span>
+          <button class="btn-secondary" onclick="deleteChoreDef('${c.id}')" style="padding:4px 10px;font-size:12px">${i18next.t('shop.delete')}</button>
         </div>`).join('');
     }
 
@@ -3704,8 +3821,8 @@
       const points = parseInt(document.getElementById('cd-points').value);
       const emoji = document.getElementById('cd-emoji').value.trim();
       const oneTime = document.getElementById('cd-onetime').checked;
-      if (!name) return toast('Wpisz nazwę.', 'error');
-      if (!points || points <= 0) return toast('Wpisz punkty.', 'error');
+      if (!name) return toast(i18next.t('common.enterName'), 'error');
+      if (!points || points <= 0) return toast(i18next.t('common.enterPoints'), 'error');
 
       const order = choreDefs.length ? Math.max(...choreDefs.map(c => c.order || 0)) + 1 : 0;
       await addDoc(collection(db, 'users', currentUser.uid, 'choreDefs'), { name, desc, emoji, points, oneTime, order });
@@ -3718,7 +3835,7 @@
       document.getElementById('cd-emoji').value = '';
       document.getElementById('cd-onetime').checked = false;
       renderChoreEmojiPicker();
-      toast(`Dodano obowiązek: ${name}`);
+      toast(i18next.t('chores.added', { name, interpolation: { escapeValue: false } }));
     };
 
     // ── Emoji picker dla obowiązków (bez wolnego wpisywania tekstu) ──
@@ -3746,18 +3863,18 @@
       await deleteDoc(doc(db, 'users', currentUser.uid, 'choreDefs', id));
       await loadChoreDefs();
       renderChoreDefsSettings();
-      toast('Obowiązek usunięty.');
+      toast(i18next.t('chores.defDeleted'));
     };
 
     // ── Zarządzanie aktywnościami w Ustawieniach ───────────
     function renderActivityDefsSettings() {
       const el = document.getElementById('activity-defs-list');
       if (!el) return;
-      if (activityDefs.length === 0) { el.innerHTML = '<p class="text2">Brak zdefiniowanych aktywności.</p>'; return; }
+      if (activityDefs.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('settings.noActivityDefs')}</p>`; return; }
       el.innerHTML = activityDefs.map(a => `
         <div class="preset-item" style="margin-bottom:6px">
-          <span class="preset-info"><i class="ti ${a.icon}" style="color:${a.color};margin-right:6px"></i>${escapeHtml(a.name)} — ${a.points} pkt/h</span>
-          <button class="btn-secondary" onclick="deleteActivityDef('${a.id}')" style="padding:4px 10px;font-size:12px">Usuń</button>
+          <span class="preset-info"><i class="ti ${a.icon}" style="color:${a.color};margin-right:6px"></i>${escapeHtml(a.name)} — ${a.points} ${i18next.t('settings.ptsPerHourShort')}</span>
+          <button class="btn-secondary" onclick="deleteActivityDef('${a.id}')" style="padding:4px 10px;font-size:12px">${i18next.t('shop.delete')}</button>
         </div>`).join('');
     }
 
@@ -3766,8 +3883,8 @@
       const points = parseInt(document.getElementById('ad-points').value);
       const icon = document.getElementById('ad-icon').value || ACTIVITY_ICON_PRESETS[0];
       const color = document.getElementById('ad-color').value || ACTIVITY_COLOR_PRESETS[0];
-      if (!name) return toast('Wpisz nazwę.', 'error');
-      if (!points || points <= 0) return toast('Wpisz punkty.', 'error');
+      if (!name) return toast(i18next.t('common.enterName'), 'error');
+      if (!points || points <= 0) return toast(i18next.t('common.enterPoints'), 'error');
 
       const order = activityDefs.length ? Math.max(...activityDefs.map(a => a.order || 0)) + 1 : 0;
       await addDoc(collection(db, 'users', currentUser.uid, 'activityDefs'), { name, points, icon, color, order });
@@ -3780,7 +3897,7 @@
       document.getElementById('ad-color').value = '';
       renderActivityIconPicker();
       renderActivityColorPicker();
-      toast(`Dodano aktywność: ${name}`);
+      toast(i18next.t('settings.activityAdded', { name, interpolation: { escapeValue: false } }));
     };
 
     window.deleteActivityDef = async (id) => {
@@ -3788,7 +3905,7 @@
       await deleteDoc(doc(db, 'users', currentUser.uid, 'activityDefs', id));
       await loadActivityDefs();
       renderActivityDefsSettings();
-      toast('Aktywność usunięta.');
+      toast(i18next.t('settings.activityDeleted'));
     };
 
     // ── Pickery ikony i koloru dla aktywności (bez wolnego wpisywania) ──
@@ -3883,7 +4000,7 @@
     window.sendParentEmailVerification = async () => {
       const email = document.getElementById('set-parent-email').value.trim();
       if (!email || !/\S+@\S+\.\S+/.test(email)) {
-        toast('Wpisz poprawny adres email.', 'error'); return;
+        toast(i18next.t('settings.enterValidEmail'), 'error'); return;
       }
       const code   = Math.floor(100000 + Math.random() * 900000).toString();
       const expiry = Date.now() + 10 * 60 * 1000;
@@ -3904,10 +4021,10 @@
           }
         })
       });
-      if (!res.ok) { toast('Błąd wysyłania emaila. Spróbuj ponownie.', 'error'); return; }
+      if (!res.ok) { toast(i18next.t('settings.emailSendError'), 'error'); return; }
       userProfile.pendingParentEmail = email;
       updateParentEmailUI();
-      toast('Wysłano kod weryfikacyjny!');
+      toast(i18next.t('settings.codeSent'));
     };
 
     window.verifyParentEmailCode = async () => {
@@ -3915,13 +4032,13 @@
       const snap  = await getDoc(doc(db, 'users', currentUser.uid));
       const data  = snap.data();
       if (!data.parentEmailCode || !data.pendingParentEmail) {
-        toast('Brak oczekującej weryfikacji.', 'error'); return;
+        toast(i18next.t('settings.noPendingVerification'), 'error'); return;
       }
       if (Date.now() > data.parentEmailCodeExpiry) {
-        toast('Kod wygasł. Wyślij nowy.', 'error'); return;
+        toast(i18next.t('settings.codeExpired'), 'error'); return;
       }
       if (input !== data.parentEmailCode) {
-        toast('Nieprawidłowy kod.', 'error'); return;
+        toast(i18next.t('settings.codeInvalid'), 'error'); return;
       }
       await updateDoc(doc(db, 'users', currentUser.uid), {
         parentEmail: data.pendingParentEmail,
@@ -3931,7 +4048,7 @@
         parentEmailCodeExpiry: deleteField(),
       });
       await loadProfile();
-      toast('Email rodzica zweryfikowany!', 'success');
+      toast(i18next.t('settings.parentEmailVerified'), 'success');
     };
 
     window.cancelParentEmailVerification = async () => {
@@ -3953,11 +4070,11 @@
     function renderGamesList() {
       const games = userProfile?.games || [];
       const el = document.getElementById('games-list');
-      if (games.length === 0) { el.innerHTML = '<p class="text2" style="margin-bottom:8px">Brak gier. Dodaj poniżej.</p>'; return; }
+      if (games.length === 0) { el.innerHTML = `<p class="text2" style="margin-bottom:8px">${i18next.t('settings.noGames')}</p>`; return; }
       el.innerHTML = games.map((g, i) => `
         <div class="preset-item" style="margin-bottom:6px">
           <span class="preset-info">🎮 ${escapeHtml(g)}</span>
-          <button class="btn-secondary" onclick="removeGame(${i})" style="padding:4px 10px;font-size:12px">Usuń</button>
+          <button class="btn-secondary" onclick="removeGame(${i})" style="padding:4px 10px;font-size:12px">${i18next.t('shop.delete')}</button>
         </div>
       `).join('');
     }
@@ -3971,10 +4088,10 @@
         await updateDoc(doc(db, 'users', currentUser.uid), { games });
         await loadProfile();
         input.value = '';
-        toast(`Dodano grę: ${name}`);
+        toast(i18next.t('settings.gameAdded', { name, interpolation: { escapeValue: false } }));
       } catch (e) {
         console.error(e);
-        toast('Błąd zapisu gry.', 'error');
+        toast(i18next.t('settings.gameSaveError'), 'error');
       }
     };
 
@@ -3985,10 +4102,10 @@
         games.splice(i, 1);
         await updateDoc(doc(db, 'users', currentUser.uid), { games });
         await loadProfile();
-        toast('Gra usunięta.');
+        toast(i18next.t('settings.gameDeleted'));
       } catch (e) {
         console.error(e);
-        toast('Błąd usuwania gry.', 'error');
+        toast(i18next.t('settings.gameDeleteError'), 'error');
       }
     };
 
@@ -4094,28 +4211,28 @@
     i18nReady.then(renderNotifHoursInfo);
 
     window.enableNotifications = async () => {
-      if (typeof Notification === 'undefined') return toast('Brak wsparcia dla powiadomień.', 'error');
-      if (VAPID_KEY === 'WSTAW_VAPID_KEY') return toast('Brak klucza VAPID — skonfiguruj w kodzie.', 'error');
+      if (typeof Notification === 'undefined') return toast(i18next.t('settings.notifUnsupported'), 'error');
+      if (VAPID_KEY === 'WSTAW_VAPID_KEY') return toast(i18next.t('settings.notifNoVapid'), 'error');
       try {
         const perm = await Notification.requestPermission();
-        if (perm !== 'granted') { updateNotifStatus(false); return toast('Nie udzielono zgody na powiadomienia.', 'error'); }
+        if (perm !== 'granted') { updateNotifStatus(false); return toast(i18next.t('settings.notifDenied'), 'error'); }
         const reg = swRegistration || await navigator.serviceWorker.register('sw.js');
         const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
-        if (!token) return toast('Nie udało się uzyskać tokenu.', 'error');
+        if (!token) return toast(i18next.t('settings.notifNoToken'), 'error');
         await setDoc(doc(db, 'users', currentUser.uid, 'fcmTokens', token), {
           token, createdAt: new Date(), ua: navigator.userAgent
         });
         updateNotifStatus(true);
-        toast('Powiadomienia włączone! 🔔');
+        toast(i18next.t('settings.notifEnabled'));
       } catch (e) {
         console.error(e);
-        toast('Błąd włączania powiadomień.', 'error');
+        toast(i18next.t('settings.notifEnableError'), 'error');
       }
     };
 
     // Powiadomienie odebrane gdy apka jest na pierwszym planie → pokaż toast.
     onMessage(messaging, (payload) => {
-      toast(payload.notification?.title || 'Nowe powiadomienie');
+      toast(payload.notification?.title || i18next.t('settings.newNotification'));
     });
 
     // ── Email Report ──────────────────────────────────────
@@ -4123,9 +4240,9 @@
       try {
         await updateDoc(doc(db, 'users', currentUser.uid), { autoReport: on });
         userProfile.autoReport = on;
-        toast(on ? 'Raport tygodniowy włączony.' : 'Raport tygodniowy wyłączony.');
+        toast(on ? i18next.t('settings.weeklyReportOn') : i18next.t('settings.weeklyReportOff'));
       } catch (e) {
-        toast('Błąd zapisu.', 'error');
+        toast(i18next.t('shop.saveError'), 'error');
         const t = document.getElementById('auto-report-toggle');
         if (t) t.checked = !on;
       }
@@ -4153,18 +4270,18 @@
     window.addNotifHour = async () => {
       const sel = document.getElementById('notif-hour-select');
       const h = parseInt(sel.value);
-      if (isNaN(h)) return toast('Wybierz godzinę.', 'error');
+      if (isNaN(h)) return toast(i18next.t('settings.chooseHourToast'), 'error');
       const hours = userProfile?.notifHours || [];
-      if (hours.includes(h)) return toast('Ta godzina jest już dodana.', 'error');
-      if (hours.length >= 3) return toast('Możesz wybrać maksymalnie 3 godziny.', 'error');
+      if (hours.includes(h)) return toast(i18next.t('settings.hourAlreadyAdded'), 'error');
+      if (hours.length >= 3) return toast(i18next.t('settings.maxThreeHours'), 'error');
       const newHours = [...hours, h];
       try {
         await updateDoc(doc(db, 'users', currentUser.uid), { notifHours: newHours });
         userProfile.notifHours = newHours;
         sel.value = '';
         renderNotifHours();
-        toast(`Dodano godzinę ${h}:00.`);
-      } catch (e) { toast('Błąd zapisu.', 'error'); }
+        toast(i18next.t('settings.hourAdded', { h }));
+      } catch (e) { toast(i18next.t('shop.saveError'), 'error'); }
     };
 
     window.removeNotifHour = async (h) => {
@@ -4173,8 +4290,8 @@
         await updateDoc(doc(db, 'users', currentUser.uid), { notifHours: newHours });
         userProfile.notifHours = newHours;
         renderNotifHours();
-        toast(`Usunięto godzinę ${h}:00.`);
-      } catch (e) { toast('Błąd zapisu.', 'error'); }
+        toast(i18next.t('settings.hourRemoved', { h }));
+      } catch (e) { toast(i18next.t('shop.saveError'), 'error'); }
     };
 
     // ── Money Tracker ─────────────────────────────────────
@@ -5104,8 +5221,10 @@
     // ── „Co nowego?" / „What's new?" ──────────────────────
     // Pokazuje się RAZ po wejściu na nową wersję (guard w localStorage). Przy każdym
     // update'u: podbij APP_VERSION i dopisz punkty do CHANGELOG (dwujęzyczne pl/en).
-    const APP_VERSION = '2026.07.03';
+    const APP_VERSION = '2026.07.04';
     const CHANGELOG = [
+      { pl: '🐛 Nowość: zgłaszanie błędów — ikonka obok profilu, limit 1 zgłoszenie/dzień', en: '🐛 New: bug reporting — icon next to your profile, 1 report/day limit' },
+      { pl: '🌐 Obowiązki i reszta aplikacji przetłumaczone w pełni na EN/PL', en: '🌐 Chores and the rest of the app are now fully translated (EN/PL)' },
       { pl: '💰 Nowa zakładka Money — budżet, transakcje i kategorie', en: '💰 New Money tab — budget, transactions and categories' },
       { pl: '🤝 Pożyczki — śledź komu pożyczasz i kto pożycza Tobie (z częściową spłatą)', en: '🤝 Loans — track who you lend to and who lends to you (with partial repayment)' },
       { pl: '🛒 Zakupy w Money odejmują też punkty LifeXP', en: '🛒 Money purchases also deduct LifeXP points' },
