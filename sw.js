@@ -33,7 +33,7 @@ self.addEventListener('notificationclick', (e) => {
 });
 
 // ── PWA app-shell cache ──
-const CACHE = 'lifexp-shell-v6';
+const CACHE = 'lifexp-shell-v7';
 const STATIC = ['style.css', 'manifest.json', 'icon.svg'];
 const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html'];
 
@@ -56,8 +56,11 @@ self.addEventListener('fetch', (e) => {
 
   if (isHTML) {
     // Network-first: zawsze świeży HTML, fallback na cache gdy offline.
+    // cache: 'no-store' pomija zwykły cache HTTP przeglądarki/CDN (GitHub Pages) —
+    // bez tego fetch() potrafił dostawać stary zbuforowany HTML mimo strategii
+    // "network-first" (to była przyczyna starego UI na telefonie po deployu).
     e.respondWith(
-      fetch(e.request).then((resp) => {
+      fetch(e.request, { cache: 'no-store' }).then((resp) => {
         const copy = resp.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
         return resp;

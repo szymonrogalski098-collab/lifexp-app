@@ -211,6 +211,10 @@ button {
   font-size: 14px;
   font-weight: 600;
   transition: opacity .15s, transform .1s;
+  /* Fix: na mobile (iOS/Android) tap na przycisku rysuje niebieski "hitbox"
+     przez -webkit-tap-highlight-color — to INNA właściwość niż outline,
+     musi być wyłączona osobno i globalnie. */
+  -webkit-tap-highlight-color: transparent;
 }
 button:hover { opacity: .85; }
 button:active { transform: scale(.97); }

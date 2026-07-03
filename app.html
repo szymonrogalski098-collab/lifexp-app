@@ -4967,7 +4967,12 @@
       } else {
         bugSpamKeywords = ['błąd', 'nie działa', 'bug', 'error', 'powinno', 'pokazuje', 'strona',
           'zakładka', 'przycisk', 'punkty', 'saldo', 'zapis', 'wyświetla', 'crash', 'literówka'];
-        await setDoc(ref, { words: bugSpamKeywords });
+        // Zapis (seed) dokumentu wolno tylko adminowi (firestore.rules) — zwykły użytkownik
+        // dostałby permission-denied. Jeśli admin jeszcze nigdy nie odwiedził panelu,
+        // reszta i tak dostaje sensowną domyślną listę w pamięci (nie trwałą, ale działającą).
+        if (isBugAdmin) {
+          try { await setDoc(ref, { words: bugSpamKeywords }); } catch (e) { console.error('bugReportsConfig seed failed:', e); }
+        }
       }
     }
 
@@ -5202,15 +5207,18 @@
       isBugAdmin = currentUser?.email === BUG_ADMIN_EMAIL;
       document.getElementById('bug-submit-view').style.display = isBugAdmin ? 'none' : 'block';
       document.getElementById('bug-admin-view').style.display = isBugAdmin ? 'block' : 'none';
+
+      // Renderuj select miejsca OD RAZU — nie zależy od Firestore, więc select ma
+      // zawsze opcje do wyboru, nawet jeśli poniższe zapytania (keywords/moje zgłoszenia) zawiodą.
+      if (!isBugAdmin) { renderBugAreaSelect(); updateBugCharCount(); }
+
       try {
         await loadBugKeywords();
         if (isBugAdmin) {
           await loadAdminBugReports();
         } else {
-          renderBugAreaSelect();
           await loadMyBugReports();
           updateBugRateLimitUI();
-          updateBugCharCount();
         }
       } catch (e) {
         console.error('loadBugReportPage failed:', e);
@@ -5221,8 +5229,11 @@
     // ── „Co nowego?" / „What's new?" ──────────────────────
     // Pokazuje się RAZ po wejściu na nową wersję (guard w localStorage). Przy każdym
     // update'u: podbij APP_VERSION i dopisz punkty do CHANGELOG (dwujęzyczne pl/en).
-    const APP_VERSION = '2026.07.04';
+    const APP_VERSION = '2026.07.05';
     const CHANGELOG = [
+      { pl: '🔧 Fix: formularz zgłaszania błędu działa, nawet zanim admin pierwszy raz otworzy panel', en: '🔧 Fix: bug report form works even before the admin has ever opened the panel' },
+      { pl: '📱 Fix: zniknął niebieski "hitbox" po tapnięciu przycisku na telefonie', en: '📱 Fix: the blue tap "hitbox" flash on buttons is gone on mobile' },
+      { pl: '📱 Fix: telefon nie pokazuje już starej zbuforowanej wersji aplikacji po update', en: "📱 Fix: phones no longer show a stale cached version of the app after an update" },
       { pl: '🐛 Nowość: zgłaszanie błędów — ikonka obok profilu, limit 1 zgłoszenie/dzień', en: '🐛 New: bug reporting — icon next to your profile, 1 report/day limit' },
       { pl: '🌐 Obowiązki i reszta aplikacji przetłumaczone w pełni na EN/PL', en: '🌐 Chores and the rest of the app are now fully translated (EN/PL)' },
       { pl: '💰 Nowa zakładka Money — budżet, transakcje i kategorie', en: '💰 New Money tab — budget, transactions and categories' },
