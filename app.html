@@ -940,6 +940,12 @@
         </div>
       </div>
 
+      <!-- HISTORIA AKTUALIZACJI -->
+      <div class="page" id="page-update-history">
+        <h2 style="margin-bottom:20px" data-i18n="whatsnew.historyTitle">Historia aktualizacji</h2>
+        <div id="update-history-list"></div>
+      </div>
+
       <!-- GENERATOR -->
       <div class="page" id="page-generator">
         <div class="card generator-card">
@@ -1200,6 +1206,16 @@
                 <button class="btn-secondary" onclick="showPage('report-bug')" data-i18n="bugReport.reportBtn">Zgłoś błąd</button>
               </div>
             </div>
+
+            <div class="card settings-section">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+                <div>
+                  <h3 data-i18n="whatsnew.historyTitle">Historia aktualizacji</h3>
+                  <p class="text2" style="font-size:13px;margin-top:4px" data-i18n="whatsnew.historyHint">Zobacz co dodaliśmy i naprawiliśmy w poprzednich wersjach.</p>
+                </div>
+                <button class="btn-secondary" onclick="showPage('update-history')" data-i18n="whatsnew.historyBtn">Historia aktualizacji</button>
+              </div>
+            </div>
           </div>
 
           <div class="settings-category">
@@ -1393,12 +1409,13 @@
 
   <!-- Co nowego? (What's new — raz na nową wersję) -->
   <div class="modal-overlay" id="whatsnew-modal">
-    <div class="modal" style="max-width:460px">
-      <div style="text-align:center;font-size:40px;margin-bottom:6px">✨</div>
-      <h3 style="text-align:center;margin-bottom:4px" data-i18n="whatsnew.title">Co nowego?</h3>
-      <p class="text2" style="text-align:center;margin-bottom:18px" id="whatsnew-version"></p>
-      <div id="whatsnew-list" style="margin-bottom:22px"></div>
-      <button class="btn-primary" style="width:100%" onclick="closeWhatsNew()" data-i18n="whatsnew.cta">Super!</button>
+    <div class="modal" style="max-width:460px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;padding-bottom:20px">
+      <div style="text-align:center;font-size:40px;margin-bottom:6px;flex-shrink:0">✨</div>
+      <h3 style="text-align:center;margin-bottom:4px;flex-shrink:0" data-i18n="whatsnew.title">Co nowego?</h3>
+      <p class="text2" style="text-align:center;margin-bottom:18px;flex-shrink:0" id="whatsnew-version"></p>
+      <div id="whatsnew-list" style="margin-bottom:16px;overflow-y:auto;flex:1;min-height:0"></div>
+      <button class="btn-primary" style="width:100%;flex-shrink:0" onclick="closeWhatsNew()" data-i18n="whatsnew.cta">Super!</button>
+      <button class="btn-ghost btn-sm" style="width:100%;margin-top:8px;flex-shrink:0" onclick="closeWhatsNew(); showPage('update-history')" data-i18n="whatsnew.historyBtn">Historia aktualizacji</button>
     </div>
   </div>
 
@@ -1729,7 +1746,11 @@
           accepted_: 'Accepted.', rejected_: 'Rejected.', postponed_: 'Postponed.', deleted_: 'Deleted.',
           rescued: 'Marked as not spam — moved to New.',
         },
-        whatsnew: { title: "What's new?", version: 'Version {{v}}', cta: 'Got it!' },
+        whatsnew: {
+          title: "What's new?", version: 'Version {{v}}', cta: 'Got it!',
+          historyBtn: 'Update history', historyTitle: 'Update history',
+          historyHint: 'See what we added and fixed in previous versions.',
+        },
       }},
       pl: { translation: {
         nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
@@ -1992,7 +2013,11 @@
           accepted_: 'Przyjęto.', rejected_: 'Odrzucono.', postponed_: 'Odłożono.', deleted_: 'Usunięto.',
           rescued: 'Oznaczono jako niespam — przeniesiono do Nowych.',
         },
-        whatsnew: { title: 'Co nowego?', version: 'Wersja {{v}}', cta: 'Super!' },
+        whatsnew: {
+          title: 'Co nowego?', version: 'Wersja {{v}}', cta: 'Super!',
+          historyBtn: 'Historia aktualizacji', historyTitle: 'Historia aktualizacji',
+          historyHint: 'Zobacz co dodaliśmy i naprawiliśmy w poprzednich wersjach.',
+        },
       }},
     };
 
@@ -2054,6 +2079,7 @@
           if (isBugAdmin) { renderBugKeywordsSettings(); renderAdminBugList(); }
           else { renderBugAreaSelect(); renderMyBugReports(); }
         }
+        if (document.getElementById('page-update-history').classList.contains('active')) renderUpdateHistory();
         if (document.getElementById('page-chores').classList.contains('active') && typeof choreDefs !== 'undefined' && choreDefs.length) renderChores();
         if (document.getElementById('page-settings').classList.contains('active')) {
           if (typeof choreDefs !== 'undefined' && choreDefs.length) renderChoreDefsSettings();
@@ -2248,6 +2274,7 @@
       if (id === 'shop') loadPurchases();
       if (id === 'money') loadMoney();
       if (id === 'report-bug') loadBugReportPage();
+      if (id === 'update-history') renderUpdateHistory();
       if (id === 'log-gaming') { updateGameSelect(); loadGamingHistory(); }
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
@@ -5228,21 +5255,29 @@
 
     // ── „Co nowego?" / „What's new?" ──────────────────────
     // Pokazuje się RAZ po wejściu na nową wersję (guard w localStorage). Przy każdym
-    // update'u: podbij APP_VERSION i dopisz punkty do CHANGELOG (dwujęzyczne pl/en).
+    // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
+    // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
+    // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
     const APP_VERSION = '2026.07.05';
     const CHANGELOG = [
-      { pl: '🔧 Fix: formularz zgłaszania błędu działa, nawet zanim admin pierwszy raz otworzy panel', en: '🔧 Fix: bug report form works even before the admin has ever opened the panel' },
-      { pl: '📱 Fix: zniknął niebieski "hitbox" po tapnięciu przycisku na telefonie', en: '📱 Fix: the blue tap "hitbox" flash on buttons is gone on mobile' },
-      { pl: '📱 Fix: telefon nie pokazuje już starej zbuforowanej wersji aplikacji po update', en: "📱 Fix: phones no longer show a stale cached version of the app after an update" },
-      { pl: '🐛 Nowość: zgłaszanie błędów — ikonka obok profilu, limit 1 zgłoszenie/dzień', en: '🐛 New: bug reporting — icon next to your profile, 1 report/day limit' },
-      { pl: '🌐 Obowiązki i reszta aplikacji przetłumaczone w pełni na EN/PL', en: '🌐 Chores and the rest of the app are now fully translated (EN/PL)' },
-      { pl: '💰 Nowa zakładka Money — budżet, transakcje i kategorie', en: '💰 New Money tab — budget, transactions and categories' },
-      { pl: '🤝 Pożyczki — śledź komu pożyczasz i kto pożycza Tobie (z częściową spłatą)', en: '🤝 Loans — track who you lend to and who lends to you (with partial repayment)' },
-      { pl: '🛒 Zakupy w Money odejmują też punkty LifeXP', en: '🛒 Money purchases also deduct LifeXP points' },
-      { pl: '🚫 Saldo Money nie może już zejść poniżej zera', en: '🚫 Money balance can no longer go below zero' },
-      { pl: '🎯 Cel pieniężny na dashboardzie liczy realne saldo Money', en: '🎯 Dashboard money goal now tracks your real Money balance' },
-      { pl: '💵 Rozliczenie obowiązków trafia na saldo Money', en: '💵 Chore payouts now land on your Money balance' },
-      { pl: '🌐 Okna potwierdzeń po polsku i angielsku + limity długości pól', en: '🌐 Bilingual confirmation dialogs + input length limits' },
+      { version: '2026.07.05', items: [
+        { pl: '🔧 Fix: formularz zgłaszania błędu działa, nawet zanim admin pierwszy raz otworzy panel', en: '🔧 Fix: bug report form works even before the admin has ever opened the panel' },
+        { pl: '📱 Fix: zniknął niebieski "hitbox" po tapnięciu przycisku na telefonie', en: '📱 Fix: the blue tap "hitbox" flash on buttons is gone on mobile' },
+        { pl: '📱 Fix: telefon nie pokazuje już starej zbuforowanej wersji aplikacji po update', en: "📱 Fix: phones no longer show a stale cached version of the app after an update" },
+      ]},
+      { version: '2026.07.04', items: [
+        { pl: '🐛 Nowość: zgłaszanie błędów — ikonka obok profilu, limit 1 zgłoszenie/dzień', en: '🐛 New: bug reporting — icon next to your profile, 1 report/day limit' },
+        { pl: '🌐 Obowiązki i reszta aplikacji przetłumaczone w pełni na EN/PL', en: '🌐 Chores and the rest of the app are now fully translated (EN/PL)' },
+      ]},
+      { version: '2026.07.03', items: [
+        { pl: '💰 Nowa zakładka Money — budżet, transakcje i kategorie', en: '💰 New Money tab — budget, transactions and categories' },
+        { pl: '🤝 Pożyczki — śledź komu pożyczasz i kto pożycza Tobie (z częściową spłatą)', en: '🤝 Loans — track who you lend to and who lends to you (with partial repayment)' },
+        { pl: '🛒 Zakupy w Money odejmują też punkty LifeXP', en: '🛒 Money purchases also deduct LifeXP points' },
+        { pl: '🚫 Saldo Money nie może już zejść poniżej zera', en: '🚫 Money balance can no longer go below zero' },
+        { pl: '🎯 Cel pieniężny na dashboardzie liczy realne saldo Money', en: '🎯 Dashboard money goal now tracks your real Money balance' },
+        { pl: '💵 Rozliczenie obowiązków trafia na saldo Money', en: '💵 Chore payouts now land on your Money balance' },
+        { pl: '🌐 Okna potwierdzeń po polsku i angielsku + limity długości pól', en: '🌐 Bilingual confirmation dialogs + input length limits' },
+      ]},
     ];
 
     window.closeWhatsNew = () => {
@@ -5253,14 +5288,31 @@
     function maybeShowWhatsNew() {
       try {
         if (localStorage.getItem('lifexp-seen-version') === APP_VERSION) return;
+        const group = CHANGELOG.find(g => g.version === APP_VERSION);
+        if (!group) return;
         const lng = (i18next.language === 'pl') ? 'pl' : 'en';
         document.getElementById('whatsnew-version').textContent = i18next.t('whatsnew.version', { v: APP_VERSION });
-        document.getElementById('whatsnew-list').innerHTML = CHANGELOG.map(c => `
+        document.getElementById('whatsnew-list').innerHTML = group.items.map(c => `
           <div style="padding:8px 0;border-bottom:1px solid var(--border)">
             <p style="margin:0;font-size:14px;line-height:1.5">${c[lng]}</p>
           </div>`).join('');
         document.getElementById('whatsnew-modal').classList.add('open');
       } catch (e) { console.error('maybeShowWhatsNew failed:', e); }
+    }
+
+    // ── Historia aktualizacji (pełny log wszystkich wersji z CHANGELOG) ──
+    function renderUpdateHistory() {
+      const el = document.getElementById('update-history-list');
+      if (!el) return;
+      const lng = (i18next.language === 'pl') ? 'pl' : 'en';
+      el.innerHTML = CHANGELOG.map(group => `
+        <div class="card" style="margin-bottom:16px">
+          <h3 style="margin-bottom:10px;font-size:15px">${i18next.t('whatsnew.version', { v: group.version })}</h3>
+          ${group.items.map(c => `
+            <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+              <p style="margin:0;font-size:14px;line-height:1.5">${c[lng]}</p>
+            </div>`).join('')}
+        </div>`).join('');
     }
 
   </script>
