@@ -496,6 +496,21 @@
     }
     .money-goal:last-of-type { border-bottom: none !important; }
 
+    /* Globalny baner wiadomości (admin → wszyscy). Wsuwa się z góry, błyska kilka
+       sekund i znika. Widoczny tylko gdy user jest aktywny (sprawdzane przy wejściu). */
+    .broadcast-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 1200;
+      background: var(--accent); color: #fff;
+      padding: calc(14px + env(safe-area-inset-top)) 20px 14px;
+      font-size: 14px; font-weight: 600; line-height: 1.4;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+      transform: translateY(-120%);
+      transition: transform .35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .broadcast-banner.show { transform: translateY(0); }
+
     /* ── Mobile bottom nav ── */
     .bottom-nav {
       display: none;
@@ -829,14 +844,12 @@
         <div class="balance-card">
           <div class="balance-label" data-i18n="money.balanceLabel">Saldo</div>
           <div class="balance-amount" id="money-balance">0,00 zł</div>
-          <div class="balance-pts" id="money-pending" style="display:none"></div>
         </div>
 
         <div class="money-alert" id="money-limit-alert" style="display:none"></div>
 
         <div class="action-row">
           <button class="btn-success" onclick="toggleMoneyTxForm()"><i class="ti ti-plus"></i> <span data-i18n="money.addTx">Dodaj transakcję</span></button>
-          <button class="btn-primary" id="money-withdraw-btn" style="display:none" onclick="withdrawMoneyPoints()"><i class="ti ti-cash"></i> <span data-i18n="money.withdraw">Wypłać punkty</span></button>
         </div>
 
         <div class="card" id="money-tx-form" style="display:none">
@@ -1216,6 +1229,15 @@
                 <button class="btn-secondary" onclick="showPage('update-history')" data-i18n="whatsnew.historyBtn">Historia aktualizacji</button>
               </div>
             </div>
+
+            <!-- Wiadomość globalna — widoczne tylko dla admina (szymonrogalski098@gmail.com) -->
+            <div class="card settings-section" id="broadcast-admin-card" style="display:none">
+              <h3 data-i18n="broadcast.title">Wiadomość globalna</h3>
+              <p class="text2" style="font-size:13px;margin:4px 0 12px" data-i18n="broadcast.hint">Wyświetli się wszystkim jako krótki baner na górze przy najbliższym wejściu do aplikacji.</p>
+              <textarea id="broadcast-text" maxlength="280" rows="3" style="width:100%;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px" placeholder="Treść wiadomości..." data-i18n-placeholder="broadcast.textPh"></textarea>
+              <button class="btn-primary" style="margin-top:10px" onclick="sendBroadcast()" data-i18n="broadcast.send">Wyślij do wszystkich</button>
+              <div id="broadcast-list" style="margin-top:16px"></div>
+            </div>
           </div>
 
           <div class="settings-category">
@@ -1406,6 +1428,7 @@
   </div>
 
   <div id="toast"></div>
+  <div class="broadcast-banner" id="broadcast-banner" onclick="dismissBroadcastNow()"></div>
 
   <!-- Co nowego? (What's new — raz na nową wersję) -->
   <div class="modal-overlay" id="whatsnew-modal">
@@ -1751,6 +1774,11 @@
           historyBtn: 'Update history', historyTitle: 'Update history',
           historyHint: 'See what we added and fixed in previous versions.',
         },
+        broadcast: {
+          title: 'Global message', hint: 'Shows to everyone as a short top banner next time they open the app.',
+          textPh: 'Message text...', send: 'Send to everyone', enterText: 'Enter a message.',
+          sent: 'Message sent.', none: 'No messages sent yet.', confirmDelete: 'Delete this message?', deleted: 'Message deleted.',
+        },
       }},
       pl: { translation: {
         nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
@@ -2018,6 +2046,11 @@
           historyBtn: 'Historia aktualizacji', historyTitle: 'Historia aktualizacji',
           historyHint: 'Zobacz co dodaliśmy i naprawiliśmy w poprzednich wersjach.',
         },
+        broadcast: {
+          title: 'Wiadomość globalna', hint: 'Wyświetli się wszystkim jako krótki baner na górze przy najbliższym wejściu do aplikacji.',
+          textPh: 'Treść wiadomości...', send: 'Wyślij do wszystkich', enterText: 'Wpisz wiadomość.',
+          sent: 'Wiadomość wysłana.', none: 'Brak wysłanych wiadomości.', confirmDelete: 'Usunąć tę wiadomość?', deleted: 'Wiadomość usunięta.',
+        },
       }},
     };
 
@@ -2209,8 +2242,9 @@
         toast(i18next.t('errors.loadFailed'), 'error');
       }
 
-      // Po załadowaniu apki — pokaż „Co nowego?" raz na nową wersję.
+      // Po załadowaniu apki — pokaż „Co nowego?" raz na nową wersję, potem globalne wiadomości.
       maybeShowWhatsNew();
+      checkBroadcasts();
     });
 
     async function loadProfile() {
@@ -2282,6 +2316,7 @@
         loadChoreDefs().then(renderChoreDefsSettings);
         loadActivityDefs().then(renderActivityDefsSettings);
         loadMoneySettingsUI();
+        loadBroadcastAdmin();
         updateNotifStatus();
         const rToggle = document.getElementById('auto-report-toggle');
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
@@ -2910,9 +2945,6 @@
           'points.earnedAllTime': newEarned
         });
 
-        // Money tracker: cofnij też niewypłacone środki z punktów (clamped w środku).
-        await creditMoneyPending(-pts);
-
         await loadProfile();
         await loadDashboard();
         if (document.getElementById('page-history').classList.contains('active')) await loadHistory();
@@ -3073,9 +3105,6 @@
           'points.total': increment(actualEarned),
           'points.earnedAllTime': increment(actualEarned)
         });
-
-        // Money tracker: punkty generują "wirtualną kasę" do wypłaty (pendingPoints w PLN)
-        await creditMoneyPending(actualEarned);
 
         await loadProfile();
         document.getElementById('act-type').value = '';
@@ -4323,9 +4352,9 @@
 
     // ── Money Tracker ─────────────────────────────────────
     // Osobny moduł budżetu (saldo PLN, transakcje, kategorie, pożyczki).
-    // Punkty z aktywności NIE znikają z LifeXP — generują pendingPoints (PLN) w
-    // money/balance, które ręcznym "Wypłać punkty" przenosi się do salda current.
-    // Wydatki (zakupy) DODATKOWO odejmują punkty LifeXP (jak dawny sklep).
+    // Money = prawdziwe pieniądze, punkty = osobne wyzwanie w grze — NIE ma już
+    // zamiany punktów na saldo (usunięto "Wypłać punkty"/pendingPoints).
+    // Jedyny styk: wydatek (zakup) DODATKOWO odejmuje punkty LifeXP (jak dawny sklep).
     // Dane: users/{uid}/money/{settings,balance} + users/{uid}/moneyTransactions,
     // moneyCategories, moneyLoans (płasko; w firestore.rules transakcje/kategorie/
     // pożyczki/ustawienia są owner-only, rodzic czyta tylko money/balance).
@@ -4358,30 +4387,16 @@
       if (bSnap.exists()) {
         moneyBalance = bSnap.data();
       } else {
-        moneyBalance = { current: 0, pendingPoints: 0 };
+        moneyBalance = { current: 0 };
         await setDoc(moneyDocRef('balance'), moneyBalance);
       }
-    }
-
-    // Hook systemu punktów: deltaPts (może być ujemna przy usuwaniu aktywności)
-    // przeliczana na PLN kursem ogólnym (domyślnie 10 pkt = 1 zł), clamp na 0.
-    async function creditMoneyPending(deltaPts) {
-      try {
-        const ref = doc(db, 'users', currentUser.uid, 'money', 'balance');
-        const snap = await getDoc(ref);
-        const cur = snap.exists() ? (snap.data().pendingPoints || 0) : 0;
-        const next = Math.max(0, round2(cur + deltaPts * rateGeneral()));
-        if (snap.exists()) await updateDoc(ref, { pendingPoints: next });
-        else await setDoc(ref, { current: 0, pendingPoints: next });
-        if (moneyBalance) moneyBalance.pendingPoints = next;
-      } catch (e) { console.error('creditMoneyPending failed:', e); }
     }
 
     async function updateMoneyCurrent(delta) {
       const ref = moneyDocRef('balance');
       const snap = await getDoc(ref);
       if (snap.exists()) await updateDoc(ref, { current: round2((snap.data().current || 0) + delta) });
-      else await setDoc(ref, { current: round2(delta), pendingPoints: 0 });
+      else await setDoc(ref, { current: round2(delta) });
     }
 
     const MONEY_CAT_COLORS = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b', '#00d2d3', '#ff9f43', '#feca57', '#8a8fa8'];
@@ -4427,18 +4442,6 @@
 
     function renderMoney() {
       animateCount(document.getElementById('money-balance'), moneyBalance?.current || 0, fmtMoney);
-
-      const pending = moneyBalance?.pendingPoints || 0;
-      const pendEl = document.getElementById('money-pending');
-      const wBtn = document.getElementById('money-withdraw-btn');
-      if (pending >= 0.01) {
-        pendEl.textContent = i18next.t('money.pendingInfo', { amount: fmtMoney(pending), interpolation: { escapeValue: false } });
-        pendEl.style.display = 'block';
-        wBtn.style.display = '';
-      } else {
-        pendEl.style.display = 'none';
-        wBtn.style.display = 'none';
-      }
 
       renderMoneyLimitAlert();
       renderMoneyCatSelect();
@@ -4585,13 +4588,6 @@
         // Cofnij wpływ transakcji na saldo.
         await updateMoneyCurrent(t.type === 'income' ? -(t.amount || 0) : (t.amount || 0));
 
-        // Usunięta wypłata punktów wraca do "do wypłaty".
-        if (t.source === 'points_withdrawal') {
-          const bSnap = await getDoc(moneyDocRef('balance'));
-          const cur = bSnap.exists() ? (bSnap.data().pendingPoints || 0) : 0;
-          await updateDoc(moneyDocRef('balance'), { pendingPoints: round2(cur + (t.amount || 0)) });
-        }
-
         // Zwróć punkty pobrane przy zakupie (wydatek z pointsCost).
         if ((t.pointsCost || 0) > 0) {
           await updateDoc(doc(db, 'users', currentUser.uid), {
@@ -4604,30 +4600,6 @@
 
         await loadMoney();
         toast(i18next.t('money.txDeleted'));
-      } catch (e) {
-        console.error(e);
-        toast(i18next.t('shop.saveError'), 'error');
-      }
-    };
-
-    // ── Wypłata punktów ──
-    window.withdrawMoneyPoints = async () => {
-      const snap = await getDoc(moneyDocRef('balance'));
-      const pending = snap.exists() ? (snap.data().pendingPoints || 0) : 0;
-      if (pending < 0.01) return;
-      const amount = round2(pending);
-      const msg = i18next.t('money.confirmWithdraw', { amount: fmtMoney(amount), interpolation: { escapeValue: false } });
-      if (!await confirmDialog(msg, i18next.t('money.withdraw'))) return;
-      try {
-        await updateDoc(moneyDocRef('balance'), { current: round2((snap.data().current || 0) + amount), pendingPoints: 0 });
-        await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
-          type: 'income', amount, category: 'punkty LifeXP', note: '', date: todayStr(),
-          source: 'points_withdrawal', createdAt: new Date(),
-        });
-        await loadMoney();
-        confettiBurst();
-        pulseEl(document.querySelector('#page-money .balance-card'));
-        toast(i18next.t('money.withdrawn', { amount: fmtMoney(amount), interpolation: { escapeValue: false } }));
       } catch (e) {
         console.error(e);
         toast(i18next.t('shop.saveError'), 'error');
@@ -5258,8 +5230,12 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.05';
+    const APP_VERSION = '2026.07.06';
     const CHANGELOG = [
+      { version: '2026.07.06', items: [
+        { pl: '💸 Usunięto "Wypłać punkty" — punkty to teraz osobne wyzwanie w grze, Money to prawdziwe pieniądze', en: '💸 Removed "Withdraw points" — points are now a separate in-game challenge, Money is real money' },
+        { pl: '📢 Nowość: mogę wysyłać globalne wiadomości, które błyskają Wam banerem na górze', en: '📢 New: I can send global messages that flash to everyone as a top banner' },
+      ]},
       { version: '2026.07.05', items: [
         { pl: '🔧 Fix: formularz zgłaszania błędu działa, nawet zanim admin pierwszy raz otworzy panel', en: '🔧 Fix: bug report form works even before the admin has ever opened the panel' },
         { pl: '📱 Fix: zniknął niebieski "hitbox" po tapnięciu przycisku na telefonie', en: '📱 Fix: the blue tap "hitbox" flash on buttons is gone on mobile' },
@@ -5314,6 +5290,111 @@
             </div>`).join('')}
         </div>`).join('');
     }
+
+    // ── Globalne wiadomości (broadcasts) ──────────────────
+    // Top-level kolekcja `broadcasts` { text, createdAt }. Admin pisze, wszyscy czytają.
+    // User side: przy wejściu do apki nieprzeczytane wiadomości błyskają banerem
+    // (~4,5s każda, po kolei), potem oznaczane jako przeczytane w localStorage
+    // (per urządzenie) — "znika na zawsze", widać tylko gdy user jest aktywny.
+    const BROADCAST_SEEN_KEY = 'lifexp-seen-broadcasts';
+    let broadcastHideTimer = null;
+
+    function getSeenBroadcasts() {
+      try { return JSON.parse(localStorage.getItem(BROADCAST_SEEN_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function markBroadcastSeen(id) {
+      try {
+        const seen = getSeenBroadcasts();
+        if (!seen.includes(id)) { seen.push(id); localStorage.setItem(BROADCAST_SEEN_KEY, JSON.stringify(seen.slice(-200))); }
+      } catch (e) {}
+    }
+
+    let broadcastResolve = null;
+    window.dismissBroadcastNow = () => {
+      const el = document.getElementById('broadcast-banner');
+      el.classList.remove('show');
+      if (broadcastHideTimer) { clearTimeout(broadcastHideTimer); broadcastHideTimer = null; }
+      if (broadcastResolve) { const r = broadcastResolve; broadcastResolve = null; setTimeout(r, 380); }
+    };
+
+    function showBroadcastBanner(text) {
+      return new Promise(resolve => {
+        const el = document.getElementById('broadcast-banner');
+        el.textContent = text;
+        el.classList.add('show');
+        broadcastResolve = resolve;
+        broadcastHideTimer = setTimeout(() => {
+          el.classList.remove('show');
+          broadcastHideTimer = null;
+          if (broadcastResolve) { broadcastResolve = null; setTimeout(resolve, 380); }
+        }, 4500);
+      });
+    }
+
+    async function checkBroadcasts() {
+      try {
+        // Nie nachodź na modal "Co nowego?" — wtedy pokażemy przy następnym wejściu.
+        if (document.getElementById('whatsnew-modal').classList.contains('open')) return;
+        const snap = await getDocs(query(collection(db, 'broadcasts'), orderBy('createdAt', 'desc'), limit(10)));
+        const seen = getSeenBroadcasts();
+        const unseen = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .filter(b => !seen.includes(b.id)).reverse(); // najstarsze najpierw
+        for (const b of unseen) {
+          await showBroadcastBanner(b.text);
+          markBroadcastSeen(b.id);
+        }
+      } catch (e) { console.error('checkBroadcasts failed:', e); }
+    }
+
+    // ── Panel admina: pisanie wiadomości globalnych (tylko BUG_ADMIN_EMAIL) ──
+    async function loadBroadcastAdmin() {
+      const card = document.getElementById('broadcast-admin-card');
+      if (!card) return;
+      const isAdmin = currentUser?.email === BUG_ADMIN_EMAIL;
+      card.style.display = isAdmin ? 'block' : 'none';
+      if (isAdmin) { try { await renderBroadcastList(); } catch (e) { console.error(e); } }
+    }
+
+    async function renderBroadcastList() {
+      const el = document.getElementById('broadcast-list');
+      if (!el) return;
+      const snap = await getDocs(query(collection(db, 'broadcasts'), orderBy('createdAt', 'desc'), limit(20)));
+      if (snap.empty) { el.innerHTML = `<p class="text2">${i18next.t('broadcast.none')}</p>`; return; }
+      const loc = i18next.language === 'pl' ? 'pl-PL' : 'en-US';
+      el.innerHTML = snap.docs.map(d => {
+        const b = d.data();
+        const date = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        const ds = date.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
+        return `<div class="preset-item" style="margin-bottom:6px">
+          <span class="preset-info" style="min-width:0">
+            <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(b.text)}</span>
+            <span class="text2">${ds}</span>
+          </span>
+          <button class="btn-secondary" onclick="deleteBroadcast('${d.id}')" style="padding:4px 10px;font-size:12px">${i18next.t('shop.delete')}</button>
+        </div>`;
+      }).join('');
+    }
+
+    window.sendBroadcast = async () => {
+      const ta = document.getElementById('broadcast-text');
+      const text = ta.value.trim();
+      if (!text) return toast(i18next.t('broadcast.enterText'), 'error');
+      try {
+        await addDoc(collection(db, 'broadcasts'), { text, createdAt: new Date() });
+        ta.value = '';
+        await renderBroadcastList();
+        toast(i18next.t('broadcast.sent'));
+      } catch (e) { console.error(e); toast(i18next.t('shop.saveError'), 'error'); }
+    };
+
+    window.deleteBroadcast = async (id) => {
+      if (!await confirmDialog(i18next.t('broadcast.confirmDelete'))) return;
+      try {
+        await deleteDoc(doc(db, 'broadcasts', id));
+        await renderBroadcastList();
+        toast(i18next.t('broadcast.deleted'));
+      } catch (e) { console.error(e); toast(i18next.t('shop.saveError'), 'error'); }
+    };
 
   </script>
 </body>

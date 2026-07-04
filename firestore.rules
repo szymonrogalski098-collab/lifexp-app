@@ -79,5 +79,12 @@ service cloud.firestore {
       allow read:  if isSignedIn();
       allow write: if isBugAdmin();
     }
+
+    // Globalne wiadomości (ogłoszenia admina → baner u wszystkich). Każdy zalogowany
+    // czyta, pisze/kasuje tylko admin.
+    match /broadcasts/{id} {
+      allow read:   if isSignedIn();
+      allow create, update, delete: if isBugAdmin();
+    }
   }
 }
