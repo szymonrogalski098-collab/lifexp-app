@@ -69,7 +69,14 @@ service cloud.firestore {
         && request.resource.data.reporterUid == request.auth.uid
         && request.resource.data.status in ['new', 'spam'];
       allow read:   if isSignedIn() && (resource.data.reporterUid == request.auth.uid || isBugAdmin());
-      allow update, delete: if isBugAdmin();
+      allow delete: if isBugAdmin();
+      // Admin może zmieniać wszystko (status itd.). Zgłaszający może zmienić TYLKO
+      // pole `messages` (dopisanie odpowiedzi w wątku) na swoim zgłoszeniu.
+      allow update: if isBugAdmin() || (
+        isSignedIn()
+        && resource.data.reporterUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages'])
+      );
     }
 
     // Lista słów wymaganych w opisie zgłoszenia (filtr spamu) — każdy zalogowany

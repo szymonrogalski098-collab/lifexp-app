@@ -901,7 +901,7 @@
 
       <!-- ZGŁOŚ BŁĄD -->
       <div class="page" id="page-report-bug">
-        <h2 style="margin-bottom:20px" data-i18n="bugReport.title">Zgłoś błąd</h2>
+        <div class="segmented bug-hub-nav" style="margin-bottom:18px"></div>
 
         <!-- Widok zgłaszającego -->
         <div id="bug-submit-view">
@@ -953,9 +953,25 @@
         </div>
       </div>
 
+      <!-- WIADOMOŚCI GLOBALNE (admin) -->
+      <div class="page" id="page-broadcasts">
+        <div class="segmented bug-hub-nav" style="margin-bottom:18px"></div>
+        <div class="card">
+          <h3 data-i18n="broadcast.title">Wiadomość globalna</h3>
+          <p class="text2" style="font-size:13px;margin:4px 0 12px" data-i18n="broadcast.hint">Wyświetli się wszystkim jako krótki baner na górze przy najbliższym wejściu do aplikacji.</p>
+          <textarea id="broadcast-text" maxlength="280" rows="3" style="width:100%;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px" placeholder="Treść wiadomości..." data-i18n-placeholder="broadcast.textPh"></textarea>
+          <div class="form-group" style="margin:12px 0 0;display:flex;align-items:center;gap:10px">
+            <label style="margin:0" data-i18n="broadcast.durationLabel">Czas wyświetlania (sekundy)</label>
+            <input type="number" id="broadcast-seconds" min="1" max="30" value="5" style="width:80px;text-align:center">
+          </div>
+          <button class="btn-primary" style="margin-top:12px" onclick="sendBroadcast()" data-i18n="broadcast.send">Wyślij do wszystkich</button>
+          <div id="broadcast-list" style="margin-top:16px"></div>
+        </div>
+      </div>
+
       <!-- HISTORIA AKTUALIZACJI -->
       <div class="page" id="page-update-history">
-        <h2 style="margin-bottom:20px" data-i18n="whatsnew.historyTitle">Historia aktualizacji</h2>
+        <div class="segmented bug-hub-nav" style="margin-bottom:18px"></div>
         <div id="update-history-list"></div>
       </div>
 
@@ -1230,14 +1246,6 @@
               </div>
             </div>
 
-            <!-- Wiadomość globalna — widoczne tylko dla admina (szymonrogalski098@gmail.com) -->
-            <div class="card settings-section" id="broadcast-admin-card" style="display:none">
-              <h3 data-i18n="broadcast.title">Wiadomość globalna</h3>
-              <p class="text2" style="font-size:13px;margin:4px 0 12px" data-i18n="broadcast.hint">Wyświetli się wszystkim jako krótki baner na górze przy najbliższym wejściu do aplikacji.</p>
-              <textarea id="broadcast-text" maxlength="280" rows="3" style="width:100%;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px" placeholder="Treść wiadomości..." data-i18n-placeholder="broadcast.textPh"></textarea>
-              <button class="btn-primary" style="margin-top:10px" onclick="sendBroadcast()" data-i18n="broadcast.send">Wyślij do wszystkich</button>
-              <div id="broadcast-list" style="margin-top:16px"></div>
-            </div>
           </div>
 
           <div class="settings-category">
@@ -1768,7 +1776,10 @@
           confirmDeleteKeyword: 'Remove this keyword?',
           accepted_: 'Accepted.', rejected_: 'Rejected.', postponed_: 'Postponed.', deleted_: 'Deleted.',
           rescued: 'Marked as not spam — moved to New.',
+          admin: 'Admin', you2: 'You', noMessages: 'No messages yet.', replyPh: 'Write a reply...', send: 'Send',
+          unread: 'New message',
         },
+        bugHub: { reports: 'Reports', broadcasts: 'Messages', history: 'Updates' },
         whatsnew: {
           title: "What's new?", version: 'Version {{v}}', cta: 'Got it!',
           historyBtn: 'Update history', historyTitle: 'Update history',
@@ -1776,6 +1787,7 @@
         },
         broadcast: {
           title: 'Global message', hint: 'Shows to everyone as a short top banner next time they open the app.',
+          durationLabel: 'Display time (seconds)',
           textPh: 'Message text...', send: 'Send to everyone', enterText: 'Enter a message.',
           sent: 'Message sent.', none: 'No messages sent yet.', confirmDelete: 'Delete this message?', deleted: 'Message deleted.',
         },
@@ -2040,7 +2052,10 @@
           confirmDeleteKeyword: 'Usunąć to słowo?',
           accepted_: 'Przyjęto.', rejected_: 'Odrzucono.', postponed_: 'Odłożono.', deleted_: 'Usunięto.',
           rescued: 'Oznaczono jako niespam — przeniesiono do Nowych.',
+          admin: 'Admin', you2: 'Ty', noMessages: 'Brak wiadomości.', replyPh: 'Napisz odpowiedź...', send: 'Wyślij',
+          unread: 'Nowa wiadomość',
         },
+        bugHub: { reports: 'Zgłoszenia', broadcasts: 'Wiadomości', history: 'Aktualizacje' },
         whatsnew: {
           title: 'Co nowego?', version: 'Wersja {{v}}', cta: 'Super!',
           historyBtn: 'Historia aktualizacji', historyTitle: 'Historia aktualizacji',
@@ -2048,6 +2063,7 @@
         },
         broadcast: {
           title: 'Wiadomość globalna', hint: 'Wyświetli się wszystkim jako krótki baner na górze przy najbliższym wejściu do aplikacji.',
+          durationLabel: 'Czas wyświetlania (sekundy)',
           textPh: 'Treść wiadomości...', send: 'Wyślij do wszystkich', enterText: 'Wpisz wiadomość.',
           sent: 'Wiadomość wysłana.', none: 'Brak wysłanych wiadomości.', confirmDelete: 'Usunąć tę wiadomość?', deleted: 'Wiadomość usunięta.',
         },
@@ -2307,8 +2323,9 @@
       if (id === 'stats') loadStats();
       if (id === 'shop') loadPurchases();
       if (id === 'money') loadMoney();
-      if (id === 'report-bug') loadBugReportPage();
-      if (id === 'update-history') renderUpdateHistory();
+      if (id === 'report-bug') { renderBugHubNav('report'); loadBugReportPage(); }
+      if (id === 'broadcasts') { renderBugHubNav('broadcast'); loadBroadcastsPage(); }
+      if (id === 'update-history') { renderBugHubNav('history'); renderUpdateHistory(); }
       if (id === 'log-gaming') { updateGameSelect(); loadGamingHistory(); }
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
@@ -2316,7 +2333,6 @@
         loadChoreDefs().then(renderChoreDefsSettings);
         loadActivityDefs().then(renderActivityDefsSettings);
         loadMoneySettingsUI();
-        loadBroadcastAdmin();
         updateNotifStatus();
         const rToggle = document.getElementById('auto-report-toggle');
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
@@ -4927,13 +4943,13 @@
     const BUG_ADMIN_EMAIL = 'szymonrogalski098@gmail.com';
     const BUG_AREAS = ['dashboard', 'money', 'chores', 'history', 'stats', 'settings', 'other'];
     const BUG_SPAM_TTL_MS = 12 * 60 * 60 * 1000;
-    const BUG_RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
 
     let isBugAdmin = false;
     let myBugReports = [];
     let adminBugReports = [];
     let bugSpamKeywords = [];
-    let bugAdminTab = 'new'; // 'new' | 'spam' | 'postponed' | 'history'
+    let bugAdminTab = 'new';    // 'new' | 'spam' | 'postponed' | 'history'
+    let bugExpandedId = null;   // rozwinięty wątek (akordeon — jeden naraz)
 
     function bugAreaLabel(key) {
       const map = {
@@ -4950,6 +4966,124 @@
       };
       return i18next.t(map[status] || 'bugReport.statusNew');
     }
+    function bugStatusBadge(status) {
+      const c = { accepted: 'var(--accent2)', rejected: 'var(--warn)', new: 'var(--accent)', postponed: 'var(--text2)', spam: 'var(--text2)' }[status] || 'var(--text2)';
+      return `<span class="tag" style="background:${c}22;color:${c}">${bugStatusLabel(status)}</span>`;
+    }
+
+    // ── Wątki odpowiedzi (Messenger-style) + nieprzeczytane ──
+    // Wiadomości trzymane w polu `messages` na dokumencie bugReport: [{ text, isAdmin, at(ISO) }].
+    // Nieprzeczytane śledzone per urządzenie w localStorage (last-seen timestamp per zgłoszenie).
+    function bugReadMap() { try { return JSON.parse(localStorage.getItem('lifexp-bug-read') || '{}'); } catch (e) { return {}; } }
+    function bugLastMsgAt(r) { const m = r.messages || []; return m.length ? m[m.length - 1].at : null; }
+    function bugIsUnread(r) {
+      const m = r.messages || [];
+      if (!m.length) return false;
+      const last = m[m.length - 1];
+      if (last.isAdmin === isBugAdmin) return false;   // ostatnia wiadomość jest ode mnie
+      const seen = bugReadMap()[r.id];
+      return !seen || last.at > seen;
+    }
+    function markBugRead(r) {
+      const at = bugLastMsgAt(r);
+      if (!at) return;
+      try { const m = bugReadMap(); m[r.id] = at; localStorage.setItem('lifexp-bug-read', JSON.stringify(m)); } catch (e) {}
+    }
+
+    function bugThreadHTML(r) {
+      const m = r.messages || [];
+      if (!m.length) return `<p class="text2" style="margin:8px 0">${i18next.t('bugReport.noMessages')}</p>`;
+      return `<div style="display:flex;flex-direction:column;gap:6px;margin:10px 0">` + m.map(msg => {
+        const mine = msg.isAdmin === isBugAdmin;
+        const bg = mine ? 'var(--accent)' : 'var(--bg3)';
+        const col = mine ? '#fff' : 'var(--text)';
+        const who = msg.isAdmin ? i18next.t('bugReport.admin') : i18next.t('bugReport.you2');
+        return `<div style="align-self:${mine ? 'flex-end' : 'flex-start'};max-width:82%">
+          <div style="font-size:10px;color:var(--text2);margin:0 4px 2px;text-align:${mine ? 'right' : 'left'}">${who}</div>
+          <div style="background:${bg};color:${col};padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.4;word-break:break-word">${escapeHtml(msg.text)}</div>
+        </div>`;
+      }).join('') + `</div>`;
+    }
+
+    function bugReplyBoxHTML(r) {
+      return `<div style="display:flex;gap:8px;margin-top:8px">
+        <input type="text" id="bug-reply-${r.id}" maxlength="500" placeholder="${i18next.t('bugReport.replyPh')}" style="flex:1" onkeydown="if(event.key==='Enter')sendBugReply('${r.id}')">
+        <button class="btn-primary btn-sm" onclick="sendBugReply('${r.id}')">${i18next.t('bugReport.send')}</button>
+      </div>`;
+    }
+
+    // Wspólny render jednego zgłoszenia (akordeon). admin=true → widok admina (imię + akcje).
+    function bugReportItemHTML(r, admin) {
+      const expanded = bugExpandedId === r.id;
+      const dot = bugIsUnread(r) ? `<span title="${i18next.t('bugReport.unread')}" style="width:9px;height:9px;border-radius:50%;background:var(--warn);flex-shrink:0"></span>` : '';
+      const header = `<div onclick="toggleBugExpand('${r.id}')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 0">
+        <span style="font-size:18px;flex-shrink:0">${expanded ? '🔽' : '🐛'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.title)}</div>
+          <div class="text2">${admin ? escapeHtml(r.reporterName || '—') + ' · ' : ''}${escapeHtml(bugAreaLabel(r.area))}</div>
+        </div>
+        ${dot}
+        ${bugStatusBadge(r.status)}
+      </div>`;
+      if (!expanded) return `<div style="border-bottom:1px solid var(--border)">${header}</div>`;
+
+      const date = r.createdAt?.toDate ? r.createdAt.toDate() : new Date(r.createdAt);
+      const loc = i18next.language === 'pl' ? 'pl-PL' : 'en-US';
+      const dateStr = date.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
+      let actions = '';
+      if (admin) {
+        if (r.status === 'spam') {
+          actions = `<button class="btn-secondary btn-sm" onclick="bugAdminRescue('${r.id}')">${i18next.t('bugReport.notSpam')}</button>
+            <button class="btn-ghost btn-sm" onclick="bugAdminDelete('${r.id}')">${i18next.t('bugReport.delete')}</button>`;
+        } else if (r.status === 'new' || r.status === 'postponed') {
+          actions = `<button class="btn-success btn-sm" onclick="bugAdminAccept('${r.id}')">${i18next.t('bugReport.accept')}</button>
+            <button class="btn-danger btn-sm" onclick="bugAdminReject('${r.id}')">${i18next.t('bugReport.reject')}</button>
+            ${r.status !== 'postponed' ? `<button class="btn-secondary btn-sm" onclick="bugAdminPostpone('${r.id}')">${i18next.t('bugReport.postpone')}</button>` : ''}
+            <button class="btn-ghost btn-sm" onclick="bugAdminDelete('${r.id}')">${i18next.t('bugReport.delete')}</button>`;
+        } else {
+          actions = `<button class="btn-ghost btn-sm" onclick="bugAdminDelete('${r.id}')">${i18next.t('bugReport.delete')}</button>`;
+        }
+      }
+      return `<div style="border-bottom:1px solid var(--border)">
+        ${header}
+        <div style="padding:0 0 14px 4px">
+          <div class="text2" style="margin-bottom:6px">${dateStr}${r.status === 'spam' ? ' · ' + bugTimeLeftLabel(r) : ''}</div>
+          <p style="font-size:14px;line-height:1.6;margin-bottom:2px">${escapeHtml(r.description)}</p>
+          ${bugThreadHTML(r)}
+          ${bugReplyBoxHTML(r)}
+          ${actions ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${actions}</div>` : ''}
+        </div>
+      </div>`;
+    }
+
+    window.toggleBugExpand = (id) => {
+      bugExpandedId = (bugExpandedId === id) ? null : id;
+      if (bugExpandedId) {
+        const r = (isBugAdmin ? adminBugReports : myBugReports).find(x => x.id === id);
+        if (r) markBugRead(r);
+      }
+      if (isBugAdmin) renderAdminBugList(); else renderMyBugReports();
+    };
+
+    window.sendBugReply = async (id) => {
+      const inp = document.getElementById('bug-reply-' + id);
+      if (!inp) return;
+      const text = inp.value.trim();
+      if (!text) return;
+      const r = (isBugAdmin ? adminBugReports : myBugReports).find(x => x.id === id);
+      if (!r) return;
+      const messages = [...(r.messages || []), { text, isAdmin: isBugAdmin, at: new Date().toISOString() }];
+      try {
+        await updateDoc(doc(db, 'bugReports', id), { messages });
+        r.messages = messages;
+        markBugRead(r);
+        inp.value = '';
+        if (isBugAdmin) renderAdminBugList(); else renderMyBugReports();
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('shop.saveError'), 'error');
+      }
+    };
 
     function renderBugAreaSelect() {
       const sel = document.getElementById('bug-area');
@@ -4988,11 +5122,16 @@
       if (el && counter) counter.textContent = i18next.t('bugReport.charCount', { cur: el.value.length, max: 400 });
     };
 
+    // Limit: 1 zgłoszenie na DZIEŃ KALENDARZOWY (reset o północy), a nie ruchome 24h —
+    // wcześniej zgłoszenie wieczorem blokowało formularz do wieczora następnego dnia.
+    function bugReportedToday() {
+      const last = userProfile?.lastBugReportAt;
+      return !!last && String(last).slice(0, 10) === todayStr();
+    }
     function updateBugRateLimitUI() {
       const btn = document.getElementById('bug-submit-btn');
       const note = document.getElementById('bug-rate-note');
-      const last = userProfile?.lastBugReportAt;
-      const blocked = !!last && (Date.now() - new Date(last).getTime()) < BUG_RATE_LIMIT_MS;
+      const blocked = bugReportedToday();
       if (btn) btn.disabled = blocked;
       if (note) note.style.display = blocked ? 'block' : 'none';
     }
@@ -5008,16 +5147,7 @@
       const el = document.getElementById('my-bug-reports');
       if (!el) return;
       if (myBugReports.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('bugReport.noReports')}</p>`; return; }
-      el.innerHTML = myBugReports.map(r => {
-        const badgeColor = { accepted: 'var(--accent2)', rejected: 'var(--warn)' }[r.status] || 'var(--text2)';
-        return `<div class="purchase-item">
-          <div style="min-width:0">
-            <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.title)}</div>
-            <div class="text2">${escapeHtml(bugAreaLabel(r.area))}</div>
-          </div>
-          <span class="tag" style="background:${badgeColor}22;color:${badgeColor}">${bugStatusLabel(r.status)}</span>
-        </div>`;
-      }).join('');
+      el.innerHTML = myBugReports.map(r => bugReportItemHTML(r, false)).join('');
     }
 
     window.submitBugReport = async () => {
@@ -5028,8 +5158,7 @@
       if (!area) return toast(i18next.t('bugReport.chooseArea'), 'error');
       if (!desc) return toast(i18next.t('bugReport.enterDesc'), 'error');
 
-      const last = userProfile?.lastBugReportAt;
-      if (last && (Date.now() - new Date(last).getTime()) < BUG_RATE_LIMIT_MS) {
+      if (bugReportedToday()) {
         return toast(i18next.t('bugReport.rateLimited'), 'error');
       }
 
@@ -5039,7 +5168,7 @@
       try {
         await addDoc(collection(db, 'bugReports'), {
           reporterUid: currentUser.uid, reporterName: userProfile.name || 'Użytkownik',
-          title, area, description: desc, status, createdAt: new Date(),
+          title, area, description: desc, status, messages: [], createdAt: new Date(),
         });
         await updateDoc(doc(db, 'users', currentUser.uid), { lastBugReportAt: new Date().toISOString() });
         userProfile.lastBugReportAt = new Date().toISOString();
@@ -5099,38 +5228,7 @@
         : adminBugReports.filter(r => r.status === bugAdminTab);
 
       if (list.length === 0) { el.innerHTML = `<p class="text2">${i18next.t('bugReport.noneInTab')}</p>`; return; }
-
-      el.innerHTML = list.map(r => {
-        const date = r.createdAt?.toDate ? r.createdAt.toDate() : new Date(r.createdAt);
-        const dateStr = date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
-        let actions = '';
-        if (r.status === 'spam') {
-          actions = `<button class="btn-secondary btn-sm" onclick="bugAdminRescue('${r.id}')">${i18next.t('bugReport.notSpam')}</button>`;
-        } else if (r.status === 'new' || r.status === 'postponed') {
-          actions = `
-            <button class="btn-success btn-sm" onclick="bugAdminAccept('${r.id}')">${i18next.t('bugReport.accept')}</button>
-            <button class="btn-danger btn-sm" onclick="bugAdminReject('${r.id}')">${i18next.t('bugReport.reject')}</button>
-            ${r.status !== 'postponed' ? `<button class="btn-secondary btn-sm" onclick="bugAdminPostpone('${r.id}')">${i18next.t('bugReport.postpone')}</button>` : ''}
-            <button class="btn-ghost btn-sm" onclick="bugAdminDelete('${r.id}')">${i18next.t('bugReport.delete')}</button>`;
-        } else {
-          actions = `<button class="btn-ghost btn-sm" onclick="bugAdminDelete('${r.id}')">${i18next.t('bugReport.delete')}</button>`;
-        }
-        const statusBadge = r.status === 'accepted'
-          ? `<span class="tag" style="background:var(--accent2)22;color:var(--accent2)">${i18next.t('bugReport.statusAccepted')}</span>`
-          : r.status === 'rejected'
-          ? `<span class="tag" style="background:var(--warn)22;color:var(--warn)">${i18next.t('bugReport.statusRejected')}</span>` : '';
-        return `
-          <div style="padding:14px 0;border-bottom:1px solid var(--border)">
-            <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px;flex-wrap:wrap">
-              <span style="font-weight:600;font-size:14px">${escapeHtml(r.title)}</span>
-              ${statusBadge}
-            </div>
-            <div class="text2" style="margin-bottom:6px">${escapeHtml(r.reporterName || '—')} · ${escapeHtml(bugAreaLabel(r.area))} · ${dateStr}</div>
-            <p style="font-size:14px;line-height:1.6;margin-bottom:10px">${escapeHtml(r.description)}</p>
-            ${r.status === 'spam' ? `<p class="text2" style="margin-bottom:8px">${bugTimeLeftLabel(r)}</p>` : ''}
-            <div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div>
-          </div>`;
-      }).join('');
+      el.innerHTML = list.map(r => bugReportItemHTML(r, true)).join('');
     }
 
     window.bugAdminAccept = async (id) => {
@@ -5230,8 +5328,13 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.06';
+    const APP_VERSION = '2026.07.07';
     const CHANGELOG = [
+      { version: '2026.07.07', items: [
+        { pl: '💬 Możesz teraz odpisywać na zgłoszenia błędów — rozmowa tam i z powrotem, jak w Messengerze (z kropką nieprzeczytanych)', en: '💬 You can now reply to bug reports — a back-and-forth chat like Messenger (with an unread dot)' },
+        { pl: '🔧 Fix: limit zgłoszeń liczony po dacie (reset o północy), a nie sztywne 24h', en: '🔧 Fix: report limit resets at midnight instead of a rolling 24h window' },
+        { pl: '⏱️ Mogę ustawić na ile sekund pokazuje się globalna wiadomość', en: '⏱️ I can set how many seconds a global message stays on screen' },
+      ]},
       { version: '2026.07.06', items: [
         { pl: '💸 Usunięto "Wypłać punkty" — punkty to teraz osobne wyzwanie w grze, Money to prawdziwe pieniądze', en: '💸 Removed "Withdraw points" — points are now a separate in-game challenge, Money is real money' },
         { pl: '📢 Nowość: mogę wysyłać globalne wiadomości, które błyskają Wam banerem na górze', en: '📢 New: I can send global messages that flash to everyone as a top banner' },
@@ -5317,7 +5420,7 @@
       if (broadcastResolve) { const r = broadcastResolve; broadcastResolve = null; setTimeout(r, 380); }
     };
 
-    function showBroadcastBanner(text) {
+    function showBroadcastBanner(text, durationMs) {
       return new Promise(resolve => {
         const el = document.getElementById('broadcast-banner');
         el.textContent = text;
@@ -5327,7 +5430,7 @@
           el.classList.remove('show');
           broadcastHideTimer = null;
           if (broadcastResolve) { broadcastResolve = null; setTimeout(resolve, 380); }
-        }, 4500);
+        }, durationMs || 5000);
       });
     }
 
@@ -5340,19 +5443,29 @@
         const unseen = snap.docs.map(d => ({ id: d.id, ...d.data() }))
           .filter(b => !seen.includes(b.id)).reverse(); // najstarsze najpierw
         for (const b of unseen) {
-          await showBroadcastBanner(b.text);
+          const secs = Math.min(30, Math.max(1, Number(b.durationSec) || 5));
+          await showBroadcastBanner(b.text, secs * 1000);
           markBroadcastSeen(b.id);
         }
       } catch (e) { console.error('checkBroadcasts failed:', e); }
     }
 
-    // ── Panel admina: pisanie wiadomości globalnych (tylko BUG_ADMIN_EMAIL) ──
-    async function loadBroadcastAdmin() {
-      const card = document.getElementById('broadcast-admin-card');
-      if (!card) return;
-      const isAdmin = currentUser?.email === BUG_ADMIN_EMAIL;
-      card.style.display = isAdmin ? 'block' : 'none';
-      if (isAdmin) { try { await renderBroadcastList(); } catch (e) { console.error(e); } }
+    // ── Hub admina/zgłoszeń: nawigacja Zgłoszenia / Wiadomości (admin) / Historia ──
+    function renderBugHubNav(active) {
+      const admin = currentUser?.email === BUG_ADMIN_EMAIL;
+      const btn = (key, page, label) =>
+        `<button class="seg-btn ${active === key ? 'active' : ''}" onclick="showPage('${page}')">${label}</button>`;
+      const html = btn('report', 'report-bug', '🐛 ' + i18next.t('bugHub.reports'))
+        + (admin ? btn('broadcast', 'broadcasts', '📢 ' + i18next.t('bugHub.broadcasts')) : '')
+        + btn('history', 'update-history', '✨ ' + i18next.t('bugHub.history'));
+      document.querySelectorAll('.bug-hub-nav').forEach(el => { el.innerHTML = html; });
+    }
+
+    // ── Strona wiadomości globalnych (tylko BUG_ADMIN_EMAIL) ──
+    async function loadBroadcastsPage() {
+      // Zabezpieczenie: normalny user nie ma przycisku, ale gdyby trafił tu ręcznie — odeślij.
+      if (currentUser?.email !== BUG_ADMIN_EMAIL) { showPage('report-bug'); return; }
+      try { await renderBroadcastList(); } catch (e) { console.error(e); }
     }
 
     async function renderBroadcastList() {
@@ -5365,10 +5478,11 @@
         const b = d.data();
         const date = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
         const ds = date.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
+        const secs = Math.min(30, Math.max(1, Number(b.durationSec) || 5));
         return `<div class="preset-item" style="margin-bottom:6px">
           <span class="preset-info" style="min-width:0">
             <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(b.text)}</span>
-            <span class="text2">${ds}</span>
+            <span class="text2">${ds} · ${secs}s</span>
           </span>
           <button class="btn-secondary" onclick="deleteBroadcast('${d.id}')" style="padding:4px 10px;font-size:12px">${i18next.t('shop.delete')}</button>
         </div>`;
@@ -5379,8 +5493,9 @@
       const ta = document.getElementById('broadcast-text');
       const text = ta.value.trim();
       if (!text) return toast(i18next.t('broadcast.enterText'), 'error');
+      const secs = Math.min(30, Math.max(1, parseInt(document.getElementById('broadcast-seconds').value) || 5));
       try {
-        await addDoc(collection(db, 'broadcasts'), { text, createdAt: new Date() });
+        await addDoc(collection(db, 'broadcasts'), { text, durationSec: secs, createdAt: new Date() });
         ta.value = '';
         await renderBroadcastList();
         toast(i18next.t('broadcast.sent'));
