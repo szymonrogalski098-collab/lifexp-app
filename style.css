@@ -193,6 +193,13 @@ body.theme-gold {
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body {
+  /* Zabezpieczenie: żaden element (dziś ani w przyszłości) nie powinien rozpychać
+     strony w poziomie na telefonie — bez tego trzeba było "oddalić" (pinch-zoom-out),
+     żeby zobaczyć całość, bo przeglądarka rozciągała viewport do najszerszego elementu. */
+  overflow-x: hidden;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
