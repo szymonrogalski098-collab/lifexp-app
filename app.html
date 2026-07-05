@@ -570,17 +570,31 @@
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
     }
-    /* Tryb pełnoekranowy gier (klasa dodawana z games.js). Play-area zajmuje cały
-       ekran; canvas nie jest już ograniczony do 420px (rozmiar liczy JS wg okna). */
+    /* Tryb pełnoekranowy — pełny ekran obejmuje SAMĄ GRĘ, nie całą apkę: chowamy
+       nagłówek i podpowiedź, zostaje tylko canvas (na cały ekran), cienki pasek
+       z wynikiem i przycisk „✕". Rozmiar canvasa liczy JS wg okna. */
+    #games-fs-exit { display: none; }
     .games-fs #games-play {
       position: fixed; inset: 0; z-index: 2000;
-      background: var(--bg); margin: 0; padding: 12px;
+      background: var(--bg); margin: 0; padding: 8px;
       display: flex; flex-direction: column; overflow: hidden;
     }
+    /* !important, bo nagłówek ma inline style="display:flex" (inline wygrywa ze zwykłą regułą). */
+    .games-fs .games-play-head { display: none !important; }
+    .games-fs #games-hint { display: none; }
     .games-fs #games-play > .card {
-      flex: 1; display: flex; flex-direction: column; justify-content: center;
+      flex: 1; background: transparent; border: none; box-shadow: none; padding: 0;
+      display: flex; flex-direction: column; justify-content: center; gap: 8px;
     }
     .games-fs #games-canvas { max-width: none; }
+    .games-fs #games-fs-exit {
+      display: flex; align-items: center; justify-content: center;
+      position: fixed; top: 10px; right: 10px; z-index: 2001;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--bg2); color: var(--text); border: 1px solid var(--border);
+      font-size: 20px; line-height: 1; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
 
     /* ── Mobile bottom nav ── */
     .bottom-nav {
@@ -1176,7 +1190,9 @@
         <div class="games-menu" id="games-menu"></div>
 
         <div id="games-play" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <!-- Przycisk wyjścia z pełnego ekranu — widoczny tylko w trybie .games-fs -->
+          <button id="games-fs-exit" onclick="LifeXPGames.toggleFullscreen()" aria-label="Zamknij pełny ekran">✕</button>
+          <div class="games-play-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
             <h3 id="games-play-title" style="margin:0"></h3>
             <div style="display:flex;gap:8px">
               <button class="btn-secondary btn-sm" onclick="LifeXPGames.toggleFullscreen()" data-i18n="games.fullscreen">⛶ Pełny ekran</button>
