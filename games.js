@@ -103,10 +103,11 @@
     const canvas = $('games-canvas');
     let cssW;
     if (fsMode) {
-      // Wypełnij ekran zachowując proporcje (rezerwa na header + wynik + hint).
-      const availW = window.innerWidth - 24;
-      const availH = window.innerHeight - 150;
-      cssW = Math.max(240, Math.min(availW, availH / aspect, 900));
+      // Pełny ekran = sama gra. Chowamy tytuł/hint (CSS), zostaje tylko cienki
+      // pasek z wynikiem i „✕", więc canvas wypełnia niemal cały ekran (proporcje zachowane).
+      const availW = window.innerWidth - 12;
+      const availH = window.innerHeight - 64;
+      cssW = Math.max(240, Math.min(availW, availH / aspect, 1400));
       canvas.style.width = Math.round(cssW) + 'px';
     } else {
       cssW = Math.max(200, Math.min(420, canvas.clientWidth || canvas.parentElement.clientWidth - 28));
