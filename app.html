@@ -534,6 +534,41 @@
     }
     .broadcast-banner.show { transform: translateY(0); }
 
+    /* ── Baner offline — reużywa styl .broadcast-banner, ale jest ostrzegawczy
+       i wisi tak długo, jak długo nie ma internetu (bez timera). ── */
+    .broadcast-banner.offline-banner { background: var(--warn); z-index: 1190; }
+
+    /* ── Gry (mini-gry offline) ── */
+    .games-menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    @media (max-width: 700px) { .games-menu { grid-template-columns: 1fr; } }
+    .game-tile {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .game-tile:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+    .game-tile:active { transform: scale(.97); }
+    .game-tile .gt-emoji { font-size: 34px; line-height: 1; margin-bottom: 10px; }
+    .game-tile .gt-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .game-tile .gt-best { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+    /* Canvas NIGDY nie może rozpychać strony w poziomie (historyczny bug pinch-zoom
+       na mobile) — szerokość rysowania ustawia JS wg kontenera, CSS tylko pilnuje 100%. */
+    #games-canvas {
+      display: block;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      border-radius: 10px;
+      background: var(--bg3);
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     /* ── Mobile bottom nav ── */
     .bottom-nav {
       display: none;
@@ -634,6 +669,9 @@
       <div class="nav-item" data-page="stats" onclick="showPage('stats')">
         <span class="icon"><i class="ti ti-chart-bar"></i></span> <span data-i18n="nav.stats">Statystyki</span>
       </div>
+      <div class="nav-item" data-page="games" onclick="showPage('games')">
+        <span class="icon"><i class="ti ti-device-gamepad"></i></span> <span data-i18n="nav.games">Gry</span>
+      </div>
       <div class="nav-item" data-page="settings" onclick="showPage('settings')">
         <span class="icon"><i class="ti ti-settings"></i></span> <span data-i18n="nav.settings">Ustawienia</span>
       </div>
@@ -665,6 +703,9 @@
       </div>
       <div class="bn-item" data-page="history" onclick="showPage('history')">
         <span class="bn-icon"><i class="ti ti-history"></i></span><span data-i18n="nav.history">Historia</span>
+      </div>
+      <div class="bn-item" data-page="games" onclick="showPage('games')">
+        <span class="bn-icon"><i class="ti ti-device-gamepad"></i></span><span data-i18n="nav.games">Gry</span>
       </div>
       <div class="bn-item" data-page="settings" onclick="showPage('settings')">
         <span class="bn-icon"><i class="ti ti-settings"></i></span><span data-i18n="nav.settings">Ustawienia</span>
@@ -1113,6 +1154,29 @@
         <button class="fab" id="chore-fab" onclick="openChoreSheet()" aria-label="Dodaj obowiązek" data-i18n-aria="chores.addAria" style="display:none">+</button>
       </div>
 
+      <!-- GRY (mini-gry offline — zero Firestore, zero punktów) -->
+      <div class="page" id="page-games">
+        <h2 style="margin-bottom:6px" data-i18n="games.title">Gry</h2>
+        <p class="text2" style="margin-bottom:18px" data-i18n="games.subtitle">Czysta rozrywka — działa też offline. Bez punktów, bez Money.</p>
+
+        <div class="games-menu" id="games-menu"></div>
+
+        <div id="games-play" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+            <h3 id="games-play-title" style="margin:0"></h3>
+            <button class="btn-secondary btn-sm" onclick="LifeXPGames.exit()" data-i18n="games.exit">Wyjdź do menu</button>
+          </div>
+          <div class="card" style="padding:14px">
+            <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--text2);margin-bottom:10px">
+              <span><span data-i18n="games.score">Wynik</span>: <strong id="games-score" style="color:var(--text);font-family:var(--mono)">0</strong></span>
+              <span><span data-i18n="games.best">Rekord</span>: <strong id="games-best" style="color:var(--accent2);font-family:var(--mono)">0</strong></span>
+            </div>
+            <canvas id="games-canvas"></canvas>
+            <p class="text2" id="games-hint" style="margin-top:10px;font-size:12px;text-align:center"></p>
+          </div>
+        </div>
+      </div>
+
       <!-- SETTINGS -->
       <div class="page" id="page-settings">
         <h2 style="margin-bottom:20px" data-i18n="settings.title">Ustawienia</h2>
@@ -1460,6 +1524,18 @@
 
   <div id="toast"></div>
   <div class="broadcast-banner" id="broadcast-banner" onclick="dismissBroadcastNow()"></div>
+  <div class="broadcast-banner offline-banner" id="offline-banner"><span data-i18n="offline.banner">Jesteś offline — nowe wpisy zapiszą się jako szkice do zatwierdzenia</span></div>
+
+  <!-- Przegląd szkiców offline (styl jak #whatsnew-modal: scrollowalna lista + przycisk na dole) -->
+  <div class="modal-overlay" id="offline-review-modal">
+    <div class="modal" style="max-width:460px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;padding-bottom:20px">
+      <div style="text-align:center;font-size:40px;margin-bottom:6px;flex-shrink:0">📡</div>
+      <h3 style="text-align:center;margin-bottom:4px;flex-shrink:0" data-i18n="offline.reviewTitle">Byłeś offline — oto co przygotowałeś</h3>
+      <p class="text2" style="text-align:center;margin-bottom:18px;flex-shrink:0" data-i18n="offline.reviewSubtitle">Zatwierdź lub odrzuć każdy szkic. Zapis liczy się według aktualnego stanu konta.</p>
+      <div id="offline-review-list" style="margin-bottom:16px;overflow-y:auto;flex:1;min-height:0"></div>
+      <button class="btn-primary" style="width:100%;flex-shrink:0" onclick="closeOfflineReview()" data-i18n="offline.reviewClose">Zamknij</button>
+    </div>
+  </div>
 
   <!-- Co nowego? (What's new — raz na nową wersję) -->
   <div class="modal-overlay" id="whatsnew-modal">
@@ -1522,25 +1598,31 @@
   <script>
     emailjs.init('1vFk29QDNKopU0RnJ');
   </script>
+  <script src="games.js" defer></script>
   <script src="firebase-config.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
     import {
-      getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
+      initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+      doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
       collection, addDoc, query, where, orderBy, limit, getDocs, increment, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Offline persistence: ostatnio zsynchronizowane dane (dashboard, historia, saldo...)
+    // są czytelne bez internetu. Single-tab manager — apka i tak żyje jako PWA w jednej karcie.
+    const db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
+    });
     const messaging = getMessaging(app);
 
     // ── i18n (Faza 5: Dashboard + Ustawienia) ──────────────
     const I18N_RESOURCES = {
       en: { translation: {
-        nav: { dashboard: 'Dashboard', shop: 'Expenses', money: 'Money', chores: 'Chores', history: 'History', stats: 'Stats', settings: 'Settings', logout: 'Log out', home: 'Home' },
+        nav: { dashboard: 'Dashboard', shop: 'Expenses', money: 'Money', chores: 'Chores', history: 'History', stats: 'Stats', settings: 'Settings', logout: 'Log out', home: 'Home', games: 'Games' },
         dashboard: {
           streakSuffix: 'day streak', available: 'Available funds', points: 'points',
           level: 'Level {{n}}', xp: '{{cur}} / {{max}} XP',
@@ -1820,9 +1902,37 @@
           textPh: 'Message text...', send: 'Send to everyone', enterText: 'Enter a message.',
           sent: 'Message sent.', none: 'No messages sent yet.', confirmDelete: 'Delete this message?', deleted: 'Message deleted.',
         },
+        offline: {
+          banner: "You're offline — new entries will be saved as drafts to confirm",
+          draftSaved: 'No connection — saved as a draft. Confirm it once you\'re back online.',
+          needConnection: 'This requires an internet connection.',
+          reviewTitle: 'You were offline — here\'s what you prepared',
+          reviewSubtitle: 'Confirm or discard each draft. Saving uses the current state of your account.',
+          reviewClose: 'Close',
+          add: 'Add', discard: 'Discard',
+          draftAdded: 'Draft saved to your account.',
+          draftDiscarded: 'Draft discarded.',
+          empty: 'All drafts processed. 🎉',
+          sumActivity: 'Activity: {{name}} — {{min}} min (~{{pts}} pts)',
+          sumGaming: 'Gaming: {{game}} — {{min}} min',
+          sumChore: 'Chore: {{name}} (+{{pts}} pts)',
+          sumMoneyExpense: 'Expense: {{amount}} zł — {{cat}}',
+          sumMoneyIncome: 'Income: {{amount}} zł — {{cat}}',
+        },
+        games: {
+          title: 'Games', subtitle: 'Pure fun — works offline too. No points, no Money.',
+          exit: 'Exit to menu', score: 'Score', best: 'Best',
+          bestLabel: 'Best: {{n}}',
+          flappyName: 'Flappy Bird', snakeName: 'Snake', g2048Name: '2048',
+          tapToStart: 'Tap or press Space to start', gameOver: 'Game over!', tapToRestart: 'Tap or press Space to play again',
+          newRecord: 'New record: {{n}}! 🏆',
+          flappyHint: 'Tap / click / Space — flap. Avoid the pipes.',
+          snakeHint: 'Arrow keys or swipe — steer the snake. Eat, grow, don\'t crash.',
+          g2048Hint: 'Arrow keys or swipe — merge tiles with the same value.',
+        },
       }},
       pl: { translation: {
-        nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home' },
+        nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home', games: 'Gry' },
         dashboard: {
           streakSuffix: 'dni z rzędu', available: 'Dostępne środki', points: 'punktów',
           level: 'Poziom {{n}}', xp: '{{cur}} / {{max}} XP',
@@ -2102,6 +2212,34 @@
           textPh: 'Treść wiadomości...', send: 'Wyślij do wszystkich', enterText: 'Wpisz wiadomość.',
           sent: 'Wiadomość wysłana.', none: 'Brak wysłanych wiadomości.', confirmDelete: 'Usunąć tę wiadomość?', deleted: 'Wiadomość usunięta.',
         },
+        offline: {
+          banner: 'Jesteś offline — nowe wpisy zapiszą się jako szkice do zatwierdzenia',
+          draftSaved: 'Brak internetu — zapisano jako szkic. Zatwierdzisz go po powrocie online.',
+          needConnection: 'Wymaga połączenia z internetem.',
+          reviewTitle: 'Byłeś offline — oto co przygotowałeś',
+          reviewSubtitle: 'Zatwierdź lub odrzuć każdy szkic. Zapis liczy się według aktualnego stanu konta.',
+          reviewClose: 'Zamknij',
+          add: 'Dodaj', discard: 'Odrzuć',
+          draftAdded: 'Szkic zapisany na koncie.',
+          draftDiscarded: 'Szkic odrzucony.',
+          empty: 'Wszystkie szkice przetworzone. 🎉',
+          sumActivity: 'Aktywność: {{name}} — {{min}} min (~{{pts}} pkt)',
+          sumGaming: 'Granie: {{game}} — {{min}} min',
+          sumChore: 'Obowiązek: {{name}} (+{{pts}} pkt)',
+          sumMoneyExpense: 'Wydatek: {{amount}} zł — {{cat}}',
+          sumMoneyIncome: 'Przychód: {{amount}} zł — {{cat}}',
+        },
+        games: {
+          title: 'Gry', subtitle: 'Czysta rozrywka — działa też offline. Bez punktów, bez Money.',
+          exit: 'Wyjdź do menu', score: 'Wynik', best: 'Rekord',
+          bestLabel: 'Rekord: {{n}}',
+          flappyName: 'Flappy Bird', snakeName: 'Snake', g2048Name: '2048',
+          tapToStart: 'Tapnij lub wciśnij spację, aby zacząć', gameOver: 'Koniec gry!', tapToRestart: 'Tapnij lub wciśnij spację, aby zagrać jeszcze raz',
+          newRecord: 'Nowy rekord: {{n}}! 🏆',
+          flappyHint: 'Tap / klik / spacja — trzepot. Omijaj rury.',
+          snakeHint: 'Strzałki lub swipe — steruj wężem. Jedz, rośnij, nie zderzaj się.',
+          g2048Hint: 'Strzałki lub swipe — łącz kafelki o tej samej wartości.',
+        },
       }},
     };
 
@@ -2298,6 +2436,11 @@
       // wysłana podczas gdy apka jest otwarta ma się pokazać od razu, bez odświeżenia).
       maybeShowWhatsNew();
       startBroadcastListener();
+
+      // Tryb offline: pokaż baner jeśli nie ma internetu, a jeśli jest — zaproponuj
+      // przegląd szkiców zrobionych offline (kolejka w localStorage).
+      updateOfflineBanner();
+      maybeShowOfflineReview();
     });
 
     async function loadProfile() {
@@ -2366,6 +2509,7 @@
       if (id === 'log-gaming') { updateGameSelect(); loadGamingHistory(); }
       if (id === 'history') loadHistory();
       if (id === 'chores') loadChores();
+      if (id === 'games' && window.LifeXPGames) LifeXPGames.showMenu();
       if (id === 'settings') {
         loadChoreDefs().then(renderChoreDefsSettings);
         loadActivityDefs().then(renderActivityDefsSettings);
@@ -3153,6 +3297,22 @@
       const ptsPerH = parseInt(opt?.dataset.pts || 0);
       let earned = Math.round((min / 60) * ptsPerH);
 
+      // Offline → szkic do lokalnej kolejki. Prawdziwy zapis (i cap limitem dziennym)
+      // dopiero przy zatwierdzeniu online — dlatego punkty w podsumowaniu to szacunek.
+      if (!navigator.onLine) {
+        const name = type === '__generated__' ? (opt?.dataset.genName || '—') : activityDefById(type).name;
+        const payload = { type, minutes: min, desc, ptsPerHour: ptsPerH, dateStr: todayStr() };
+        if (type === '__generated__' && opt?.dataset.genName) payload.typeName = opt.dataset.genName;
+        queueOfflineDraft('activity',
+          i18next.t('offline.sumActivity', { name, min, pts: earned, interpolation: { escapeValue: false } }),
+          payload);
+        document.getElementById('act-type').value = '';
+        document.getElementById('act-minutes').value = '';
+        document.getElementById('act-desc').value = '';
+        document.getElementById('pts-preview').style.display = 'none';
+        return;
+      }
+
       // Cap to daily limit
       const todayPts = await getTodayPts();
       const dailyLimit = await getDailyLimit();
@@ -3244,6 +3404,18 @@
       if (!game) return toast(i18next.t('logGaming.enterGame'), 'error');
       if (!min || min < 1) return toast(i18next.t('logGaming.enterDuration'), 'error');
       if (min > 1440) return toast(i18next.t('logGaming.sessionTooLong'), 'error');
+
+      // Offline → szkic; limit 1440 min/dzień weryfikowany przy zatwierdzeniu online.
+      if (!navigator.onLine) {
+        queueOfflineDraft('gaming',
+          i18next.t('offline.sumGaming', { game, min, interpolation: { escapeValue: false } }),
+          { game, minutes: min, date });
+        document.getElementById('game-select').value = '';
+        document.getElementById('game-minutes').value = '';
+        document.getElementById('game-custom').value = '';
+        document.getElementById('game-custom-wrap').style.display = 'none';
+        return;
+      }
 
       const btn = document.querySelector('#page-log-gaming button');
       btn.disabled = true;
@@ -3869,6 +4041,15 @@
       const todayISO = dateISOLocal();
       const y = new Date(); y.setDate(y.getDate() - 1);
       const yesterdayISO = dateISOLocal(y);
+
+      // Offline → szkic z dzisiejszą datą lokalną (bez pytania "wczoraj?" — data
+      // szkicu = moment stworzenia offline).
+      if (!navigator.onLine) {
+        queueOfflineDraft('chore',
+          i18next.t('offline.sumChore', { name: chore.name, pts: chore.points, interpolation: { escapeValue: false } }),
+          { choreId, choreName: chore.name, choreEmoji: chore.emoji || '', points: chore.points, oneTime: !!chore.oneTime, dateISO: todayISO });
+        return;
+      }
 
       const todayHas = choreEntries.some(e => e.choreId === choreId && e.dateISO === todayISO);
       const sameMonth = monthKeyOf(yesterdayISO) === monthKeyOf(todayISO);
@@ -4628,6 +4809,27 @@
     window.saveMoneyTx = async () => {
       const amount = round2(parseFloat(document.getElementById('mtx-amount').value));
       if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
+
+      // Offline → szkic. Saldo i ewentualna nowa kategoria weryfikowane/tworzone
+      // dopiero przy zatwierdzeniu online (świeży stan serwera).
+      if (!navigator.onLine) {
+        let cat = document.getElementById('mtx-category').value;
+        if (cat === '__new__') cat = document.getElementById('mtx-newcat').value.trim();
+        if (!cat) return toast(i18next.t('money.chooseCategory'), 'error');
+        queueOfflineDraft('money_tx',
+          i18next.t(moneyTxType === 'income' ? 'offline.sumMoneyIncome' : 'offline.sumMoneyExpense',
+            { amount: amount.toFixed(2).replace('.', ','), cat, interpolation: { escapeValue: false } }),
+          { txType: moneyTxType, amount, category: cat,
+            note: document.getElementById('mtx-note').value.trim(),
+            date: document.getElementById('mtx-date').value || todayStr() });
+        document.getElementById('mtx-amount').value = '';
+        document.getElementById('mtx-note').value = '';
+        document.getElementById('mtx-newcat').value = '';
+        document.getElementById('mtx-newcat-wrap').style.display = 'none';
+        document.getElementById('mtx-category').value = '';
+        document.getElementById('money-tx-form').style.display = 'none';
+        return;
+      }
 
       // Blokada ujemnego salda — wydatek nie może zejść poniżej zera.
       if (moneyTxType === 'expense' && (moneyBalance?.current || 0) - amount < 0) {
@@ -5452,14 +5654,17 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.09';
+    const APP_VERSION = '2026.07.10';
     const CHANGELOG = [
+      { version: '2026.07.10', items: [
+        { pl: '🎮 2048: kafelki płynnie się przesuwają i pulsują przy łączeniu, zamiast się teleportować', en: '🎮 2048: tiles now slide and pulse on merge instead of teleporting' },
+        { pl: '🎆 Pobicie rekordu w grze odpala fajerwerki', en: '🎆 Beating a game highscore now sets off fireworks' },
+        { pl: '🐤 Flappy Bird: fizyka jak w oryginale (grawitacja, trzepot, prędkość rur) — koniec z kamieniem spadającym w dół', en: '🐤 Flappy Bird: physics matched to the original game (gravity, flap, pipe speed) — no more falling like a rock' },
+        { pl: '🔧 Fix: zakładka Gry ma wreszcie ikonę', en: '🔧 Fix: the Games tab finally has an icon' },
+      ]},
       { version: '2026.07.09', items: [
-        { pl: '🏆 Nowe osiągnięcia za zdobyte pieniądze w Money (100, 500, 1000, 2500, 5000 i 10 000 zł) — liczą się też Twoje dotychczasowe wpływy', en: '🏆 New achievements for money earned in Money (100, 500, 1000, 2500, 5000 and 10,000 zł) — your past income counts too' },
-        { pl: '🎯 Cele pieniężne: teraz sam wpłacasz kwoty na cel przyciskiem „Wpłać" — to NIE odejmuje pieniędzy z Money', en: '🎯 Money goals: you now deposit amounts yourself with the “Deposit” button — it does NOT subtract from your Money balance' },
-        { pl: '🤝 Dodawanie pożyczki ma teraz przycisk „Anuluj"', en: '🤝 Adding a loan now has a “Cancel” button' },
-        { pl: '✅ Obowiązki: dodawanie zamkniesz, tapając kreskę na górze okienka', en: '✅ Chores: cancel adding by tapping the handle at the top of the sheet' },
-        { pl: '🥇 Motyw Gold: przycisk „+" ma teraz złotą poświatę zamiast zielonej', en: '🥇 Gold theme: the “+” button now has a gold glow instead of green' },
+        { pl: '🎮 Nowa zakładka Gry — Flappy Bird, Snake i 2048 z lokalnymi rekordami, działa też offline', en: '🎮 New Games tab — Flappy Bird, Snake and 2048 with local highscores, works offline too' },
+        { pl: '📡 Tryb offline — podgląd danych bez internetu, a wpisy zrobione offline czekają jako szkice do zatwierdzenia po powrocie online', en: '📡 Offline mode — browse your data without internet; entries made offline wait as drafts to confirm once you\'re back online' },
       ]},
       { version: '2026.07.08', items: [
         { pl: '📢 Globalne wiadomości pokazują się od razu, bez odświeżania aplikacji', en: '📢 Global messages now show up immediately, no app refresh needed' },
@@ -5679,6 +5884,205 @@
         toast(i18next.t('broadcast.deleted'));
       } catch (e) { console.error(e); toast(i18next.t('shop.saveError'), 'error'); }
     };
+
+    // ── Tryb offline: lokalna kolejka szkiców ─────────────
+    // Wpisy zrobione offline NIE idą do Firestore — trafiają do localStorage jako
+    // szkice. Prawdziwy zapis dzieje się dopiero po powrocie online, po kliknięciu
+    // "Dodaj" na ekranie przeglądu — ze świeżym stanem serwera (limit dzienny,
+    // saldo Money liczone wtedy, nie na nieaktualnych danych offline). Nie
+    // "optymalizować" tego na automatyczny sync — to celowy design.
+    const OFFLINE_QUEUE_KEY = 'lifexp-offline-queue';
+
+    function getOfflineQueue() {
+      try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function setOfflineQueue(q) {
+      try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); } catch (e) {}
+    }
+    function queueOfflineDraft(type, summary, payload) {
+      const q = getOfflineQueue();
+      q.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        type, summary, payload,
+        createdAtLocal: new Date().toISOString(),
+      });
+      setOfflineQueue(q);
+      toast(i18next.t('offline.draftSaved'));
+    }
+
+    // Akcje poza zakresem MVP kolejki (pożyczki, bugi, ustawienia/kategorie) —
+    // offline blokujemy komunikatem zamiast draftować.
+    function requireOnline() {
+      if (navigator.onLine) return true;
+      toast(i18next.t('offline.needConnection'), 'error');
+      return false;
+    }
+    window.requireOnline = requireOnline;
+
+    // Wrapper zakłada blokadę na już zdefiniowane funkcje window.* (moduł wykonuje
+    // się sekwencyjnie, więc w tym miejscu wszystkie definicje już istnieją).
+    ['saveLoan', 'saveLoanRepay', 'submitBugReport', 'saveSettings', 'saveEconomyGeneral',
+     'saveEconomyChores', 'saveMoneyLimit', 'addChoreDef', 'addActivityDef', 'addGame',
+     'addMoneyCategory', 'settleChores', 'sendBroadcast'].forEach(fn => {
+      const orig = window[fn];
+      if (typeof orig !== 'function') return;
+      window[fn] = (...args) => { if (!requireOnline()) return; return orig(...args); };
+    });
+
+    function updateOfflineBanner() {
+      document.getElementById('offline-banner').classList.toggle('show', !navigator.onLine);
+    }
+    window.addEventListener('offline', updateOfflineBanner);
+    window.addEventListener('online', () => {
+      updateOfflineBanner();
+      maybeShowOfflineReview();
+    });
+
+    // ── Ekran "Byłeś offline" (styl #whatsnew-modal) ──
+    function maybeShowOfflineReview() {
+      if (!currentUser || !navigator.onLine) return;
+      if (getOfflineQueue().length === 0) return;
+      // Nie nachodź na modal "Co nowego?" — poczekaj, aż user go zamknie.
+      if (document.getElementById('whatsnew-modal').classList.contains('open')) {
+        setTimeout(maybeShowOfflineReview, 1000);
+        return;
+      }
+      renderOfflineReview();
+      document.getElementById('offline-review-modal').classList.add('open');
+    }
+
+    window.closeOfflineReview = () => {
+      document.getElementById('offline-review-modal').classList.remove('open');
+    };
+
+    function renderOfflineReview() {
+      const el = document.getElementById('offline-review-list');
+      const q = getOfflineQueue();
+      if (q.length === 0) {
+        el.innerHTML = `<p class="text2" style="text-align:center;padding:14px 0">${i18next.t('offline.empty')}</p>`;
+        return;
+      }
+      const loc = i18next.language === 'pl' ? 'pl-PL' : 'en-US';
+      el.innerHTML = q.map(item => {
+        const d = new Date(item.createdAtLocal);
+        const ds = isNaN(d) ? '' : d.toLocaleString(loc, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <p style="margin:0 0 2px;font-size:14px;line-height:1.5">${escapeHtml(item.summary)}</p>
+          <p class="text2" style="margin:0 0 8px;font-size:12px">${ds}</p>
+          <div style="display:flex;gap:8px">
+            <button class="btn-success btn-sm" onclick="applyOfflineDraft('${item.id}')">${i18next.t('offline.add')}</button>
+            <button class="btn-ghost btn-sm" onclick="discardOfflineDraft('${item.id}')">${i18next.t('offline.discard')}</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    window.discardOfflineDraft = (id) => {
+      setOfflineQueue(getOfflineQueue().filter(x => x.id !== id));
+      renderOfflineReview();
+      toast(i18next.t('offline.draftDiscarded'));
+    };
+
+    window.applyOfflineDraft = async (id) => {
+      if (!requireOnline()) return;
+      const item = getOfflineQueue().find(x => x.id === id);
+      if (!item) return;
+      // Zablokuj przyciski na czas zapisu (podwójny klik = podwójny wpis).
+      document.querySelectorAll('#offline-review-list button').forEach(b => b.disabled = true);
+      try {
+        if (item.type === 'activity') await applyDraftActivity(item);
+        else if (item.type === 'gaming') await applyDraftGaming(item);
+        else if (item.type === 'chore') await applyDraftChore(item);
+        else if (item.type === 'money_tx') await applyDraftMoneyTx(item);
+        setOfflineQueue(getOfflineQueue().filter(x => x.id !== id));
+        toast(i18next.t('offline.draftAdded'));
+        try { await loadProfile(); await loadDashboard(); } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error('applyOfflineDraft failed:', e);
+        toast(e && e.userMessage ? e.userMessage : i18next.t('errors.saveRetry'), 'error');
+      }
+      renderOfflineReview();
+    };
+
+    // Data szkicu = moment stworzenia OFFLINE (createdAtLocal), nie moment zatwierdzenia.
+    // Limity (dzienny limit punktów, 24h grania, saldo Money) liczone są tutaj — online,
+    // ze świeżym stanem serwera.
+    async function applyDraftActivity(item) {
+      const p = item.payload;
+      const dateStr = p.dateStr; // klucz dailyLog wg konwencji todayStr() z dnia szkicu
+      const estimated = Math.round((p.minutes / 60) * (p.ptsPerHour || 0));
+
+      const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', dateStr);
+      const daySnap = await getDoc(dayRef);
+      const dayPts = daySnap.exists() ? (daySnap.data().pointsEarned || 0) : 0;
+      const dailyLimit = await getDailyLimit();
+      const actualEarned = Math.min(estimated, Math.max(0, dailyLimit - dayPts));
+      if (actualEarned === 0) throw { userMessage: i18next.t('logActivity.dailyLimitHit') };
+
+      const activityDoc = { type: p.type, duration: p.minutes, points: actualEarned, desc: p.desc || '', timestamp: new Date(item.createdAtLocal) };
+      if (p.typeName) activityDoc.typeName = p.typeName;
+      await addDoc(collection(db, 'users', currentUser.uid, 'activities'), activityDoc);
+
+      if (daySnap.exists()) await updateDoc(dayRef, { pointsEarned: increment(actualEarned) });
+      else await setDoc(dayRef, { pointsEarned: actualEarned, gamingMinutes: 0 });
+
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        'points.total': increment(actualEarned),
+        'points.earnedAllTime': increment(actualEarned),
+      });
+    }
+
+    async function applyDraftGaming(item) {
+      const p = item.payload;
+      const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', p.date);
+      const daySnap = await getDoc(dayRef);
+      const existingMin = daySnap.exists() ? (daySnap.data().gamingMinutes || 0) : 0;
+      if (existingMin + p.minutes > 1440) throw { userMessage: i18next.t('logGaming.dailyLimitHit', { existing: existingMin }) };
+
+      await addDoc(collection(db, 'users', currentUser.uid, 'gamingSessions'), {
+        game: p.game, duration: p.minutes, date: p.date, timestamp: new Date(item.createdAtLocal),
+      });
+      if (daySnap.exists()) await updateDoc(dayRef, { gamingMinutes: increment(p.minutes) });
+      else await setDoc(dayRef, { pointsEarned: 0, gamingMinutes: p.minutes });
+    }
+
+    async function applyDraftChore(item) {
+      const p = item.payload;
+      await addDoc(collection(db, 'users', currentUser.uid, 'chores'), {
+        choreId: p.choreId, choreName: p.choreName, choreEmoji: p.choreEmoji || '',
+        points: p.points, dateISO: p.dateISO, monthKey: monthKeyOf(p.dateISO), createdAt: new Date(item.createdAtLocal),
+      });
+      if (p.oneTime) {
+        try { await deleteDoc(doc(db, 'users', currentUser.uid, 'choreDefs', p.choreId)); } catch (_) {}
+      }
+    }
+
+    async function applyDraftMoneyTx(item) {
+      const p = item.payload;
+      await loadMoneyDocs();
+      if (p.txType === 'expense' && (moneyBalance?.current || 0) - p.amount < 0) {
+        throw { userMessage: i18next.t('money.notEnoughBalance') };
+      }
+      await loadMoneyCategories();
+      const category = await addMoneyCategoryByName(p.category);
+
+      let pointsCost = 0;
+      if (p.txType === 'expense') {
+        const wanted = Math.ceil(p.amount / rateGeneral());
+        pointsCost = Math.min(wanted, userProfile.points?.total || 0);
+      }
+      await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
+        type: p.txType, amount: p.amount, category, note: p.note || '', date: p.date,
+        source: 'manual', pointsCost, createdAt: new Date(item.createdAtLocal),
+      });
+      await updateMoneyCurrent(p.txType === 'income' ? p.amount : -p.amount);
+      if (pointsCost > 0) {
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          'points.total': increment(-pointsCost),
+          'points.spentAllTime': increment(pointsCost),
+        });
+      }
+    }
 
   </script>
 </body>
