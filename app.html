@@ -462,6 +462,8 @@
     }
     .sheet-backdrop.open .sheet { transform: translateY(0); }
     .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 16px; }
+    .sheet-handle-hit { margin: -6px auto 0; padding: 6px 40px 10px; width: fit-content; }
+    .sheet-handle-hit .sheet-handle { margin: 0 auto; }
     .sheet-chore {
       display: flex; align-items: center; gap: 12px;
       padding: 14px; border-radius: 12px;
@@ -1561,7 +1563,7 @@
   <!-- Bottom-sheet wyboru obowiązku -->
   <div class="sheet-backdrop" id="chore-sheet" onclick="if(event.target===this)closeChoreSheet()">
     <div class="sheet">
-      <div class="sheet-handle"></div>
+      <div class="sheet-handle-hit" onclick="closeChoreSheet()" role="button" aria-label="Zamknij" data-i18n-aria="chores.closeAria" style="cursor:pointer"><div class="sheet-handle"></div></div>
       <h3 style="margin-bottom:4px" data-i18n="chores.sheetTitle">Co zrobiłeś?</h3>
       <p class="text2" style="margin-bottom:14px" data-i18n="chores.sheetSubtitle">Tapnij obowiązek, żeby dodać go na dziś.</p>
       <div id="chore-sheet-list"></div>
@@ -1710,6 +1712,12 @@
           streak_30: { name: 'Month legend', desc: '30 day streak' },
           gaming_hour: { name: 'Gaming marathon', desc: '60 min of gaming in one day' },
           daily_limit: { name: 'Limit smashed!', desc: 'Hit your daily point limit' },
+          money_100: { name: 'First hundred', desc: 'Earn 100 PLN total in Money' },
+          money_500: { name: 'Five hundred', desc: 'Earn 500 PLN total in Money' },
+          money_1000: { name: 'Thousand in the bank', desc: 'Earn 1,000 PLN total in Money' },
+          money_2500: { name: 'Serious saver', desc: 'Earn 2,500 PLN total in Money' },
+          money_5000: { name: 'Five grand', desc: 'Earn 5,000 PLN total in Money' },
+          money_10000: { name: 'Money master', desc: 'Earn 10,000 PLN total in Money' },
         },
         facts: {
           favoriteActivity: 'Your favorite activity is <strong>{{name}}</strong> — you did it {{count}}×.',
@@ -1834,7 +1842,7 @@
           subtitle: 'Separate ledger — earnings for household chores (<span id="chore-rate-label">1 pt = 0.45 zł</span>).',
           outstanding: 'To be paid out (unsettled)', settle: 'Settle payout',
           tabCurrent: 'Current month', tabPrev: 'Previous month', monthEarnings: "Month's earnings",
-          payoutHistory: 'Payout history', noPayouts: 'No payouts yet.', addAria: 'Add chore',
+          payoutHistory: 'Payout history', noPayouts: 'No payouts yet.', addAria: 'Add chore', closeAria: 'Close',
           sheetTitle: 'What did you do?', sheetSubtitle: "Tap a chore to add it for today.", sheetEmpty: 'No chores defined yet.',
           yesterdayTitle: 'When did you do it?', today: 'Today', yesterday: 'Yesterday',
           yesterdayText: '"{{name}}" is already marked for today. Did you do it yesterday ({{date}})?',
@@ -2014,6 +2022,12 @@
           streak_30: { name: 'Miesięczna legenda', desc: '30 dni z rzędu' },
           gaming_hour: { name: 'Maraton gracza', desc: '60 min grania w jeden dzień' },
           daily_limit: { name: 'Limit dobity!', desc: 'Dobij dzienny limit punktów' },
+          money_100: { name: 'Pierwsza setka', desc: 'Zdobądź łącznie 100 zł w Money' },
+          money_500: { name: 'Pięć stówek', desc: 'Zdobądź łącznie 500 zł w Money' },
+          money_1000: { name: 'Tysiąc na koncie', desc: 'Zdobądź łącznie 1 000 zł w Money' },
+          money_2500: { name: 'Poważny ciułacz', desc: 'Zdobądź łącznie 2 500 zł w Money' },
+          money_5000: { name: 'Pięć tysięcy zł', desc: 'Zdobądź łącznie 5 000 zł w Money' },
+          money_10000: { name: 'Mistrz pieniędzy', desc: 'Zdobądź łącznie 10 000 zł w Money' },
         },
         facts: {
           favoriteActivity: 'Twoją ulubioną aktywnością jest <strong>{{name}}</strong> — wykonałeś ją {{count}}×.',
@@ -2138,7 +2152,7 @@
           subtitle: 'Osobny rejestr — zarobek za prace domowe (<span id="chore-rate-label">1 pkt = 0,45 zł</span>).',
           outstanding: 'Do wypłaty (nierozliczone)', settle: 'Rozlicz wypłatę',
           tabCurrent: 'Bieżący miesiąc', tabPrev: 'Poprzedni miesiąc', monthEarnings: 'Zarobek miesiąca',
-          payoutHistory: 'Historia wypłat', noPayouts: 'Brak wypłat.', addAria: 'Dodaj obowiązek',
+          payoutHistory: 'Historia wypłat', noPayouts: 'Brak wypłat.', addAria: 'Dodaj obowiązek', closeAria: 'Zamknij',
           sheetTitle: 'Co zrobiłeś?', sheetSubtitle: 'Tapnij obowiązek, żeby dodać go na dziś.', sheetEmpty: 'Lista obowiązków jeszcze nie zdefiniowana.',
           yesterdayTitle: 'Kiedy to zrobiłeś?', today: 'Dzisiaj', yesterday: 'Wczoraj',
           yesterdayText: '„{{name}}" jest już zaznaczony na dziś. Czy zrobiłeś to wczoraj ({{date}})?',
@@ -2626,6 +2640,7 @@
       const streak = await renderStreak();
       await loadRecentActivities();
       loadStatsSection();
+      await migrateMoneyIncome();
       checkAchievements({ streak });
       // Saldo Money potrzebne do celów pieniężnych na dashboardzie (money/balance).
       try { await loadMoneyDocs(); } catch (e) { console.error('loadMoneyDocs (dashboard) failed:', e); }
@@ -2659,9 +2674,9 @@
     function goalCardHTML(g) {
       const t = (k, o) => i18next.t(k, o);
       const isMoney = g.type === 'money';
-      // Cel pieniężny mierzy realne saldo Money trackera (money/balance.current),
-      // cel punktowy — punkty LifeXP. moneyBalance ładowane jest w loadDashboard.
-      const balance = isMoney ? (moneyBalance?.current || 0) : (userProfile.points?.total || 0);
+      // Cel pieniężny mierzy sumę WPŁACONĄ na cel (g.saved) — użytkownik sam odkłada
+      // kwoty przyciskiem „Wpłać", co NIE rusza salda Money. Cel punktowy — punkty LifeXP.
+      const balance = isMoney ? (g.saved || 0) : (userProfile.points?.total || 0);
       const pct = Math.min(100, (balance / g.amount) * 100);
       const missing = Math.max(0, g.amount - balance);
       const reached = balance >= g.amount;
@@ -2692,6 +2707,11 @@
               ${reached ? t('goal.reached') : (isMoney ? t('goal.missing', { zl: missing.toFixed(2).replace('.', ',') }) : t('goal.missingPts', { pts: Math.ceil(missing) }))}
             </span>
           </div>
+          ${isMoney && !reached ? `
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input type="number" id="goal-deposit-${g.id}" min="0.01" max="1000000" step="0.01" placeholder="${t('money.depositPh')}" style="flex:1">
+            <button class="btn-primary btn-sm" onclick="depositGoal('${g.id}')">${t('money.deposit')}</button>
+          </div>` : ''}
         </div>`;
     }
 
@@ -2770,13 +2790,28 @@
         if (g) { g.name = name; g.type = goalFormState.type; g.amount = amount; g.celebrated = false; }
       } else {
         if (goals.length >= 3) return toast(i18next.t('goal.maxReached'), 'error');
-        goals.push({ id: newGoalId(), name, type: goalFormState.type, amount, celebrated: false });
+        // saved = ile już wpłacono na cel (tylko cele pieniężne); startuje od 0.
+        goals.push({ id: newGoalId(), name, type: goalFormState.type, amount, celebrated: false, saved: 0 });
       }
       userProfile.goals = goals;
       await updateDoc(doc(db, 'users', currentUser.uid), { goals });
       goalFormState = null;
       await loadProfile();
       renderGoal();
+    };
+
+    // Wpłata na cel pieniężny — dolicza do g.saved i NIE rusza salda Money trackera.
+    window.depositGoal = async (id) => {
+      const g = (userProfile.goals || []).find(x => x.id === id);
+      if (!g || g.type !== 'money') return;
+      const input = document.getElementById('goal-deposit-' + id);
+      const amount = round2(parseFloat(input?.value));
+      if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
+      g.saved = round2((g.saved || 0) + amount);
+      await updateDoc(doc(db, 'users', currentUser.uid), { goals: userProfile.goals });
+      await loadProfile();
+      renderGoal();
+      toast(i18next.t('money.depositSaved', { amount: fmtMoney(amount), name: g.name, interpolation: { escapeValue: false } }));
     };
 
     window.editGoal = (id) => {
@@ -3008,6 +3043,12 @@
       { id: 'streak_30',      emoji: '🏆' },
       { id: 'gaming_hour',    emoji: '🎮' },
       { id: 'daily_limit',    emoji: '⚡' },
+      { id: 'money_100',      emoji: '💵' },
+      { id: 'money_500',      emoji: '💶' },
+      { id: 'money_1000',     emoji: '🤑' },
+      { id: 'money_2500',     emoji: '🪙' },
+      { id: 'money_5000',     emoji: '🏦' },
+      { id: 'money_10000',    emoji: '👑' },
     ];
 
     async function checkAchievements({ streak = 0 } = {}) {
@@ -3028,6 +3069,12 @@
         streak_30:      streak >= 30,
         gaming_hour:    todayGame >= 60,
         daily_limit:    todayPts  >= (profile.dailyLimit || DAILY_LIMIT_DEFAULT),
+        money_100:      (profile.moneyIncomeAllTime || 0) >= 100,
+        money_500:      (profile.moneyIncomeAllTime || 0) >= 500,
+        money_1000:     (profile.moneyIncomeAllTime || 0) >= 1000,
+        money_2500:     (profile.moneyIncomeAllTime || 0) >= 2500,
+        money_5000:     (profile.moneyIncomeAllTime || 0) >= 5000,
+        money_10000:    (profile.moneyIncomeAllTime || 0) >= 10000,
       };
 
       for (const a of ACHIEVEMENTS) {
@@ -3869,6 +3916,7 @@
           type: 'income', amount, category: i18next.t('choreMsg.incomeCategory'), note: '',
           date: todayStr(), source: 'chore_payout', createdAt: new Date(),
         });
+        await bumpMoneyIncome(amount);
 
         choreSelectedDay = null;
         await loadChores();
@@ -4619,6 +4667,31 @@
       else await setDoc(ref, { current: round2(delta) });
     }
 
+    // Licznik sumy wpływów (income) na potrzeby osiągnięć pieniężnych — trwały na
+    // dokumencie usera (users/{uid}.moneyIncomeAllTime), niezależny od bieżącego salda.
+    // delta > 0 przy nowym wpływie, < 0 przy cofnięciu transakcji income.
+    async function bumpMoneyIncome(delta) {
+      if (!delta) return;
+      await updateDoc(doc(db, 'users', currentUser.uid), { moneyIncomeAllTime: increment(round2(delta)) });
+      userProfile.moneyIncomeAllTime = round2((userProfile.moneyIncomeAllTime || 0) + delta);
+      if (delta > 0) await checkAchievements({ streak: 0 }).catch(() => {});
+    }
+
+    // Jednorazowy backfill licznika: gdy pole jeszcze nie istnieje, sumujemy WSZYSTKIE
+    // dotychczasowe wpływy (income) z pełnej historii transakcji i zapisujemy jako start,
+    // żeby osiągnięcia doliczyły już zdobyte pieniądze. Pełny odczyt kolekcji tylko raz.
+    async function migrateMoneyIncome() {
+      if (!currentUser || !userProfile || typeof userProfile.moneyIncomeAllTime === 'number') return;
+      try {
+        const snap = await getDocs(collection(db, 'users', currentUser.uid, 'moneyTransactions'));
+        let sum = 0;
+        snap.forEach(d => { const t = d.data(); if (t.type === 'income') sum += (t.amount || 0); });
+        sum = round2(sum);
+        await updateDoc(doc(db, 'users', currentUser.uid), { moneyIncomeAllTime: sum });
+        userProfile.moneyIncomeAllTime = sum;
+      } catch (e) { console.error('migrateMoneyIncome failed:', e); }
+    }
+
     const MONEY_CAT_COLORS = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b', '#00d2d3', '#ff9f43', '#feca57', '#8a8fa8'];
 
     async function loadMoneyCategories() {
@@ -4790,6 +4863,7 @@
           type: moneyTxType, amount, category, note, date, source: 'manual', pointsCost, createdAt: new Date(),
         });
         await updateMoneyCurrent(moneyTxType === 'income' ? amount : -amount);
+        if (moneyTxType === 'income') await bumpMoneyIncome(amount);
 
         if (pointsCost > 0) {
           await updateDoc(doc(db, 'users', currentUser.uid), {
@@ -4828,6 +4902,8 @@
 
         // Cofnij wpływ transakcji na saldo.
         await updateMoneyCurrent(t.type === 'income' ? -(t.amount || 0) : (t.amount || 0));
+        // Skoryguj też licznik sumy wpływów (nie odbieramy już zdobytych odznak).
+        if (t.type === 'income') await bumpMoneyIncome(-(t.amount || 0));
 
         // Zwróć punkty pobrane przy zakupie (wydatek z pointsCost).
         if ((t.pointsCost || 0) > 0) {
@@ -4882,7 +4958,10 @@
           <div class="form-group"><label>${t('money.date')}</label><input type="date" id="loan-date"></div>
           <div class="form-group"><label>${t('money.note')}</label><input type="text" id="loan-note" maxlength="100" placeholder="${t('money.notePh')}"></div>
         </div>
-        <button class="btn-success" style="width:100%" onclick="saveLoan()">${t('loan.save')}</button>`;
+        <div style="display:flex;gap:8px">
+          <button class="btn-ghost" style="flex:1" onclick="toggleLoanForm()">${t('settings.cancel')}</button>
+          <button class="btn-success" style="flex:2" onclick="saveLoan()">${t('loan.save')}</button>
+        </div>`;
       document.getElementById('loan-date').value = todayStr();
       document.getElementById('loan-person').focus();
     }
@@ -5575,8 +5654,15 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.10';
+    const APP_VERSION = '2026.07.11';
     const CHANGELOG = [
+      { version: '2026.07.11', items: [
+        { pl: '🏆 Nowe osiągnięcia za zdobyte pieniądze w Money (100, 500, 1000, 2500, 5000 i 10 000 zł) — liczą się też Twoje dotychczasowe wpływy', en: '🏆 New achievements for money earned in Money (100, 500, 1000, 2500, 5000 and 10,000 zł) — your past income counts too' },
+        { pl: '🎯 Cele pieniężne: teraz sam wpłacasz kwoty na cel przyciskiem „Wpłać" — to NIE odejmuje pieniędzy z Money', en: '🎯 Money goals: you now deposit amounts yourself with the “Deposit” button — it does NOT subtract from your Money balance' },
+        { pl: '🤝 Dodawanie pożyczki ma teraz przycisk „Anuluj"', en: '🤝 Adding a loan now has a “Cancel” button' },
+        { pl: '✅ Obowiązki: dodawanie zamkniesz, tapając kreskę na górze okienka', en: '✅ Chores: cancel adding by tapping the handle at the top of the sheet' },
+        { pl: '🥇 Motyw Gold: przycisk „+" ma teraz złotą poświatę zamiast zielonej', en: '🥇 Gold theme: the “+” button now has a gold glow instead of green' },
+      ]},
       { version: '2026.07.10', items: [
         { pl: '🎮 2048: kafelki płynnie się przesuwają i pulsują przy łączeniu, zamiast się teleportować', en: '🎮 2048: tiles now slide and pulse on merge instead of teleporting' },
         { pl: '🎆 Pobicie rekordu w grze odpala fajerwerki', en: '🎆 Beating a game highscore now sets off fireworks' },
