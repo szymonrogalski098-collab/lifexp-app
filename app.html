@@ -668,7 +668,7 @@
         <span class="icon"><i class="ti ti-chart-bar"></i></span> <span data-i18n="nav.stats">Statystyki</span>
       </div>
       <div class="nav-item" data-page="games" onclick="showPage('games')">
-        <span class="icon"><i class="ti ti-joystick"></i></span> <span data-i18n="nav.games">Gry</span>
+        <span class="icon"><i class="ti ti-device-gamepad"></i></span> <span data-i18n="nav.games">Gry</span>
       </div>
       <div class="nav-item" data-page="settings" onclick="showPage('settings')">
         <span class="icon"><i class="ti ti-settings"></i></span> <span data-i18n="nav.settings">Ustawienia</span>
@@ -703,7 +703,7 @@
         <span class="bn-icon"><i class="ti ti-history"></i></span><span data-i18n="nav.history">Historia</span>
       </div>
       <div class="bn-item" data-page="games" onclick="showPage('games')">
-        <span class="bn-icon"><i class="ti ti-joystick"></i></span><span data-i18n="nav.games">Gry</span>
+        <span class="bn-icon"><i class="ti ti-device-gamepad"></i></span><span data-i18n="nav.games">Gry</span>
       </div>
       <div class="bn-item" data-page="settings" onclick="showPage('settings')">
         <span class="bn-icon"><i class="ti ti-settings"></i></span><span data-i18n="nav.settings">Ustawienia</span>
@@ -5575,8 +5575,14 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.09';
+    const APP_VERSION = '2026.07.10';
     const CHANGELOG = [
+      { version: '2026.07.10', items: [
+        { pl: '🎮 2048: kafelki płynnie się przesuwają i pulsują przy łączeniu, zamiast się teleportować', en: '🎮 2048: tiles now slide and pulse on merge instead of teleporting' },
+        { pl: '🎆 Pobicie rekordu w grze odpala fajerwerki', en: '🎆 Beating a game highscore now sets off fireworks' },
+        { pl: '🐤 Flappy Bird: fizyka jak w oryginale (grawitacja, trzepot, prędkość rur) — koniec z kamieniem spadającym w dół', en: '🐤 Flappy Bird: physics matched to the original game (gravity, flap, pipe speed) — no more falling like a rock' },
+        { pl: '🔧 Fix: zakładka Gry ma wreszcie ikonę', en: '🔧 Fix: the Games tab finally has an icon' },
+      ]},
       { version: '2026.07.09', items: [
         { pl: '🎮 Nowa zakładka Gry — Flappy Bird, Snake i 2048 z lokalnymi rekordami, działa też offline', en: '🎮 New Games tab — Flappy Bird, Snake and 2048 with local highscores, works offline too' },
         { pl: '📡 Tryb offline — podgląd danych bez internetu, a wpisy zrobione offline czekają jako szkice do zatwierdzenia po powrocie online', en: '📡 Offline mode — browse your data without internet; entries made offline wait as drafts to confirm once you\'re back online' },

@@ -86,10 +86,46 @@
     }
   }
 
+  // Zwraca true, gdy padł nowy rekord (gry pokazują to na overlayu game over).
   function finishGame(score) {
     if (score > getBest(activeGame)) {
       setBest(activeGame, score);
       setBestLabel(score);
+      fireworks();
+      return true;
+    }
+    return false;
+  }
+
+  // Fajerwerki przy rekordzie — reużywają .confetti-piece + @keyframes confettiFall
+  // ze style.css (klasy są globalne), więc zero dodatkowego CSS.
+  function fireworks() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const c = $('games-canvas');
+    const rect = c && c.clientWidth
+      ? c.getBoundingClientRect()
+      : { left: window.innerWidth * 0.3, top: window.innerHeight * 0.25, width: window.innerWidth * 0.4, height: window.innerHeight * 0.3 };
+    const colors = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b'];
+    for (let burst = 0; burst < 3; burst++) {
+      setTimeout(() => {
+        const cx = rect.left + rect.width * (0.25 + Math.random() * 0.5);
+        const cy = rect.top + rect.height * (0.2 + Math.random() * 0.4);
+        for (let i = 0; i < 16; i++) {
+          const p = document.createElement('div');
+          p.className = 'confetti-piece';
+          p.style.left = cx + 'px';
+          p.style.top = cy + 'px';
+          p.style.background = colors[(i + burst) % colors.length];
+          const ang = (i / 16) * Math.PI * 2;
+          const dist = 60 + Math.random() * 90;
+          p.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+          p.style.setProperty('--dy', (Math.sin(ang) * dist + 60) + 'px');
+          p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+          p.style.setProperty('--dur', (0.9 + Math.random() * 0.6) + 's');
+          document.body.appendChild(p);
+          setTimeout(() => p.remove(), 1800);
+        }
+      }, burst * 180);
     }
   }
 
@@ -157,32 +193,45 @@
     const { canvas, ctx, W, H } = setupCanvas(1.25);
     const accent = cssVar('--accent', '#6c63ff');
     const accent2 = cssVar('--accent2', '#4ecca3');
-    const GRAVITY = H * 3.1, FLAP = -H * 0.72, PIPE_W = 54, GAP = H * 0.30, SPEED = W * 0.42;
-    let bird, pipes, score, state, diedAt;
+    // Fizyka wg oryginalnego Flappy Bird (ekran 288x512, logika 30 fps):
+    // grawitacja 1 px/klatkę², trzepot -9 px/klatkę, max opadanie 10 px/klatkę,
+    // rury 4 px/klatkę, szerokość rury 52 px, przerwa ~100 px, nowa rura co ~1,4 s.
+    // Przeliczone na px/s (x30 i x900) i przeskalowane do rozmiaru canvasa.
+    const SX = W / 288, SY = H / 512;
+    const GRAVITY = 900 * SY;
+    const FLAP = -270 * SY;
+    const MAX_FALL = 300 * SY;
+    const SPEED = 120 * SX;
+    const PIPE_W = 52 * SX;
+    const GAP = 110 * SY; // oryginał ~100 px — odrobinę luźniej pod sterowanie dotykiem
+    const PIPE_SPACING = 168 * SX;
+    let bird, pipes, score, state, diedAt, isRecord;
 
     function reset() {
-      bird = { x: W * 0.28, y: H * 0.45, vy: 0, r: 12 };
+      bird = { x: W * 0.28, y: H * 0.45, vy: 0, r: 12 * SY };
       pipes = [];
       score = 0; setScore(0);
-      state = 'ready';
+      state = 'ready'; isRecord = false;
     }
 
     function spawnPipe() {
-      const margin = 40;
+      const margin = 40 * SY;
       const gapY = margin + Math.random() * (H - GAP - margin * 2);
       pipes.push({ x: W + PIPE_W, gapY, passed: false });
     }
 
     function die() {
       state = 'over'; diedAt = Date.now();
-      finishGame(score);
+      isRecord = finishGame(score);
     }
 
     function step(dt) {
       if (state === 'playing') {
-        bird.vy += GRAVITY * dt;
+        bird.vy = Math.min(MAX_FALL, bird.vy + GRAVITY * dt);
         bird.y += bird.vy * dt;
-        if (pipes.length === 0 || pipes[pipes.length - 1].x < W - W * 0.52) spawnPipe();
+        // Jak w oryginale: sufit nie zabija — ptak się o niego zatrzymuje.
+        if (bird.y - bird.r < 0) { bird.y = bird.r; bird.vy = 0; }
+        if (pipes.length === 0 || pipes[pipes.length - 1].x < W - PIPE_SPACING) spawnPipe();
         pipes.forEach((p) => { p.x -= SPEED * dt; });
         pipes = pipes.filter((p) => p.x > -PIPE_W);
         for (const p of pipes) {
@@ -190,7 +239,7 @@
           const inX = bird.x + bird.r > p.x && bird.x - bird.r < p.x + PIPE_W;
           if (inX && (bird.y - bird.r < p.gapY || bird.y + bird.r > p.gapY + GAP)) die();
         }
-        if (bird.y + bird.r > H || bird.y - bird.r < 0) die();
+        if (bird.y + bird.r > H) die();
       }
 
       // Rysowanie
@@ -210,7 +259,7 @@
       ctx.fill();
 
       if (state === 'ready') drawOverlay(ctx, W, H, t('flappyName'), t('tapToStart'));
-      if (state === 'over') drawOverlay(ctx, W, H, t('gameOver'), t('tapToRestart'));
+      if (state === 'over') drawOverlay(ctx, W, H, t('gameOver'), isRecord ? t('newRecord', { n: score }) : t('tapToRestart'));
     }
 
     const unbind = bindPointer(canvas);
@@ -235,13 +284,13 @@
     const accent = cssVar('--accent', '#6c63ff');
     const warn = cssVar('--warn', '#ff6b6b');
     const TICK = 0.12;
-    let snake, dir, dirQueue, food, score, state, acc, diedAt;
+    let snake, dir, dirQueue, food, score, state, acc, diedAt, isRecord;
 
     function reset() {
       snake = [{ x: 9, y: 10 }, { x: 8, y: 10 }, { x: 7, y: 10 }];
       dir = 'right'; dirQueue = [];
       score = 0; setScore(0);
-      state = 'ready'; acc = 0;
+      state = 'ready'; acc = 0; isRecord = false;
       placeFood();
     }
 
@@ -251,7 +300,7 @@
       } while (snake.some((s) => s.x === food.x && s.y === food.y));
     }
 
-    function die() { state = 'over'; diedAt = Date.now(); finishGame(score); }
+    function die() { state = 'over'; diedAt = Date.now(); isRecord = finishGame(score); }
 
     const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
     function tick() {
@@ -290,7 +339,7 @@
       ctx.globalAlpha = 1;
 
       if (state === 'ready') drawOverlay(ctx, W, H, t('snakeName'), t('tapToStart'));
-      if (state === 'over') drawOverlay(ctx, W, H, t('gameOver'), t('tapToRestart'));
+      if (state === 'over') drawOverlay(ctx, W, H, t('gameOver'), isRecord ? t('newRecord', { n: score }) : t('tapToRestart'));
     }
 
     const unbind = bindPointer(canvas);
@@ -320,12 +369,14 @@
       32: '#4ecca3', 64: '#3db38e', 128: '#ffd700', 256: '#f5c842',
       512: '#ff9f43', 1024: '#ff6b6b', 2048: '#e05555',
     };
-    let board, score, state, diedAt;
+    let board, score, state, diedAt, isRecord;
+    let anim = null; // bieżąca animacja ruchu: { moves, newTile, mergedTargets, start, failsafe }
+    const SLIDE_MS = 110, POP_MS = 90;
 
     function reset() {
       board = Array.from({ length: N }, () => Array(N).fill(0));
       score = 0; setScore(0);
-      state = 'playing';
+      state = 'playing'; isRecord = false; anim = null;
       addTile(); addTile();
       draw();
     }
@@ -333,49 +384,88 @@
     function addTile() {
       const free = [];
       board.forEach((row, y) => row.forEach((v, x) => { if (!v) free.push({ x, y }); }));
-      if (!free.length) return;
+      if (!free.length) return null;
       const p = free[Math.floor(Math.random() * free.length)];
       board[p.y][p.x] = Math.random() < 0.9 ? 2 : 4;
+      return p;
     }
 
-    // Przesunięcie jednego wiersza w lewo z łączeniem; zwraca { row, gained, moved }.
-    function slideRow(row) {
-      const vals = row.filter((v) => v);
-      let gained = 0;
-      for (let i = 0; i < vals.length - 1; i++) {
-        if (vals[i] === vals[i + 1]) { vals[i] *= 2; gained += vals[i]; vals.splice(i + 1, 1); }
+    // Przesuwa wiersz w lewo (w znormalizowanych współrzędnych) i zwraca listę
+    // ruchów kafelków (skąd → dokąd) — z niej rysowana jest animacja przesuwania.
+    function slideRowMoves(row) {
+      const out = Array(N).fill(0);
+      const moves = [];
+      let gained = 0, target = 0, lastVal = 0, lastIdx = -1;
+      for (let j = 0; j < N; j++) {
+        const v = row[j];
+        if (!v) continue;
+        if (v === lastVal) {
+          out[lastIdx] = v * 2;
+          gained += v * 2;
+          moves.push({ from: j, to: lastIdx, value: v, merged: true });
+          lastVal = 0;
+        } else {
+          out[target] = v;
+          moves.push({ from: j, to: target, value: v });
+          lastVal = v; lastIdx = target; target++;
+        }
       }
-      while (vals.length < N) vals.push(0);
-      return { row: vals, gained, moved: vals.some((v, i) => v !== row[i]) };
+      return { row: out, gained, moved: out.some((v, j) => v !== row[j]), moves };
     }
 
     function move(dir) {
-      if (state !== 'playing') return;
+      if (state !== 'playing' || anim) return;
+      // Mapowanie znormalizowanych współrzędnych (linia i, pozycja j liczona od
+      // krawędzi, w którą przesuwamy) na realne pola siatki.
+      const posOf = (i, j) => {
+        if (dir === 'left') return { x: j, y: i };
+        if (dir === 'right') return { x: N - 1 - j, y: i };
+        if (dir === 'up') return { x: i, y: j };
+        return { x: i, y: N - 1 - j }; // down
+      };
       let moved = false, gained = 0;
-      const get = (i, j) => {
-        if (dir === 'left') return board[i][j];
-        if (dir === 'right') return board[i][N - 1 - j];
-        if (dir === 'up') return board[j][i];
-        return board[N - 1 - j][i]; // down
-      };
-      const set = (i, j, v) => {
-        if (dir === 'left') board[i][j] = v;
-        else if (dir === 'right') board[i][N - 1 - j] = v;
-        else if (dir === 'up') board[j][i] = v;
-        else board[N - 1 - j][i] = v;
-      };
+      const next = Array.from({ length: N }, () => Array(N).fill(0));
+      const allMoves = [];
       for (let i = 0; i < N; i++) {
         const row = [];
-        for (let j = 0; j < N; j++) row.push(get(i, j));
-        const r = slideRow(row);
+        for (let j = 0; j < N; j++) { const p = posOf(i, j); row.push(board[p.y][p.x]); }
+        const r = slideRowMoves(row);
         if (r.moved) moved = true;
         gained += r.gained;
-        for (let j = 0; j < N; j++) set(i, j, r.row[j]);
+        for (let j = 0; j < N; j++) { const p = posOf(i, j); next[p.y][p.x] = r.row[j]; }
+        r.moves.forEach((m) => allMoves.push({ from: posOf(i, m.from), to: posOf(i, m.to), value: m.value, merged: m.merged }));
       }
       if (!moved) return;
+      board = next;
       score += gained; setScore(score);
-      addTile();
-      if (!canMove()) { state = 'over'; diedAt = Date.now(); finishGame(score); }
+      startAnim(allMoves, addTile());
+    }
+
+    // Animacja: faza przesuwania (kafelki jadą ze starych pól na nowe, jeszcze ze
+    // starymi wartościami), potem faza "pop" (połączone kafelki pulsują, nowy
+    // kafelek rośnie od zera). Failsafe finalizuje ruch nawet gdy rAF nie działa
+    // (np. karta w tle) — wtedy po prostu bez animacji.
+    function startAnim(moves, newTile) {
+      const mergedTargets = {};
+      moves.forEach((m) => { if (m.merged) mergedTargets[m.to.x + ',' + m.to.y] = true; });
+      anim = { moves, newTile, mergedTargets, start: performance.now() };
+      anim.failsafe = setTimeout(finalizeMove, SLIDE_MS + POP_MS + 300);
+      const frame = (now) => {
+        if (!anim) return;
+        const el = now - anim.start;
+        if (el < SLIDE_MS) drawSlide(el / SLIDE_MS);
+        else if (el < SLIDE_MS + POP_MS) drawPop((el - SLIDE_MS) / POP_MS);
+        else { finalizeMove(); return; }
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    }
+
+    function finalizeMove() {
+      if (!anim) return;
+      clearTimeout(anim.failsafe);
+      anim = null;
+      if (!canMove()) { state = 'over'; diedAt = Date.now(); isRecord = finishGame(score); }
       draw();
     }
 
@@ -398,26 +488,70 @@
       ctx.closePath();
     }
 
-    function draw() {
+    const boardX = (W - (cell * N + PAD * (N + 1))) / 2;
+    const cellPx = (x, y) => ({ px: boardX + PAD + x * (cell + PAD), py: PAD + y * (cell + PAD) });
+
+    function drawGrid() {
       ctx.clearRect(0, 0, W, H);
-      const bx = (W - (cell * N + PAD * (N + 1))) / 2;
+      ctx.fillStyle = 'rgba(255,255,255,.06)';
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-        const px = bx + PAD + x * (cell + PAD), py = PAD + y * (cell + PAD);
-        const v = board[y][x];
-        ctx.fillStyle = v ? (TILE_COLORS[v] || '#e05555') : 'rgba(255,255,255,.06)';
+        const { px, py } = cellPx(x, y);
         roundRect(px, py, cell, cell, 8);
         ctx.fill();
-        if (v) {
-          ctx.fillStyle = v <= 4 ? '#e8eaf0' : '#fff';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const size = v < 128 ? cell * 0.42 : v < 1024 ? cell * 0.34 : cell * 0.28;
-          ctx.font = '700 ' + Math.round(size) + 'px ' + font;
-          ctx.fillText(String(v), px + cell / 2, py + cell / 2 + 1);
-        }
+      }
+    }
+
+    function drawTile(px, py, v, scale) {
+      const s = scale || 1;
+      const off = (cell * (1 - s)) / 2;
+      ctx.fillStyle = TILE_COLORS[v] || '#e05555';
+      roundRect(px + off, py + off, cell * s, cell * s, 8 * s);
+      ctx.fill();
+      ctx.fillStyle = v <= 4 ? '#e8eaf0' : '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const size = (v < 128 ? cell * 0.42 : v < 1024 ? cell * 0.34 : cell * 0.28) * s;
+      ctx.font = '700 ' + Math.round(size) + 'px ' + font;
+      ctx.fillText(String(v), px + cell / 2, py + cell / 2 + 1);
+    }
+
+    // Faza 1: kafelki jadą ze starych pól na nowe (jeszcze ze starymi wartościami).
+    function drawSlide(tt) {
+      const e = 1 - Math.pow(1 - tt, 3); // easeOutCubic
+      drawGrid();
+      anim.moves.forEach((m) => {
+        const a = cellPx(m.from.x, m.from.y), b = cellPx(m.to.x, m.to.y);
+        drawTile(a.px + (b.px - a.px) * e, a.py + (b.py - a.py) * e, m.value, 1);
+      });
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // Faza 2: plansza po ruchu — połączone kafelki pulsują, nowy rośnie od zera.
+    function drawPop(tt) {
+      drawGrid();
+      const popS = 1 + 0.12 * Math.sin(tt * Math.PI);
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const v = board[y][x];
+        if (!v) continue;
+        const { px, py } = cellPx(x, y);
+        let s = 1;
+        if (anim.mergedTargets[x + ',' + y]) s = popS;
+        if (anim.newTile && anim.newTile.x === x && anim.newTile.y === y) s = Math.max(0.15, tt);
+        drawTile(px, py, v, s);
       }
       ctx.textBaseline = 'alphabetic';
-      if (state === 'over') drawOverlay(ctx, W, H, t('gameOver'), t('tapToRestart'));
+    }
+
+    function draw() {
+      drawGrid();
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const v = board[y][x];
+        if (!v) continue;
+        const { px, py } = cellPx(x, y);
+        drawTile(px, py, v, 1);
+      }
+      ctx.textBaseline = 'alphabetic';
+      if (state === 'over') drawOverlay(ctx, W, H, t('gameOver'), isRecord ? t('newRecord', { n: score }) : t('tapToRestart'));
     }
 
     const unbind = bindPointer(canvas);
