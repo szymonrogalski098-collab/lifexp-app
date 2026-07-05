@@ -124,6 +124,8 @@
     .balance-label { font-size: 13px; color: rgba(255,255,255,.7); font-weight: 500; }
     .balance-amount { font-size: 48px; font-weight: 700; font-family: var(--mono); margin: 4px 0; color: #fff; }
     .balance-pts { font-size: 14px; color: rgba(255,255,255,.7); }
+    .balance-in-goals { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.82); position: relative; z-index: 1; }
+    .balance-in-goals::before { content: '🎯 '; }
 
     .stats-grid {
       display: grid;
@@ -908,6 +910,7 @@
         <div class="balance-card">
           <div class="balance-label" data-i18n="money.balanceLabel">Saldo</div>
           <div class="balance-amount" id="money-balance">0,00 zł</div>
+          <div class="balance-in-goals" id="money-in-goals" style="display:none"></div>
         </div>
 
         <div class="money-alert" id="money-limit-alert" style="display:none"></div>
@@ -1812,6 +1815,7 @@
           goalAdd: 'Add goal', goalAdded: 'Goal added.', goalDeleted: 'Goal deleted.',
           confirmDeleteGoal: 'Delete this goal? Deposited money stays in your transaction history.',
           deposit: 'Deposit', depositPh: 'Amount (PLN)', depositSaved: 'Deposited {{amount}} to "{{name}}".',
+          inGoals: 'In goals',
           goalDone: 'Goal reached! 🎉', noGoals: 'No goals yet. Add your first one!',
           limitTitle: 'Monthly spending limit', monthlyLimit: 'Limit (PLN)', saveLimit: 'Save limit', limitSaved: 'Limit saved.',
           categories: 'Transaction categories', catPh: 'Category name...', catAdded: 'Category added.', catDeleted: 'Category deleted.',
@@ -1923,10 +1927,10 @@
           title: 'Games', subtitle: 'Pure fun — works offline too. No points, no Money.',
           exit: 'Exit to menu', score: 'Score', best: 'Best',
           bestLabel: 'Best: {{n}}',
-          flappyName: 'Flappy Bird', snakeName: 'Snake', g2048Name: '2048',
+          coinsName: 'Coin Catcher', snakeName: 'Snake', g2048Name: '2048',
           tapToStart: 'Tap or press Space to start', gameOver: 'Game over!', tapToRestart: 'Tap or press Space to play again',
           newRecord: 'New record: {{n}}! 🏆',
-          flappyHint: 'Tap / click / Space — flap. Avoid the pipes.',
+          coinsHint: 'Move the basket (drag / arrows) — catch coins, avoid bombs.',
           snakeHint: 'Arrow keys or swipe — steer the snake. Eat, grow, don\'t crash.',
           g2048Hint: 'Arrow keys or swipe — merge tiles with the same value.',
         },
@@ -2122,6 +2126,7 @@
           goalAdd: 'Dodaj cel', goalAdded: 'Cel dodany.', goalDeleted: 'Cel usunięty.',
           confirmDeleteGoal: 'Usunąć ten cel? Wpłacone pieniądze zostają w historii transakcji.',
           deposit: 'Wpłać', depositPh: 'Kwota (PLN)', depositSaved: 'Wpłacono {{amount}} na „{{name}}".',
+          inGoals: 'W celach',
           goalDone: 'Cel osiągnięty! 🎉', noGoals: 'Brak celów. Dodaj pierwszy!',
           limitTitle: 'Miesięczny limit wydatków', monthlyLimit: 'Limit (PLN)', saveLimit: 'Zapisz limit', limitSaved: 'Limit zapisany.',
           categories: 'Kategorie transakcji', catPh: 'Nazwa kategorii...', catAdded: 'Kategoria dodana.', catDeleted: 'Kategoria usunięta.',
@@ -2233,10 +2238,10 @@
           title: 'Gry', subtitle: 'Czysta rozrywka — działa też offline. Bez punktów, bez Money.',
           exit: 'Wyjdź do menu', score: 'Wynik', best: 'Rekord',
           bestLabel: 'Rekord: {{n}}',
-          flappyName: 'Flappy Bird', snakeName: 'Snake', g2048Name: '2048',
+          coinsName: 'Łapacz monet', snakeName: 'Snake', g2048Name: '2048',
           tapToStart: 'Tapnij lub wciśnij spację, aby zacząć', gameOver: 'Koniec gry!', tapToRestart: 'Tapnij lub wciśnij spację, aby zagrać jeszcze raz',
           newRecord: 'Nowy rekord: {{n}}! 🏆',
-          flappyHint: 'Tap / klik / spacja — trzepot. Omijaj rury.',
+          coinsHint: 'Przesuwaj koszyk (palec / strzałki) — łap monety, omijaj bomby.',
           snakeHint: 'Strzałki lub swipe — steruj wężem. Jedz, rośnij, nie zderzaj się.',
           g2048Hint: 'Strzałki lub swipe — łącz kafelki o tej samej wartości.',
         },
@@ -2787,7 +2792,15 @@
       const goals = userProfile.goals || [];
       if (goalFormState.editId) {
         const g = goals.find(x => x.id === goalFormState.editId);
-        if (g) { g.name = name; g.type = goalFormState.type; g.amount = amount; g.celebrated = false; }
+        if (g) {
+          // Zmiana typu pieniężny → punktowy: zwróć odłożoną kasę na saldo, by nie utknęła.
+          if (g.type === 'money' && goalFormState.type !== 'money' && (g.saved || 0) > 0) {
+            await updateMoneyCurrent(g.saved);
+            if (moneyBalance) moneyBalance.current = round2((moneyBalance.current || 0) + g.saved);
+            g.saved = 0;
+          }
+          g.name = name; g.type = goalFormState.type; g.amount = amount; g.celebrated = false;
+        }
       } else {
         if (goals.length >= 3) return toast(i18next.t('goal.maxReached'), 'error');
         // saved = ile już wpłacono na cel (tylko cele pieniężne); startuje od 0.
@@ -2798,6 +2811,7 @@
       goalFormState = null;
       await loadProfile();
       renderGoal();
+      updateMoneyBalanceUI();
     };
 
     // Wpłata na cel pieniężny — dolicza do g.saved i NIE rusza salda Money trackera.
@@ -2807,10 +2821,15 @@
       const input = document.getElementById('goal-deposit-' + id);
       const amount = round2(parseFloat(input?.value));
       if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
+      // Wpłata pobiera kasę z konta Money — nie pozwól wpłacić więcej niż saldo.
+      if (amount > (moneyBalance?.current || 0)) return toast(i18next.t('money.notEnoughBalance'), 'error');
+      await updateMoneyCurrent(-amount);
+      if (moneyBalance) moneyBalance.current = round2((moneyBalance.current || 0) - amount);
       g.saved = round2((g.saved || 0) + amount);
       await updateDoc(doc(db, 'users', currentUser.uid), { goals: userProfile.goals });
       await loadProfile();
       renderGoal();
+      updateMoneyBalanceUI();
       toast(i18next.t('money.depositSaved', { amount: fmtMoney(amount), name: g.name, interpolation: { escapeValue: false } }));
     };
 
@@ -2826,11 +2845,18 @@
 
     window.removeGoal = async (id) => {
       if (!await confirmDialog(i18next.t('goal.confirmRemove'))) return;
+      // Odłożone na cel pieniądze wracają na saldo Money — nie przepadają.
+      const g = (userProfile.goals || []).find(x => x.id === id);
+      if (g && g.type === 'money' && (g.saved || 0) > 0) {
+        await updateMoneyCurrent(g.saved);
+        if (moneyBalance) moneyBalance.current = round2((moneyBalance.current || 0) + g.saved);
+      }
       userProfile.goals = (userProfile.goals || []).filter(x => x.id !== id);
       await updateDoc(doc(db, 'users', currentUser.uid), { goals: userProfile.goals });
       goalFormState = null;
       await loadProfile();
       renderGoal();
+      updateMoneyBalanceUI();
     };
 
     // ── Stats section ─────────────────────────────────────
@@ -4733,8 +4759,27 @@
       }
     };
 
+    // Odświeża saldo + wiersz „W celach" (suma wpłat na cele pieniężne). Wołane też
+    // z depositGoal/removeGoal, dlatego wydzielone (bez pełnego renderMoney).
+    function updateMoneyBalanceUI() {
+      const balEl = document.getElementById('money-balance');
+      if (balEl) animateCount(balEl, moneyBalance?.current || 0, fmtMoney);
+      const goalsEl = document.getElementById('money-in-goals');
+      if (goalsEl) {
+        const inGoals = (userProfile?.goals || [])
+          .filter(g => g.type === 'money')
+          .reduce((s, g) => s + (g.saved || 0), 0);
+        if (inGoals > 0) {
+          goalsEl.textContent = i18next.t('money.inGoals') + ': ' + fmtMoney(inGoals);
+          goalsEl.style.display = '';
+        } else {
+          goalsEl.style.display = 'none';
+        }
+      }
+    }
+
     function renderMoney() {
-      animateCount(document.getElementById('money-balance'), moneyBalance?.current || 0, fmtMoney);
+      updateMoneyBalanceUI();
 
       renderMoneyLimitAlert();
       renderMoneyCatSelect();
@@ -5654,11 +5699,15 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.11';
+    const APP_VERSION = '2026.07.12';
     const CHANGELOG = [
+      { version: '2026.07.12', items: [
+        { pl: '🎯 Wpłata na cel pobiera teraz kasę z konta Money (nie wpłacisz więcej niż masz), a pod saldem widać ile masz odłożone „w celach". Usunięcie celu zwraca kasę na saldo', en: '🎯 Depositing to a goal now takes the money from your Money balance (you can’t deposit more than you have), and the balance shows how much is “in goals”. Deleting a goal returns the money to your balance' },
+        { pl: '🎮 Pożegnaj Flappy Bird — w jego miejsce nowa gra „Łapacz monet": łap spadające monety, omijaj bomby (offline, z animacjami)', en: '🎮 Goodbye Flappy Bird — replaced by a new game “Coin Catcher”: catch falling coins, dodge bombs (offline, animated)' },
+      ]},
       { version: '2026.07.11', items: [
         { pl: '🏆 Nowe osiągnięcia za zdobyte pieniądze w Money (100, 500, 1000, 2500, 5000 i 10 000 zł) — liczą się też Twoje dotychczasowe wpływy', en: '🏆 New achievements for money earned in Money (100, 500, 1000, 2500, 5000 and 10,000 zł) — your past income counts too' },
-        { pl: '🎯 Cele pieniężne: teraz sam wpłacasz kwoty na cel przyciskiem „Wpłać" — to NIE odejmuje pieniędzy z Money', en: '🎯 Money goals: you now deposit amounts yourself with the “Deposit” button — it does NOT subtract from your Money balance' },
+        { pl: '🎯 Cele pieniężne: możesz sam odkładać kwoty na cel przyciskiem „Wpłać"', en: '🎯 Money goals: you can put money aside toward a goal with the “Deposit” button' },
         { pl: '🤝 Dodawanie pożyczki ma teraz przycisk „Anuluj"', en: '🤝 Adding a loan now has a “Cancel” button' },
         { pl: '✅ Obowiązki: dodawanie zamkniesz, tapając kreskę na górze okienka', en: '✅ Chores: cancel adding by tapping the handle at the top of the sheet' },
         { pl: '🥇 Motyw Gold: przycisk „+" ma teraz złotą poświatę zamiast zielonej', en: '🥇 Gold theme: the “+” button now has a gold glow instead of green' },
