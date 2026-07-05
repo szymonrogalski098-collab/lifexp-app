@@ -22,6 +22,7 @@
   let activeGame = null;   // id aktywnej gry
   let engine = null;       // { stop() } — bieżący silnik gry
   let rafId = 0;
+  let fsMode = false;      // tryb pełnoekranowy (klasa .games-fs na #page-games)
 
   // ── Menu (3 kafelki z rekordami) ──────────────────────
   function renderMenu() {
@@ -39,6 +40,7 @@
 
   function showMenu() {
     stopEngine();
+    applyFs(false);
     activeGame = null;
     const play = $('games-play');
     if (play) play.style.display = 'none';
@@ -53,6 +55,44 @@
     engine = null;
   }
 
+  // ── Pełny ekran (dla wszystkich gier) ─────────────────
+  // Hybryda: klasa .games-fs (in-app maximize, pewna też na iOS) + best-effort
+  // Fullscreen API (chowa pasek przeglądarki na Androidzie/desktopie).
+  function reinitGame() {
+    if (!activeGame || !STARTERS[activeGame]) return;
+    stopEngine();
+    STARTERS[activeGame]();
+  }
+
+  function applyFs(on) {
+    fsMode = on;
+    const page = $('page-games');
+    if (page) page.classList.toggle('games-fs', on);
+    reinitGame();  // canvas przeliczy rozmiar wg fsMode (restart bieżącej partii)
+  }
+
+  function toggleFullscreen() {
+    const target = $('games-play');
+    const wantOn = !fsMode;
+    try {
+      if (wantOn) { if (target && target.requestFullscreen) target.requestFullscreen().catch(() => {}); }
+      else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    } catch (e) {}
+    applyFs(wantOn);
+  }
+
+  // Wyjście z fullscreena gestem/Esc (Android/desktop) → zsynchronizuj klasę.
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && fsMode) applyFs(false);
+  });
+  // Obrót/zmiana rozmiaru w trybie fullscreen → dopasuj canvas (debounce).
+  let fsResizeT = 0;
+  window.addEventListener('resize', () => {
+    if (!fsMode || !activeGame) return;
+    clearTimeout(fsResizeT);
+    fsResizeT = setTimeout(reinitGame, 150);
+  });
+
   // ── Wspólne: canvas, wynik, wejście ───────────────────
   function setScore(n) { const el = $('games-score'); if (el) el.textContent = n; }
   function setBestLabel(n) { const el = $('games-best'); if (el) el.textContent = n; }
@@ -61,7 +101,17 @@
   // (canvas NIGDY nie może rozpychać strony w poziomie na telefonie).
   function setupCanvas(aspect) {
     const canvas = $('games-canvas');
-    const cssW = Math.max(200, Math.min(420, canvas.clientWidth || canvas.parentElement.clientWidth - 28));
+    let cssW;
+    if (fsMode) {
+      // Wypełnij ekran zachowując proporcje (rezerwa na header + wynik + hint).
+      const availW = window.innerWidth - 24;
+      const availH = window.innerHeight - 150;
+      cssW = Math.max(240, Math.min(availW, availH / aspect, 900));
+      canvas.style.width = Math.round(cssW) + 'px';
+    } else {
+      cssW = Math.max(200, Math.min(420, canvas.clientWidth || canvas.parentElement.clientWidth - 28));
+      canvas.style.width = '';
+    }
     const cssH = Math.round(cssW * aspect);
     canvas.style.height = cssH + 'px';
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -229,14 +279,25 @@
       return COIN_TYPES[0];
     }
 
+    // Więcej bomb niż w pierwszej wersji + 3 kształty z RÓŻNYM hitboxem (hw/hh).
+    const BOMB_SHAPES = ['round', 'tnt', 'spiky'];
     function spawn() {
-      const bombP = Math.min(0.30, 0.12 + elapsed * 0.004);
+      const bombP = Math.min(0.45, 0.18 + elapsed * 0.006);
       if (Math.random() < bombP) {
-        const r = W * 0.040;
-        items.push({ kind: 'bomb', x: r + Math.random() * (W - 2 * r), y: -r, r, fuse: 0 });
+        const shape = BOMB_SHAPES[Math.floor(Math.random() * BOMB_SHAPES.length)];
+        let r, hw, hh, vyMul, rot = 0;
+        if (shape === 'tnt') {            // laska dynamitu — wąski, wysoki hitbox
+          r = W * 0.036; hw = r * 0.85; hh = r * 1.25; vyMul = 1.0;
+        } else if (shape === 'spiky') {   // mina morska — rdzeń mniejszy niż grafika (kolce zwodzą)
+          r = W * 0.044; hw = hh = r * 0.82; vyMul = 1.15;
+        } else {                          // okrągła — hitbox = promień
+          r = W * 0.040; hw = hh = r; vyMul = 1.06;
+        }
+        const half = Math.max(hw, r);
+        items.push({ kind: 'bomb', shape, x: half + Math.random() * (W - 2 * half), y: -hh, r, hw, hh, vyMul, fuse: 0, rot });
       } else {
         const tp = pickType();
-        items.push({ kind: 'coin', x: tp.r + Math.random() * (W - 2 * tp.r), y: -tp.r, r: tp.r, spin: Math.random() * Math.PI, value: tp.value, color: tp.color, edge: tp.edge });
+        items.push({ kind: 'coin', x: tp.r + Math.random() * (W - 2 * tp.r), y: -tp.r, r: tp.r, hw: tp.r, hh: tp.r, spin: Math.random() * Math.PI, value: tp.value, color: tp.color, edge: tp.edge });
       }
     }
 
@@ -280,12 +341,13 @@
         while (spawnAcc >= spawnEvery) { spawnAcc -= spawnEvery; spawn(); }
         const bx0 = basketX - bw / 2, bx1 = basketX + bw / 2;
         for (const it of items) {
-          it.y += fall * (it.kind === 'bomb' ? 1.06 : 1) * dt;
+          it.y += fall * (it.vyMul || 1) * dt;
           if (it.kind === 'coin') it.spin += 6 * dt; else it.fuse += dt;
           if (it.caught || it.dead) continue;
-          if (it.y + it.r >= basketY && it.y - it.r <= basketY + bh && it.x >= bx0 - it.r * 0.4 && it.x <= bx1 + it.r * 0.4) {
+          // Kolizja AABB wg hitboxa obiektu (hw/hh) — różne dla kształtów bomb.
+          if (it.y + it.hh >= basketY && it.y - it.hh <= basketY + bh && it.x + it.hw >= bx0 && it.x - it.hw <= bx1) {
             it.caught = true; catchItem(it);
-          } else if (it.y - it.r > H) {
+          } else if (it.y - it.hh > H) {
             it.dead = true; if (it.kind === 'coin') combo = 0;
           }
         }
@@ -325,19 +387,57 @@
       ctx.beginPath(); ctx.arc(it.x - it.r * 0.28 * sx, it.y - it.r * 0.3, it.r * 0.14, 0, Math.PI * 2); ctx.fill();
     }
 
+    function fuseSpark(r, fuse) {
+      // Wspólny lont + migająca iskra (rysowane w lokalnym układzie obiektu).
+      ctx.strokeStyle = '#8a6b3a'; ctx.lineWidth = Math.max(1, r * 0.14);
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.quadraticCurveTo(r * 0.5, -r * 1.4, r * 0.2, -r * 1.65); ctx.stroke();
+      if (!reduce && Math.floor(fuse * 10) % 2 === 0) {
+        ctx.fillStyle = '#ffcf4d';
+        ctx.beginPath(); ctx.arc(r * 0.2, -r * 1.65, r * 0.18, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
     function drawBomb(it) {
       ctx.save();
       ctx.translate(it.x, it.y);
-      ctx.rotate(reduce ? 0 : Math.sin(it.fuse * 12) * 0.12);
-      ctx.fillStyle = '#2b2f3a';
-      ctx.beginPath(); ctx.arc(0, 0, it.r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#4a4f5e';
-      ctx.beginPath(); ctx.arc(-it.r * 0.3, -it.r * 0.3, it.r * 0.28, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#8a6b3a'; ctx.lineWidth = Math.max(1, it.r * 0.14);
-      ctx.beginPath(); ctx.moveTo(0, -it.r); ctx.quadraticCurveTo(it.r * 0.5, -it.r * 1.4, it.r * 0.2, -it.r * 1.65); ctx.stroke();
-      if (!reduce && Math.floor(it.fuse * 10) % 2 === 0) {
-        ctx.fillStyle = '#ffcf4d';
-        ctx.beginPath(); ctx.arc(it.r * 0.2, -it.r * 1.65, it.r * 0.18, 0, Math.PI * 2); ctx.fill();
+      if (it.shape === 'tnt') {
+        // Laska dynamitu — zaokrąglony czerwony prostokąt z opaskami + lont.
+        ctx.rotate(reduce ? 0 : Math.sin(it.fuse * 10) * 0.08);
+        const w = it.hw * 2, h = it.hh * 2;
+        ctx.fillStyle = '#c0392b';
+        roundRect(-w / 2, -h / 2, w, h, w * 0.28); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.28)';
+        ctx.fillRect(-w / 2, -h * 0.22, w, h * 0.12);
+        ctx.fillRect(-w / 2, h * 0.10, w, h * 0.12);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '700 ' + Math.round(w * 0.5) + 'px ' + font;
+        ctx.fillText('!', 0, 0);
+        ctx.textBaseline = 'alphabetic';
+        fuseSpark(it.hh, it.fuse);
+      } else if (it.shape === 'spiky') {
+        // Mina morska — ciemne koło z kolcami i migającym światełkiem.
+        ctx.rotate(it.fuse * 0.8);
+        ctx.fillStyle = '#3a3f4b';
+        const spikes = 8;
+        for (let i = 0; i < spikes; i++) {
+          const a = (i / spikes) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * it.r, Math.sin(a) * it.r);
+          ctx.lineTo(Math.cos(a) * it.r * 1.4, Math.sin(a) * it.r * 1.4);
+          ctx.lineWidth = Math.max(2, it.r * 0.22); ctx.strokeStyle = '#3a3f4b'; ctx.stroke();
+        }
+        ctx.fillStyle = '#2b2f3a';
+        ctx.beginPath(); ctx.arc(0, 0, it.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = (!reduce && Math.floor(it.fuse * 6) % 2 === 0) ? '#ff5050' : '#7a2b2b';
+        ctx.beginPath(); ctx.arc(0, 0, it.r * 0.28, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // Klasyczna okrągła bomba.
+        ctx.rotate(reduce ? 0 : Math.sin(it.fuse * 12) * 0.12);
+        ctx.fillStyle = '#2b2f3a';
+        ctx.beginPath(); ctx.arc(0, 0, it.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4a4f5e';
+        ctx.beginPath(); ctx.arc(-it.r * 0.3, -it.r * 0.3, it.r * 0.28, 0, Math.PI * 2); ctx.fill();
+        fuseSpark(it.r, it.fuse);
       }
       ctx.restore();
     }
@@ -719,6 +819,7 @@
   window.LifeXPGames = {
     showMenu,
     exit: showMenu,
+    toggleFullscreen,
     open(id) {
       if (!GAMES[id]) return;
       stopEngine();

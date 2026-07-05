@@ -570,6 +570,17 @@
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
     }
+    /* Tryb pełnoekranowy gier (klasa dodawana z games.js). Play-area zajmuje cały
+       ekran; canvas nie jest już ograniczony do 420px (rozmiar liczy JS wg okna). */
+    .games-fs #games-play {
+      position: fixed; inset: 0; z-index: 2000;
+      background: var(--bg); margin: 0; padding: 12px;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .games-fs #games-play > .card {
+      flex: 1; display: flex; flex-direction: column; justify-content: center;
+    }
+    .games-fs #games-canvas { max-width: none; }
 
     /* ── Mobile bottom nav ── */
     .bottom-nav {
@@ -1167,7 +1178,10 @@
         <div id="games-play" style="display:none">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
             <h3 id="games-play-title" style="margin:0"></h3>
-            <button class="btn-secondary btn-sm" onclick="LifeXPGames.exit()" data-i18n="games.exit">Wyjdź do menu</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn-secondary btn-sm" onclick="LifeXPGames.toggleFullscreen()" data-i18n="games.fullscreen">⛶ Pełny ekran</button>
+              <button class="btn-secondary btn-sm" onclick="LifeXPGames.exit()" data-i18n="games.exit">Wyjdź do menu</button>
+            </div>
           </div>
           <div class="card" style="padding:14px">
             <div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--text2);margin-bottom:10px">
@@ -1925,7 +1939,7 @@
         },
         games: {
           title: 'Games', subtitle: 'Pure fun — works offline too. No points, no Money.',
-          exit: 'Exit to menu', score: 'Score', best: 'Best',
+          exit: 'Exit to menu', fullscreen: '⛶ Fullscreen', score: 'Score', best: 'Best',
           bestLabel: 'Best: {{n}}',
           coinsName: 'Coin Catcher', snakeName: 'Snake', g2048Name: '2048',
           tapToStart: 'Tap or press Space to start', gameOver: 'Game over!', tapToRestart: 'Tap or press Space to play again',
@@ -2236,7 +2250,7 @@
         },
         games: {
           title: 'Gry', subtitle: 'Czysta rozrywka — działa też offline. Bez punktów, bez Money.',
-          exit: 'Wyjdź do menu', score: 'Wynik', best: 'Rekord',
+          exit: 'Wyjdź do menu', fullscreen: '⛶ Pełny ekran', score: 'Wynik', best: 'Rekord',
           bestLabel: 'Rekord: {{n}}',
           coinsName: 'Łapacz monet', snakeName: 'Snake', g2048Name: '2048',
           tapToStart: 'Tapnij lub wciśnij spację, aby zacząć', gameOver: 'Koniec gry!', tapToRestart: 'Tapnij lub wciśnij spację, aby zagrać jeszcze raz',
@@ -5699,8 +5713,12 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.12';
+    const APP_VERSION = '2026.07.13';
     const CHANGELOG = [
+      { version: '2026.07.13', items: [
+        { pl: '🖥️ Gry można teraz grać na pełnym ekranie — przycisk „⛶ Pełny ekran" w każdej grze', en: '🖥️ Games can now be played fullscreen — a “⛶ Fullscreen” button in every game' },
+        { pl: '💣 Łapacz monet: więcej bomb i 3 różne rodzaje (okrągła, dynamit, mina) — każdy z innym kształtem i trafieniem', en: '💣 Coin Catcher: more bombs and 3 different kinds (round, dynamite, mine) — each with its own shape and hitbox' },
+      ]},
       { version: '2026.07.12', items: [
         { pl: '🎯 Wpłata na cel pobiera teraz kasę z konta Money (nie wpłacisz więcej niż masz), a pod saldem widać ile masz odłożone „w celach". Usunięcie celu zwraca kasę na saldo', en: '🎯 Depositing to a goal now takes the money from your Money balance (you can’t deposit more than you have), and the balance shows how much is “in goals”. Deleting a goal returns the money to your balance' },
         { pl: '🎮 Pożegnaj Flappy Bird — w jego miejsce nowa gra „Łapacz monet": łap spadające monety, omijaj bomby (offline, z animacjami)', en: '🎮 Goodbye Flappy Bird — replaced by a new game “Coin Catcher”: catch falling coins, dodge bombs (offline, animated)' },
