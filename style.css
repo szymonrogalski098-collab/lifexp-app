@@ -220,6 +220,20 @@ body.theme-gold .fab:hover { box-shadow: 0 10px 30px rgba(201,150,15,.55); }
    opcje motywu), które wcześniej ten flash pokazywały mimo fixu na button. */
 *, *::before, *::after { -webkit-tap-highlight-color: transparent; }
 
+/* Fix cz.2: to co wygląda jak "hitbox" na div-ach z onclick to często NIE
+   tap-highlight (już wyłączony wyżej), tylko natywne zaznaczanie tekstu —
+   <div> w przeciwieństwie do <button> jest domyślnie zaznaczalny, więc tap
+   (albo lekki, przypadkowy drag przy tapnięciu) rysuje niebieski prostokąt
+   zaznaczenia. Łapiemy to po atrybucie onclick, bo dotyczy to każdego
+   klikalnego div-a w całej apce (motywy, język, karty ustawień, itd.),
+   plus wyłączamy iOS-owe long-press "callout" (menu Kopiuj/Zapisz obraz). */
+[onclick] {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 html, body {
   /* Zabezpieczenie: żaden element (dziś ani w przyszłości) nie powinien rozpychać
      strony w poziomie na telefonie — bez tego trzeba było "oddalić" (pinch-zoom-out),

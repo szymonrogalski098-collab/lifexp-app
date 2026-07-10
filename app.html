@@ -355,11 +355,16 @@
     .settings-category .settings-section { margin-bottom: 0; }
     .settings-cat-label {
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
-      color: var(--text2); padding-bottom: 4px;
+      color: var(--text2);
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
       cursor: pointer; user-select: none;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg2);
+      transition: border-color .15s, color .15s;
     }
-    .settings-cat-label:hover { color: var(--text); }
+    .settings-cat-label:hover { color: var(--text); border-color: var(--accent); }
     .settings-cat-chevron {
       font-size: 16px; line-height: 1; flex-shrink: 0;
       transition: transform .25s ease;
@@ -5832,8 +5837,12 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.15';
+    const APP_VERSION = '2026.07.16';
     const CHANGELOG = [
+      { version: '2026.07.16', items: [
+        { pl: '📱 Fix: hitbox po tapnięciu naprawiony do końca — poprzedni fix łapał tylko flash koloru, teraz też zaznaczanie tekstu na klikalnych elementach (prawdziwa przyczyna na niektórych telefonach)', en: '📱 Fix: the tap hitbox is now fully fixed — the previous fix only caught the color flash, this also stops text-selection on clickable elements (the real cause on some phones)' },
+        { pl: '⚙️ Ustawienia: kategorie mają teraz wyraźną ramkę — łatwiej zobaczyć że to osobne, klikalne wiersze', en: '⚙️ Settings: categories now have a visible border — easier to see they’re separate, tappable rows' },
+      ]},
       { version: '2026.07.15', items: [
         { pl: '⚙️ Ustawienia: kategorie zwijają się w akordeon zamiast jednej długiej listy — łatwiej znaleźć to czego szukasz', en: '⚙️ Settings: categories now collapse into an accordion instead of one long list — easier to find what you need' },
         { pl: '📱 Fix: spadki FPS przy scrollu w Ustawieniach (motyw Apple) — mniej rozmycia tła na telefonie', en: '📱 Fix: FPS drops while scrolling Settings (Apple theme) — lighter background blur on mobile' },
