@@ -1,4 +1,4 @@
-/* LifeXP — mini-gry offline (Flappy Bird, Snake, 2048).
+/* LifeXP — mini-gry offline (Łapacz monet, Snake, 2048).
    Zasada nadrzędna: gry i punkty/Money to osobne światy — zero Firestore,
    zero punktów LifeXP. Jedyny zapis: lokalne rekordy w localStorage.
    Vanilla JS + <canvas>, bez zewnętrznych bibliotek. */
@@ -11,7 +11,7 @@
     (getComputedStyle(document.body).getPropertyValue(name) || '').trim() || fallback;
 
   const GAMES = {
-    flappy: { emoji: '🐤', nameKey: 'flappyName', hintKey: 'flappyHint', hsKey: 'lifexp-game-highscore-flappy' },
+    coins:  { emoji: '🪙', nameKey: 'coinsName',  hintKey: 'coinsHint',  hsKey: 'lifexp-game-highscore-coins' },
     snake:  { emoji: '🐍', nameKey: 'snakeName',  hintKey: 'snakeHint',  hsKey: 'lifexp-game-highscore-snake' },
     g2048:  { emoji: '🔢', nameKey: 'g2048Name',  hintKey: 'g2048Hint',  hsKey: 'lifexp-game-highscore-2048' },
   };
@@ -22,6 +22,7 @@
   let activeGame = null;   // id aktywnej gry
   let engine = null;       // { stop() } — bieżący silnik gry
   let rafId = 0;
+  let fsMode = false;      // tryb pełnoekranowy (klasa .games-fs na #page-games)
 
   // ── Menu (3 kafelki z rekordami) ──────────────────────
   function renderMenu() {
@@ -39,6 +40,7 @@
 
   function showMenu() {
     stopEngine();
+    applyFs(false);
     activeGame = null;
     const play = $('games-play');
     if (play) play.style.display = 'none';
@@ -53,6 +55,44 @@
     engine = null;
   }
 
+  // ── Pełny ekran (dla wszystkich gier) ─────────────────
+  // Hybryda: klasa .games-fs (in-app maximize, pewna też na iOS) + best-effort
+  // Fullscreen API (chowa pasek przeglądarki na Androidzie/desktopie).
+  function reinitGame() {
+    if (!activeGame || !STARTERS[activeGame]) return;
+    stopEngine();
+    STARTERS[activeGame]();
+  }
+
+  function applyFs(on) {
+    fsMode = on;
+    const page = $('page-games');
+    if (page) page.classList.toggle('games-fs', on);
+    reinitGame();  // canvas przeliczy rozmiar wg fsMode (restart bieżącej partii)
+  }
+
+  function toggleFullscreen() {
+    const target = $('games-play');
+    const wantOn = !fsMode;
+    try {
+      if (wantOn) { if (target && target.requestFullscreen) target.requestFullscreen().catch(() => {}); }
+      else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    } catch (e) {}
+    applyFs(wantOn);
+  }
+
+  // Wyjście z fullscreena gestem/Esc (Android/desktop) → zsynchronizuj klasę.
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && fsMode) applyFs(false);
+  });
+  // Obrót/zmiana rozmiaru w trybie fullscreen → dopasuj canvas (debounce).
+  let fsResizeT = 0;
+  window.addEventListener('resize', () => {
+    if (!fsMode || !activeGame) return;
+    clearTimeout(fsResizeT);
+    fsResizeT = setTimeout(reinitGame, 150);
+  });
+
   // ── Wspólne: canvas, wynik, wejście ───────────────────
   function setScore(n) { const el = $('games-score'); if (el) el.textContent = n; }
   function setBestLabel(n) { const el = $('games-best'); if (el) el.textContent = n; }
@@ -61,7 +101,18 @@
   // (canvas NIGDY nie może rozpychać strony w poziomie na telefonie).
   function setupCanvas(aspect) {
     const canvas = $('games-canvas');
-    const cssW = Math.max(200, Math.min(420, canvas.clientWidth || canvas.parentElement.clientWidth - 28));
+    let cssW;
+    if (fsMode) {
+      // Pełny ekran = sama gra. Chowamy tytuł/hint (CSS), zostaje tylko cienki
+      // pasek z wynikiem i „✕", więc canvas wypełnia niemal cały ekran (proporcje zachowane).
+      const availW = window.innerWidth - 12;
+      const availH = window.innerHeight - 64;
+      cssW = Math.max(240, Math.min(availW, availH / aspect, 1400));
+      canvas.style.width = Math.round(cssW) + 'px';
+    } else {
+      cssW = Math.max(200, Math.min(420, canvas.clientWidth || canvas.parentElement.clientWidth - 28));
+      canvas.style.width = '';
+    }
     const cssH = Math.round(cssW * aspect);
     canvas.style.height = cssH + 'px';
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -188,87 +239,287 @@
     rafId = requestAnimationFrame(frame);
   }
 
-  // ── Flappy Bird ───────────────────────────────────────
-  function startFlappy() {
-    const { canvas, ctx, W, H } = setupCanvas(1.25);
+  // ── Łapacz monet ──────────────────────────────────────
+  // Przesuwasz koszyk (palec/mysz/strzałki), łapiesz spadające monety o różnych
+  // nominałach, omijasz bomby. Tempo i częstość rosną z czasem. Dużo animacji:
+  // obracające się monety, iskry i „+N" przy złapaniu, przechył koszyka, tło z
+  // bokeh, flash + wstrząs przy bombie. Wszystko dt-owe; szanuje reduce-motion.
+  function startCoins() {
+    const { canvas, ctx, W, H } = setupCanvas(1.3);
     const accent = cssVar('--accent', '#6c63ff');
     const accent2 = cssVar('--accent2', '#4ecca3');
-    // Fizyka wg oryginalnego Flappy Bird (ekran 288x512, logika 30 fps):
-    // grawitacja 1 px/klatkę², trzepot -9 px/klatkę, max opadanie 10 px/klatkę,
-    // rury 4 px/klatkę, szerokość rury 52 px, przerwa ~100 px, nowa rura co ~1,4 s.
-    // Przeliczone na px/s (x30 i x900) i przeskalowane do rozmiaru canvasa.
-    const SX = W / 288, SY = H / 512;
-    const GRAVITY = 900 * SY;
-    const FLAP = -270 * SY;
-    const MAX_FALL = 300 * SY;
-    const SPEED = 120 * SX;
-    const PIPE_W = 52 * SX;
-    const GAP = 110 * SY; // oryginał ~100 px — odrobinę luźniej pod sterowanie dotykiem
-    const PIPE_SPACING = 168 * SX;
-    let bird, pipes, score, state, diedAt, isRecord;
+    const bg2 = cssVar('--bg2', '#14141c');
+    const font = cssVar('--font', 'sans-serif');
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const bw = Math.round(W * 0.22), bh = Math.round(W * 0.06);
+    const basketY = H - bh - Math.round(H * 0.05);
+    const COIN_TYPES = [
+      { value: 1, color: '#cfd6e0', edge: '#95a0b0', r: W * 0.033, weight: 0.50 },
+      { value: 2, color: '#ffd34d', edge: '#e0a92e', r: W * 0.041, weight: 0.35 },
+      { value: 5, color: '#6fe0ff', edge: '#2bb3d6', r: W * 0.046, weight: 0.15 },
+    ];
+
+    let basketX, basketVX, targetX, items, particles, floats, bokeh;
+    let score, combo, state, elapsed, spawnAcc, spawnEvery, diedAt, isRecord;
+    let shakeT, flashA;
 
     function reset() {
-      bird = { x: W * 0.28, y: H * 0.45, vy: 0, r: 12 * SY };
-      pipes = [];
-      score = 0; setScore(0);
-      state = 'ready'; isRecord = false;
+      basketX = W / 2; basketVX = 0; targetX = W / 2;
+      items = []; particles = []; floats = []; bokeh = [];
+      for (let i = 0; i < 6; i++) bokeh.push({ x: Math.random() * W, y: Math.random() * H, r: 8 + Math.random() * 22, vy: 6 + Math.random() * 12, a: 0.04 + Math.random() * 0.06 });
+      score = 0; setScore(0); combo = 0;
+      state = 'ready'; elapsed = 0; spawnAcc = 0; spawnEvery = 0.95; isRecord = false;
+      shakeT = 0; flashA = 0;
     }
 
-    function spawnPipe() {
-      const margin = 40 * SY;
-      const gapY = margin + Math.random() * (H - GAP - margin * 2);
-      pipes.push({ x: W + PIPE_W, gapY, passed: false });
+    function pickType() {
+      const r = Math.random();
+      let acc = 0;
+      for (const c of COIN_TYPES) { acc += c.weight; if (r <= acc) return c; }
+      return COIN_TYPES[0];
+    }
+
+    // Więcej bomb niż w pierwszej wersji + 3 kształty z RÓŻNYM hitboxem (hw/hh).
+    const BOMB_SHAPES = ['round', 'tnt', 'spiky'];
+    function spawn() {
+      const bombP = Math.min(0.45, 0.18 + elapsed * 0.006);
+      if (Math.random() < bombP) {
+        const shape = BOMB_SHAPES[Math.floor(Math.random() * BOMB_SHAPES.length)];
+        let r, hw, hh, vyMul, rot = 0;
+        if (shape === 'tnt') {            // laska dynamitu — wąski, wysoki hitbox
+          r = W * 0.036; hw = r * 0.85; hh = r * 1.25; vyMul = 1.0;
+        } else if (shape === 'spiky') {   // mina morska — rdzeń mniejszy niż grafika (kolce zwodzą)
+          r = W * 0.044; hw = hh = r * 0.82; vyMul = 1.15;
+        } else {                          // okrągła — hitbox = promień
+          r = W * 0.040; hw = hh = r; vyMul = 1.06;
+        }
+        const half = Math.max(hw, r);
+        items.push({ kind: 'bomb', shape, x: half + Math.random() * (W - 2 * half), y: -hh, r, hw, hh, vyMul, fuse: 0, rot });
+      } else {
+        const tp = pickType();
+        items.push({ kind: 'coin', x: tp.r + Math.random() * (W - 2 * tp.r), y: -tp.r, r: tp.r, hw: tp.r, hh: tp.r, spin: Math.random() * Math.PI, value: tp.value, color: tp.color, edge: tp.edge });
+      }
+    }
+
+    function burst(x, y, color, n) {
+      if (reduce) return;
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 130;
+        particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 50, life: 0.5 + Math.random() * 0.3, max: 0.8, r: 2 + Math.random() * 2, color });
+      }
+    }
+
+    function catchItem(it) {
+      if (it.kind === 'bomb') { die(); return; }
+      score += it.value; setScore(score); combo++;
+      burst(it.x, basketY, it.color, 9);
+      floats.push({ x: it.x, y: basketY - 6, text: '+' + it.value, life: 0.8, color: it.color });
     }
 
     function die() {
-      state = 'over'; diedAt = Date.now();
+      state = 'over'; diedAt = Date.now(); combo = 0;
       isRecord = finishGame(score);
+      if (!reduce) { shakeT = 0.4; flashA = 0.6; }
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
     }
 
     function step(dt) {
       if (state === 'playing') {
-        bird.vy = Math.min(MAX_FALL, bird.vy + GRAVITY * dt);
-        bird.y += bird.vy * dt;
-        // Jak w oryginale: sufit nie zabija — ptak się o niego zatrzymuje.
-        if (bird.y - bird.r < 0) { bird.y = bird.r; bird.vy = 0; }
-        if (pipes.length === 0 || pipes[pipes.length - 1].x < W - PIPE_SPACING) spawnPipe();
-        pipes.forEach((p) => { p.x -= SPEED * dt; });
-        pipes = pipes.filter((p) => p.x > -PIPE_W);
-        for (const p of pipes) {
-          if (!p.passed && p.x + PIPE_W < bird.x - bird.r) { p.passed = true; score++; setScore(score); }
-          const inX = bird.x + bird.r > p.x && bird.x - bird.r < p.x + PIPE_W;
-          if (inX && (bird.y - bird.r < p.gapY || bird.y + bird.r > p.gapY + GAP)) die();
+        elapsed += dt;
+        const fall = H * (0.42 + Math.min(0.62, elapsed * 0.012));
+        spawnEvery = Math.max(0.42, 0.95 - elapsed * 0.012);
+        spawnAcc += dt;
+        while (spawnAcc >= spawnEvery) { spawnAcc -= spawnEvery; spawn(); }
+        const bx0 = basketX - bw / 2, bx1 = basketX + bw / 2;
+        for (const it of items) {
+          it.y += fall * (it.vyMul || 1) * dt;
+          if (it.kind === 'coin') it.spin += 6 * dt; else it.fuse += dt;
+          if (it.caught || it.dead) continue;
+          // Kolizja AABB wg hitboxa obiektu (hw/hh) — różne dla kształtów bomb.
+          if (it.y + it.hh >= basketY && it.y - it.hh <= basketY + bh && it.x + it.hw >= bx0 && it.x - it.hw <= bx1) {
+            it.caught = true; catchItem(it);
+          } else if (it.y - it.hh > H) {
+            it.dead = true; if (it.kind === 'coin') combo = 0;
+          }
         }
-        if (bird.y + bird.r > H) die();
+        items = items.filter((it) => !it.caught && !it.dead);
       }
 
-      // Rysowanie
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = accent2;
-      pipes.forEach((p) => {
-        ctx.fillRect(p.x, 0, PIPE_W, p.gapY);
-        ctx.fillRect(p.x, p.gapY + GAP, PIPE_W, H - p.gapY - GAP);
-      });
-      ctx.fillStyle = accent;
-      ctx.beginPath();
-      ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(bird.x + 4, bird.y - 3, 3, 0, Math.PI * 2);
-      ctx.fill();
+      const prev = basketX;
+      basketX += (targetX - basketX) * Math.min(1, dt * 14);
+      basketX = Math.max(bw / 2, Math.min(W - bw / 2, basketX));
+      basketVX = (basketX - prev) / Math.max(dt, 0.001);
 
-      if (state === 'ready') drawOverlay(ctx, W, H, t('flappyName'), t('tapToStart'));
+      for (const p of particles) { p.vy += 240 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+      particles = particles.filter((p) => p.life > 0);
+      for (const f of floats) { f.y -= 34 * dt; f.life -= dt; }
+      floats = floats.filter((f) => f.life > 0);
+      for (const b of bokeh) { b.y += b.vy * dt; if (b.y - b.r > H) { b.y = -b.r; b.x = Math.random() * W; } }
+      if (shakeT > 0) shakeT -= dt;
+      if (flashA > 0) flashA = Math.max(0, flashA - dt * 1.6);
+
+      draw();
+    }
+
+    function drawCoin(it) {
+      const sx = Math.max(0.15, Math.abs(Math.cos(it.spin)));
+      ctx.save();
+      ctx.translate(it.x, it.y);
+      ctx.scale(sx, 1);
+      const g = ctx.createRadialGradient(-it.r * 0.3, -it.r * 0.3, it.r * 0.2, 0, 0, it.r);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.28, it.color);
+      g.addColorStop(1, it.edge);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, it.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = it.edge; ctx.lineWidth = Math.max(1, it.r * 0.12); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,.7)';
+      ctx.beginPath(); ctx.arc(it.x - it.r * 0.28 * sx, it.y - it.r * 0.3, it.r * 0.14, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function fuseSpark(r, fuse) {
+      // Wspólny lont + migająca iskra (rysowane w lokalnym układzie obiektu).
+      ctx.strokeStyle = '#8a6b3a'; ctx.lineWidth = Math.max(1, r * 0.14);
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.quadraticCurveTo(r * 0.5, -r * 1.4, r * 0.2, -r * 1.65); ctx.stroke();
+      if (!reduce && Math.floor(fuse * 10) % 2 === 0) {
+        ctx.fillStyle = '#ffcf4d';
+        ctx.beginPath(); ctx.arc(r * 0.2, -r * 1.65, r * 0.18, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    function drawBomb(it) {
+      ctx.save();
+      ctx.translate(it.x, it.y);
+      if (it.shape === 'tnt') {
+        // Laska dynamitu — zaokrąglony czerwony prostokąt z opaskami + lont.
+        ctx.rotate(reduce ? 0 : Math.sin(it.fuse * 10) * 0.08);
+        const w = it.hw * 2, h = it.hh * 2;
+        ctx.fillStyle = '#c0392b';
+        roundRect(-w / 2, -h / 2, w, h, w * 0.28); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.28)';
+        ctx.fillRect(-w / 2, -h * 0.22, w, h * 0.12);
+        ctx.fillRect(-w / 2, h * 0.10, w, h * 0.12);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '700 ' + Math.round(w * 0.5) + 'px ' + font;
+        ctx.fillText('!', 0, 0);
+        ctx.textBaseline = 'alphabetic';
+        fuseSpark(it.hh, it.fuse);
+      } else if (it.shape === 'spiky') {
+        // Mina morska — ciemne koło z kolcami i migającym światełkiem.
+        ctx.rotate(it.fuse * 0.8);
+        ctx.fillStyle = '#3a3f4b';
+        const spikes = 8;
+        for (let i = 0; i < spikes; i++) {
+          const a = (i / spikes) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * it.r, Math.sin(a) * it.r);
+          ctx.lineTo(Math.cos(a) * it.r * 1.4, Math.sin(a) * it.r * 1.4);
+          ctx.lineWidth = Math.max(2, it.r * 0.22); ctx.strokeStyle = '#3a3f4b'; ctx.stroke();
+        }
+        ctx.fillStyle = '#2b2f3a';
+        ctx.beginPath(); ctx.arc(0, 0, it.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = (!reduce && Math.floor(it.fuse * 6) % 2 === 0) ? '#ff5050' : '#7a2b2b';
+        ctx.beginPath(); ctx.arc(0, 0, it.r * 0.28, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // Klasyczna okrągła bomba.
+        ctx.rotate(reduce ? 0 : Math.sin(it.fuse * 12) * 0.12);
+        ctx.fillStyle = '#2b2f3a';
+        ctx.beginPath(); ctx.arc(0, 0, it.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4a4f5e';
+        ctx.beginPath(); ctx.arc(-it.r * 0.3, -it.r * 0.3, it.r * 0.28, 0, Math.PI * 2); ctx.fill();
+        fuseSpark(it.r, it.fuse);
+      }
+      ctx.restore();
+    }
+
+    function drawBasket() {
+      ctx.save();
+      ctx.translate(basketX, basketY + bh / 2);
+      ctx.rotate(reduce ? 0 : Math.max(-0.24, Math.min(0.24, basketVX / (W * 6))));
+      if (!reduce) { ctx.shadowColor = accent; ctx.shadowBlur = 14; }
+      const g = ctx.createLinearGradient(0, -bh / 2, 0, bh / 2);
+      g.addColorStop(0, accent2); g.addColorStop(1, accent);
+      ctx.fillStyle = g;
+      roundRect(-bw / 2, -bh / 2, bw, bh, bh / 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,.28)';
+      roundRect(-bw / 2 + 4, -bh / 2 + 3, bw - 8, bh * 0.32, bh * 0.16);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.save();
+      if (shakeT > 0 && !reduce) {
+        const m = shakeT * 20;
+        ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m);
+      }
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, bg2);
+      bg.addColorStop(1, 'rgba(0,0,0,.28)');
+      ctx.fillStyle = bg; ctx.fillRect(-20, -20, W + 40, H + 40);
+      if (!reduce) for (const b of bokeh) { ctx.fillStyle = 'rgba(255,255,255,' + b.a + ')'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); }
+      for (const it of items) { if (it.kind === 'coin') drawCoin(it); else drawBomb(it); }
+      drawBasket();
+      for (const p of particles) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'center';
+      for (const f of floats) { ctx.globalAlpha = Math.max(0, f.life / 0.8); ctx.fillStyle = f.color; ctx.font = '700 15px ' + font; ctx.fillText(f.text, f.x, f.y); }
+      ctx.globalAlpha = 1;
+      if (state === 'playing' && combo >= 3) {
+        ctx.fillStyle = accent2; ctx.textAlign = 'left';
+        ctx.font = '700 13px ' + font; ctx.fillText('combo ×' + combo, 10, 20);
+      }
+      ctx.restore();
+
+      if (flashA > 0) { ctx.fillStyle = 'rgba(255,80,80,' + flashA + ')'; ctx.fillRect(0, 0, W, H); }
+      if (state === 'ready') drawOverlay(ctx, W, H, t('coinsName'), t('tapToStart'));
       if (state === 'over') drawOverlay(ctx, W, H, t('gameOver'), isRecord ? t('newRecord', { n: score }) : t('tapToRestart'));
     }
 
-    const unbind = bindPointer(canvas);
+    // Sterowanie: koszyk podąża za palcem/myszą; tap/klik = start-restart;
+    // strzałki (klawiatura, przez engine.onDir) przesuwają koszyk skokowo.
+    function moveTo(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      targetX = Math.max(bw / 2, Math.min(W - bw / 2, (clientX - rect.left) * (W / Math.max(1, rect.width))));
+    }
+    const tapish = () => { if (engine && engine.onTap) engine.onTap(); };
+    const mDown = (e) => { moveTo(e.clientX); tapish(); };
+    const mMove = (e) => { moveTo(e.clientX); };
+    const tStart = (e) => { e.preventDefault(); const p = e.touches[0]; if (p) moveTo(p.clientX); tapish(); };
+    const tMove = (e) => { e.preventDefault(); const p = e.touches[0]; if (p) moveTo(p.clientX); };
+    canvas.addEventListener('mousedown', mDown);
+    canvas.addEventListener('mousemove', mMove);
+    canvas.addEventListener('touchstart', tStart, { passive: false });
+    canvas.addEventListener('touchmove', tMove, { passive: false });
+
     engine = {
-      stop: unbind,
+      stop() {
+        canvas.removeEventListener('mousedown', mDown);
+        canvas.removeEventListener('mousemove', mMove);
+        canvas.removeEventListener('touchstart', tStart);
+        canvas.removeEventListener('touchmove', tMove);
+      },
       onTap() {
-        if (state === 'ready') { state = 'playing'; bird.vy = FLAP; }
-        else if (state === 'playing') bird.vy = FLAP;
-        else if (state === 'over' && Date.now() - diedAt > 500) reset();
+        if (state === 'ready') state = 'playing';
+        else if (state === 'over' && Date.now() - diedAt > 400) reset();
+      },
+      onDir(d) {
+        if (state === 'ready') state = 'playing';
+        if (d === 'left') targetX = Math.max(bw / 2, targetX - W * 0.18);
+        if (d === 'right') targetX = Math.min(W - bw / 2, targetX + W * 0.18);
       },
     };
     reset();
@@ -564,11 +815,12 @@
   }
 
   // ── API publiczne ─────────────────────────────────────
-  const STARTERS = { flappy: startFlappy, snake: startSnake, g2048: start2048 };
+  const STARTERS = { coins: startCoins, snake: startSnake, g2048: start2048 };
 
   window.LifeXPGames = {
     showMenu,
     exit: showMenu,
+    toggleFullscreen,
     open(id) {
       if (!GAMES[id]) return;
       stopEngine();

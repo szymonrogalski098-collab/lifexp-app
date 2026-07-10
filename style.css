@@ -171,6 +171,10 @@ body.theme-gold {
   --warn: #e05555;
   --radius: 10px;
 }
+/* FAB w motywie gold — poświata musi być złota, nie domyślna zielona
+   (bazowy .fab ma na sztywno rgba(78,204,163,…) — zieleń LifeXP). */
+body.theme-gold .fab { box-shadow: 0 8px 24px rgba(201,150,15,.40); }
+body.theme-gold .fab:hover { box-shadow: 0 10px 30px rgba(201,150,15,.55); }
 
 /* ── Wybór motywu w ustawieniach ── */
 .theme-picker { display: flex; gap: 12px; }
