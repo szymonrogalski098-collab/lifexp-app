@@ -356,7 +356,24 @@
     .settings-cat-label {
       font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
       color: var(--text2); padding-bottom: 4px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      cursor: pointer; user-select: none;
     }
+    .settings-cat-label:hover { color: var(--text); }
+    .settings-cat-chevron {
+      font-size: 16px; line-height: 1; flex-shrink: 0;
+      transition: transform .25s ease;
+    }
+    .settings-category.collapsed .settings-cat-chevron { transform: rotate(-90deg); }
+    /* Karty w środku muszą zachować odstęp jaki dawał gap na .settings-category —
+       body jest teraz osobnym flex-kontenerem między labelką a kartami. */
+    .settings-cat-body {
+      display: flex; flex-direction: column; gap: 16px;
+      overflow: hidden;
+      max-height: 4000px;
+      transition: max-height .3s ease;
+    }
+    .settings-category.collapsed .settings-cat-body { max-height: 0; }
     @media (max-width: 900px) {
       .settings-grid { flex-direction: column; }
     }
@@ -1217,8 +1234,12 @@
         <div class="settings-grid">
           <div class="settings-col">
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catAppearance">Wygląd</div>
+          <div class="settings-category collapsed" id="settings-cat-appearance">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('appearance')">
+              <span data-i18n="settings.catAppearance">Wygląd</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 style="margin-bottom:16px" data-i18n="settings.theme">Motyw</h3>
@@ -1296,10 +1317,16 @@
                 </div>
               </div>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catAccount">Konto</div>
+          <div class="settings-category collapsed" id="settings-cat-account">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('account')">
+              <span data-i18n="settings.catAccount">Konto</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 data-i18n="settings.profile">Profil</h3>
@@ -1366,10 +1393,15 @@
               </div>
             </div>
 
+            </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catNotifications">Powiadomienia</div>
+          <div class="settings-category collapsed" id="settings-cat-notifications">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('notifications')">
+              <span data-i18n="settings.catNotifications">Powiadomienia</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 data-i18n="settings.notifications">Powiadomienia</h3>
@@ -1397,10 +1429,16 @@
                 <button class="btn-primary" onclick="addNotifHour()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
               </div>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catDashboard">Dashboard</div>
+          <div class="settings-category collapsed" id="settings-cat-dashboard">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('dashboard')">
+              <span data-i18n="settings.catDashboard">Dashboard</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 data-i18n="settings.limits">Limity</h3>
@@ -1416,10 +1454,16 @@
               <p class="text2" style="margin-bottom:14px" data-i18n="settings.resetTodayInfo">Zeruje licznik punktów zdobytych dzisiaj (dla testowania dziennego limitu). Nie zmienia salda ani statystyk łącznych.</p>
               <button class="btn-secondary" onclick="resetToday()" data-i18n="settings.resetToday">Resetuj dzisiejszy limit</button>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catGaming">Granie</div>
+          <div class="settings-category collapsed" id="settings-cat-gaming">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('gaming')">
+              <span data-i18n="settings.catGaming">Granie</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 data-i18n="settings.gamesList">Lista gier</h3>
@@ -1429,13 +1473,19 @@
                 <button class="btn-primary" onclick="addGame()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
               </div>
             </div>
+
+            </div>
           </div>
 
           </div>
           <div class="settings-col">
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catExpenses">Wydatki</div>
+          <div class="settings-category collapsed" id="settings-cat-expenses">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('expenses')">
+              <span data-i18n="settings.catExpenses">Wydatki</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 style="margin-bottom:16px" data-i18n="settings.generalEconomy">Ekonomia ogólna</h3>
@@ -1450,10 +1500,16 @@
               </div>
               <button class="btn-primary" onclick="saveEconomyGeneral()" data-i18n="settings.save">Zapisz</button>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catMoney">Money</div>
+          <div class="settings-category collapsed" id="settings-cat-money">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('money')">
+              <span data-i18n="settings.catMoney">Money</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 data-i18n="money.limitTitle">Miesięczny limit wydatków</h3>
@@ -1472,10 +1528,16 @@
                 <button class="btn-primary" onclick="addMoneyCategory()" style="padding:10px 16px" data-i18n="settings.add">Dodaj</button>
               </div>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catChores">Obowiązki</div>
+          <div class="settings-category collapsed" id="settings-cat-chores">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('chores')">
+              <span data-i18n="settings.catChores">Obowiązki</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 style="margin-bottom:16px" data-i18n="settings.chorEconomy">Ekonomia obowiązków</h3>
@@ -1517,10 +1579,16 @@
               </label>
               <button class="btn-primary" onclick="addChoreDef()" data-i18n="settings.addChore">Dodaj obowiązek</button>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-category">
-            <div class="settings-cat-label" data-i18n="settings.catActivities">Aktywności</div>
+          <div class="settings-category collapsed" id="settings-cat-activities">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('activities')">
+              <span data-i18n="settings.catActivities">Aktywności</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
 
             <div class="card settings-section">
               <h3 style="margin-bottom:16px" data-i18n="settings.manageActivities">Zarządzaj aktywnościami</h3>
@@ -1545,6 +1613,8 @@
                 <div id="ad-color-picker" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
               </div>
               <button class="btn-primary" onclick="addActivityDef()" data-i18n="settings.addActivity">Dodaj aktywność</button>
+            </div>
+
             </div>
           </div>
 
@@ -2554,8 +2624,41 @@
         if (rToggle) rToggle.checked = userProfile?.autoReport === true;
         updateReportInfo();
         renderNotifHours();
+        initSettingsAccordion();
       }
     };
+
+    // ── Ustawienia: akordeon kategorii (zwinięte domyślnie — długa lista kart
+    // była trudna do przejrzenia i winowajcą spadków FPS przy scrollu na telefonie).
+    // Stan zwinięcia zapamiętywany per-przeglądarka; przy pierwszej wizycie
+    // rozwijamy tylko kategorię wymagającą uwagi (np. brak zweryfikowanego
+    // emaila rodzica), reszta zostaje zwinięta.
+    const SETTINGS_COLLAPSE_KEY = 'lifexp-settings-collapsed';
+    function getSettingsCollapseState() {
+      try { return JSON.parse(localStorage.getItem(SETTINGS_COLLAPSE_KEY)) || {}; }
+      catch { return {}; }
+    }
+    window.toggleSettingsCat = (catId) => {
+      const el = document.getElementById('settings-cat-' + catId);
+      if (!el) return;
+      const collapsed = el.classList.toggle('collapsed');
+      const state = getSettingsCollapseState();
+      state[catId] = collapsed;
+      localStorage.setItem(SETTINGS_COLLAPSE_KEY, JSON.stringify(state));
+    };
+    function initSettingsAccordion() {
+      const state = getSettingsCollapseState();
+      const firstVisit = Object.keys(state).length === 0;
+      const parentEmailNeedsAttention = !(userProfile?.parentEmail && userProfile?.parentEmailVerifiedAt);
+      document.querySelectorAll('.settings-category').forEach(cat => {
+        const id = cat.id.replace('settings-cat-', '');
+        let collapsed;
+        if (id in state) collapsed = state[id];
+        else if (firstVisit && id === 'account' && parentEmailNeedsAttention) collapsed = false;
+        else collapsed = true;
+        cat.classList.toggle('collapsed', collapsed);
+      });
+    }
 
     window.logout = async () => {
       await signOut(auth);
@@ -5729,8 +5832,13 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.14';
+    const APP_VERSION = '2026.07.15';
     const CHANGELOG = [
+      { version: '2026.07.15', items: [
+        { pl: '⚙️ Ustawienia: kategorie zwijają się w akordeon zamiast jednej długiej listy — łatwiej znaleźć to czego szukasz', en: '⚙️ Settings: categories now collapse into an accordion instead of one long list — easier to find what you need' },
+        { pl: '📱 Fix: spadki FPS przy scrollu w Ustawieniach (motyw Apple) — mniej rozmycia tła na telefonie', en: '📱 Fix: FPS drops while scrolling Settings (Apple theme) — lighter background blur on mobile' },
+        { pl: '📱 Fix: niebieski "hitbox" po tapnięciu działał tylko na przyciskach — teraz naprawiony wszędzie (np. wybór języka)', en: '📱 Fix: the blue tap "hitbox" was only fixed on buttons — now fixed everywhere (e.g. the language picker)' },
+      ]},
       { version: '2026.07.14', items: [
         { pl: '🖥️ Pełny ekran w grach obejmuje teraz samą grę (na cały ekran), a nie całą aplikację — wychodzisz przyciskiem „✕"', en: '🖥️ Fullscreen in games now shows just the game (edge to edge), not the whole app — exit with the “✕” button' },
       ]},
