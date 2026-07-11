@@ -840,6 +840,10 @@
   let rsScheduledRepeaters = new Map(); // ulotne — key -> { dueTick }
   let rsButtonActive = new Map();       // ulotne — key -> tick do którego przycisk aktywny
   let rsLastPower = new Map();          // ulotne, tylko do rysowania
+  let rsScheduledComparators = new Map(); // ulotne — key -> { dueTick, strength } (przeliczane co tick, nie tylko raz)
+  let rsComparatorOutputPrev = new Map(); // ulotne — ostatnia zastosowana siła wyjścia (do rysowania + sygnatur Observera)
+  let rsScheduledObservers = new Map();    // ulotne — key -> { dueTick } (impuls jednorazowy, siła zawsze 15)
+  let rsObserverPrevSig = new Map();       // ulotne — ostatnia sygnatura obserwowanej komórki (do wykrywania zmian)
   let rsSimTimer = 0;
   let rsSaveT = 0;
   let rsW = 0, rsH = 0;
@@ -849,6 +853,11 @@
   const rsNeighbors = (x, y) => RS_ORTHO.map(([dx, dy]) => [x + dx, y + dy]);
   const rsRepeaterOut = (x, y, rot) => { const d = RS_DIR[rot]; return [x + d[0], y + d[1]]; };
   const rsRepeaterIn = (x, y, rot) => { const d = RS_DIR[(rot + 2) % 4]; return [x + d[0], y + d[1]]; };
+  // Aliasy ogólne — Comparator/Observer dzielą tę samą logikę kierunku co
+  // Repeater (rsRepeaterOut/In zostają nietknięte, Repeater dalej ich używa
+  // wprost). "Front" = kierunek wskazywany przez rotację, "Back" = przeciwny.
+  const rsFrontOf = rsRepeaterOut;
+  const rsBackOf = rsRepeaterIn;
 
   function rsLoadWorld() {
     rsWorld = new Map();
@@ -866,6 +875,10 @@
     rsScheduledRepeaters = new Map();
     rsButtonActive = new Map();
     rsLastPower = new Map();
+    rsScheduledComparators = new Map();
+    rsComparatorOutputPrev = new Map();
+    rsScheduledObservers = new Map();
+    rsObserverPrevSig = new Map();
   }
 
   function rsSaveWorld() {
@@ -883,6 +896,8 @@
 
   function rsDefaultCell(tool) {
     if (tool === 'repeater') return { type: 'repeater', rotation: 0 };
+    if (tool === 'comparator') return { type: 'comparator', rotation: 0, mode: 'compare' };
+    if (tool === 'observer') return { type: 'observer', rotation: 0 };
     if (tool === 'lever') return { type: 'lever', on: false };
     if (tool === 'block') return { type: 'block', torch: false };
     return { type: tool }; // wire, button, lamp
@@ -896,10 +911,13 @@
   }
 
   // Dotknięcie komórki (cx,cy) — zachowanie zależy od wybranego narzędzia:
-  // - "select": obraca przekaźnik / przełącza dźwignię / naciska przycisk;
-  //   blok/przewód/pochodnia/lampa — nic (brak akcji do wykonania na nich).
+  // - "select": obraca przekaźnik/komparator/observer, przełącza dźwignię,
+  //   naciska przycisk; blok/przewód/pochodnia/lampa — nic (brak akcji).
   // - "torch": WYJĄTEK od "zajęte pole = nic" — dotyka istniejącego Bloku bez
   //   pochodni i ją dołącza (2D-owy odpowiednik "postaw pochodnię na bloku").
+  // - "compmode": WYJĄTEK analogiczny do "torch" — dotyka istniejącego
+  //   Komparatora i przełącza mu tryb compare/subtract (osobne narzędzie, bo
+  //   "select" na Komparatorze już obraca go, tak jak Repeater).
   // - "eraser": usuwa cokolwiek stoi na polu.
   // - inne narzędzie: stawia nowy klocek na PUSTYM polu (zajęte = nic, najpierw
   //   trzeba wymazać).
@@ -908,7 +926,7 @@
     const cell = rsWorld.get(key);
     if (rsTool === 'select') {
       if (!cell) return;
-      if (cell.type === 'repeater') cell.rotation = (cell.rotation + 1) % 4;
+      if (cell.type === 'repeater' || cell.type === 'comparator' || cell.type === 'observer') cell.rotation = (cell.rotation + 1) % 4;
       else if (cell.type === 'lever') cell.on = !cell.on;
       else if (cell.type === 'button') rsButtonActive.set(key, rsTick + RS_BUTTON_TICKS);
       else return;
@@ -917,8 +935,15 @@
       rsWorld.delete(key);
       rsScheduledRepeaters.delete(key);
       rsButtonActive.delete(key);
+      rsScheduledComparators.delete(key);
+      rsComparatorOutputPrev.delete(key);
+      rsScheduledObservers.delete(key);
+      rsObserverPrevSig.delete(key);
     } else if (rsTool === 'torch') {
       if (cell && cell.type === 'block' && !cell.torch) cell.torch = true;
+      else return;
+    } else if (rsTool === 'compmode') {
+      if (cell && cell.type === 'comparator') cell.mode = (cell.mode === 'compare') ? 'subtract' : 'compare';
       else return;
     } else {
       if (cell) return;
@@ -928,40 +953,113 @@
     rsScheduleSave();
   }
 
+  // Ile mocy "widzi" komponent patrzący NA komórkę `key` — albo przekazany
+  // sygnał z mapy `power` (przewód/blok/lampa/wyjście przekaźnika/komparatora),
+  // albo, jeśli ta komórka SAMA jest źródłem (dźwignia/przycisk/pochodnia na
+  // bloku), jej własna moc wprost — bo źródło nie zasila SAMEGO SIEBIE w mapie
+  // `power` (relayInto dostaje tylko jego SĄSIADÓW), a mimo to w prawdziwym
+  // Minecrafcie przekaźnik/komparator stojący TUŻ PRZY źródle (bez przewodu
+  // pomiędzy) i tak je odczytuje. Używane wszędzie tam, gdzie komponent czyta
+  // stan sąsiada na potrzeby WŁASNEJ decyzji (Repeater/Comparator), NIE w
+  // ogólnej propagacji przewodu (ta już poprawnie obsługuje źródła przez
+  // omniSources+relayInto).
+  function rsCellPowerFor(key, power, torchLitNow) {
+    const c = rsWorld.get(key);
+    if (!c) return power.get(key) || 0;
+    if (c.type === 'lever') return c.on ? 15 : 0;
+    if (c.type === 'button') return (rsButtonActive.get(key) || 0) > rsTick ? 15 : 0;
+    if (c.type === 'block' && c.torch) return torchLitNow.get(key) ? 15 : 0;
+    return power.get(key) || 0;
+  }
+
+  // Sygnatura "co widać z zewnątrz" dla dowolnej komórki w TYM ticku — używana
+  // przez Observer do wykrywania zmian. Rozszerzalna: kolejne typy komórek
+  // (czujniki, drzwi, tłoki, Note Block...) dopisują tu swój przypadek.
+  function rsCellSignature(key, power, torchLitNow) {
+    const c = rsWorld.get(key);
+    if (!c) return 'empty';
+    switch (c.type) {
+      case 'wire': return 'wire:' + (power.get(key) || 0);
+      case 'block': return 'block:' + (c.torch ? (torchLitNow.get(key) ? 'lit' : 'off') : 'plain');
+      case 'lever': return 'lever:' + (c.on ? 1 : 0);
+      case 'button': return 'button:' + ((rsButtonActive.get(key) || 0) > rsTick ? 1 : 0);
+      // Przybliżenie: "czy przekaźnik właśnie widzi aktywne wejście" (ma
+      // zaplanowane odpalenie) — wystarczające do wykrywania przejść on/off.
+      case 'repeater': return 'repeater:' + c.rotation + ':' + (rsScheduledRepeaters.has(key) ? 1 : 0);
+      case 'comparator': return 'comparator:' + c.rotation + ':' + c.mode + ':' + (rsComparatorOutputPrev.get(key) || 0);
+      case 'lamp': return 'lamp:' + ((power.get(key) || 0) > 0 ? 1 : 0);
+      default: return c.type;
+    }
+  }
+
   // ── Symulacja (setInterval, ~10 ticków/s, niezależna od rAF renderu) ──
+  // Kolejność faz jest CELOWO stała i deterministyczna (nie zmieniać kolejności
+  // przy dopisywaniu kolejnych komponentów — kolejne fazy czytają wyniki
+  // poprzednich w tym samym ticku):
+  // 1. źródła sygnału  2. propagacja  3. Repeatery  4. Komparatory
+  // 5. Observers  6. (Pistony — TODO kolejna faza prac)
+  // 7. (czujniki — TODO kolejna faza prac)  8. aktualizacja bloków  9. render (poza tą funkcją)
   function rsTick_() {
     rsTick++;
 
-    // 1) Przekaźniki zaplanowane w poprzednich tickach odpalają teraz —
-    //    kierunkowe wstrzyknięcie sygnału TYLKO w pole wyjściowe (nie dookoła).
-    const directedInjections = [];
+    // FAZA 1: źródła sygnału.
+    // 1a) Kierunkowe odpalenia zaplanowane w POPRZEDNICH tickach (Repeater,
+    //     Komparator, Observer) — każdy niesie własną siłę sygnału (Repeater/
+    //     Observer zawsze 15, Komparator to co właśnie policzył).
+    const directedInjections = []; // [{ pos, strength }]
     for (const [key, sched] of rsScheduledRepeaters) {
       if (sched.dueTick <= rsTick) {
         const cell = rsWorld.get(key);
         if (cell && cell.type === 'repeater') {
           const [x, y] = rsParseKey(key);
-          directedInjections.push(rsKey(...rsRepeaterOut(x, y, cell.rotation)));
+          directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: 15 });
         }
         rsScheduledRepeaters.delete(key);
       }
     }
-
-    // 2) Źródła wszechkierunkowe: pochodnie (wg stanu Bloku z POPRZEDNIEGO
-    //    ticku — to jest ten 1-tickowy lag łamiący pętlę zwrotną), dźwignie
-    //    włączone, przyciski wciąż aktywne.
+    for (const [key, sched] of rsScheduledComparators) {
+      if (sched.dueTick <= rsTick) {
+        const cell = rsWorld.get(key);
+        if (cell && cell.type === 'comparator') {
+          const [x, y] = rsParseKey(key);
+          directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: sched.strength });
+        }
+        rsComparatorOutputPrev.set(key, sched.strength);
+        rsScheduledComparators.delete(key);
+      }
+    }
+    for (const [key, sched] of rsScheduledObservers) {
+      if (sched.dueTick <= rsTick) {
+        const cell = rsWorld.get(key);
+        if (cell && cell.type === 'observer') {
+          const [x, y] = rsParseKey(key);
+          directedInjections.push({ pos: rsKey(...rsBackOf(x, y, cell.rotation)), strength: 15 });
+        }
+        rsScheduledObservers.delete(key);
+      }
+    }
+    // 1b) Źródła wszechkierunkowe: pochodnie (wg stanu Bloku z POPRZEDNIEGO
+    //     ticku — to jest ten 1-tickowy lag łamiący pętlę zwrotną), dźwignie
+    //     włączone, przyciski wciąż aktywne.
     const omniSources = [];
+    const torchLitNow = new Map(); // klucz Bloku z pochodnią -> czy świeci W TYM ticku (do sygnatur Observera)
     for (const [key, cell] of rsWorld) {
-      if (cell.type === 'block' && cell.torch && !rsBlockPoweredPrev.get(key)) omniSources.push(key);
+      if (cell.type === 'block' && cell.torch) {
+        const lit = !rsBlockPoweredPrev.get(key);
+        torchLitNow.set(key, lit);
+        if (lit) omniSources.push(key);
+      }
       else if (cell.type === 'lever' && cell.on) omniSources.push(key);
       else if (cell.type === 'button' && (rsButtonActive.get(key) || 0) > rsTick) omniSources.push(key);
     }
 
-    // 3) Wielo-źródłowy BFS z zanikiem (kubełki wg siły 15→1). Każda komórka
-    //    przyjmuje tylko NAJSILNIEJSZY sygnał jaki do niej dotarł i to wystarczy
-    //    — klasyczne "shortest path z zanikiem", jeden przebieg, bez pętli.
-    //    Dalej propagują TYLKO przewody (wire) — blok/lampa/przekaźnik/dźwignia/
-    //    przycisk to zawsze ślepy zaułek (stąd brak przewodzenia przez blok i
-    //    brak "przecieku" z wyjścia przekaźnika na jego wejście).
+    // FAZA 2: propagacja — wielo-źródłowy BFS z zanikiem (kubełki wg siły
+    // 15→1). Każda komórka przyjmuje tylko NAJSILNIEJSZY sygnał jaki do niej
+    // dotarł i to wystarczy — klasyczne "shortest path z zanikiem", jeden
+    // przebieg, bez pętli. Dalej propagują TYLKO przewody (wire) — blok/
+    // lampa/przekaźnik/komparator/dźwignia/przycisk to zawsze ślepy zaułek
+    // (stąd brak przewodzenia przez blok i brak "przecieku" z wyjścia
+    // przekaźnika/komparatora na jego wejście).
     const power = new Map();
     const buckets = Array.from({ length: 16 }, () => []);
     const relayInto = (pos, level) => {
@@ -976,7 +1074,7 @@
       const [x, y] = rsParseKey(key);
       for (const [nx, ny] of rsNeighbors(x, y)) relayInto(rsKey(nx, ny), 15);
     }
-    for (const pos of directedInjections) relayInto(pos, 15);
+    for (const inj of directedInjections) relayInto(inj.pos, inj.strength);
     for (let lvl = 15; lvl >= 1; lvl--) {
       for (const pos of buckets[lvl]) {
         if (power.get(pos) !== lvl) continue; // wpis nieaktualny, ktoś już nadpisał mocniejszym
@@ -985,22 +1083,60 @@
       }
     }
 
-    // 4) Przekaźniki: sprawdź TYLKO pole od strony wejścia (rotation+180°) —
-    //    to właśnie ta jednostronność daje efekt diody (blokada przepływu
-    //    zwrotnego z wyjścia). Jeśli zasilone i jeszcze nic nie zaplanowano,
-    //    zaplanuj wyjście na kolejny tick (ciągłe zasilanie = ciągłe odpalanie
-    //    co tick, z 1-tickowym opóźnieniem, jak prawdziwy przekaźnik).
+    // FAZA 3: Repeatery — sprawdź TYLKO pole od strony wejścia (rotation+180°)
+    // — ta jednostronność daje efekt diody (blokada przepływu zwrotnego z
+    // wyjścia). Jeśli zasilone i jeszcze nic nie zaplanowano, zaplanuj wyjście
+    // na kolejny tick (ciągłe zasilanie = ciągłe odpalanie co tick, z
+    // 1-tickowym opóźnieniem, jak prawdziwy przekaźnik).
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'repeater') continue;
       const [x, y] = rsParseKey(key);
-      const inKey = rsKey(...rsRepeaterIn(x, y, cell.rotation));
-      if ((power.get(inKey) || 0) > 0 && !rsScheduledRepeaters.has(key)) {
+      const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
+      if (rsCellPowerFor(inKey, power, torchLitNow) > 0 && !rsScheduledRepeaters.has(key)) {
         rsScheduledRepeaters.set(key, { dueTick: rsTick + RS_REPEATER_DELAY });
       }
     }
 
-    // 5) Zapisz stan zasilenia Bloków z TEGO ticku — użyje go dopiero
-    //    NASTĘPNY tick przy sprawdzaniu pochodni (patrz komentarz na górze).
+    // FAZA 4: Komparatory — główne wejście (od tyłu wg rotacji) i dwa boczne
+    // (prostopadłe). Tryb "compare": przepuszcza główny sygnał, chyba że
+    // boczny jest SILNIEJSZY — wtedy wyjście 0. Tryb "subtract": wyjście =
+    // główny minus najsilniejszy boczny (min. 0). W przeciwieństwie do
+    // przekaźnika PRZELICZAMY co tick bezwarunkowo (wynik może się zmieniać
+    // płynnie, nie tylko włącz/wyłącz) — nadpisujemy zaplanowane wyjście, więc
+    // zawsze niesie NAJŚWIEŻSZĄ wartość z 1-tickowym opóźnieniem.
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'comparator') continue;
+      const [x, y] = rsParseKey(key);
+      const mainKey = rsKey(...rsBackOf(x, y, cell.rotation));
+      const sideA = RS_DIR[(cell.rotation + 1) % 4];
+      const sideB = RS_DIR[(cell.rotation + 3) % 4];
+      const main = rsCellPowerFor(mainKey, power, torchLitNow);
+      const sideMax = Math.max(
+        rsCellPowerFor(rsKey(x + sideA[0], y + sideA[1]), power, torchLitNow),
+        rsCellPowerFor(rsKey(x + sideB[0], y + sideB[1]), power, torchLitNow)
+      );
+      const out = cell.mode === 'subtract' ? Math.max(0, main - sideMax) : (main >= sideMax ? main : 0);
+      rsScheduledComparators.set(key, { dueTick: rsTick + RS_REPEATER_DELAY, strength: out });
+    }
+
+    // FAZA 5: Observers — wykrywają zmianę sygnatury obserwowanej komórki
+    // ("z przodu", wg rotacji) względem poprzedniego ticku i strzelają impuls
+    // DOKŁADNIE 1-tickowy, jednorazowo (nie na okrągło jak przekaźnik) —
+    // stąd brak warunku "!rsScheduledObservers.has(key)": to zdarzenie
+    // krawędziowe (edge-triggered), nie poziomowe (level-triggered).
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'observer') continue;
+      const [x, y] = rsParseKey(key);
+      const watchKey = rsKey(...rsFrontOf(x, y, cell.rotation));
+      const sig = rsCellSignature(watchKey, power, torchLitNow);
+      if (rsObserverPrevSig.has(key) && rsObserverPrevSig.get(key) !== sig) {
+        rsScheduledObservers.set(key, { dueTick: rsTick + RS_REPEATER_DELAY });
+      }
+      rsObserverPrevSig.set(key, sig);
+    }
+
+    // FAZA 8: aktualizacja bloków — zapisz stan zasilenia Bloków z TEGO ticku,
+    // użyje go dopiero NASTĘPNY tick przy sprawdzaniu pochodni.
     const nextBlockPowered = new Map();
     for (const [key, cell] of rsWorld) {
       if (cell.type === 'block') nextBlockPowered.set(key, (power.get(key) || 0) > 0);
@@ -1098,9 +1234,10 @@
     const el = $('games-toolbar');
     if (!el) return;
     el.style.display = 'flex';
-    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'lever', 'button', 'lamp', 'eraser'];
+    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'compmode', 'observer', 'lever', 'button', 'lamp', 'eraser'];
     const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch',
-      repeater: 'rsToolRepeater', lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', eraser: 'rsToolEraser' };
+      repeater: 'rsToolRepeater', comparator: 'rsToolComparator', compmode: 'rsToolCompMode', observer: 'rsToolObserver',
+      lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', eraser: 'rsToolEraser' };
     el.innerHTML = tools.map((id) =>
       `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}" data-rs-tool="${id}">${t(labelKeys[id])}</button>`
     ).join('') + `<button class="btn-secondary btn-sm" data-rs-clear="1">${t('rsClearWorld')}</button>`;
@@ -1119,6 +1256,10 @@
       rsButtonActive = new Map();
       rsBlockPoweredPrev = new Map();
       rsLastPower = new Map();
+      rsScheduledComparators = new Map();
+      rsComparatorOutputPrev = new Map();
+      rsScheduledObservers = new Map();
+      rsObserverPrevSig = new Map();
       setScore(0);
       rsScheduleSave();
     };
@@ -1190,6 +1331,40 @@
     ctx.beginPath(); ctx.arc(cx - d[0] * s * 0.22, cy - d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
   }
 
+  function rsDrawComparator(ctx, sx, sy, s, cell, key) {
+    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    const out = rsComparatorOutputPrev.get(key) || 0;
+    const d = RS_DIR[cell.rotation];
+    const cx = sx + s / 2, cy = sy + s / 2;
+    // Dwie kropki jak w przekaźniku (kierunek wejście/wyjście), jasność wg
+    // aktualnej siły wyjścia — spójne z konwencją przewodu (rsDrawWire).
+    ctx.fillStyle = out > 0 ? rsLerpColor(RS_WIRE_OFF, RS_WIRE_ON, out / 15) : '#8a8fa8';
+    ctx.beginPath(); ctx.arc(cx + d[0] * s * 0.22, cy + d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - d[0] * s * 0.22, cy - d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
+    // Środkowa kropka = tryb (szara = compare, pomarańczowa = subtract).
+    ctx.fillStyle = cell.mode === 'subtract' ? '#ff6b1a' : '#5a5f70';
+    ctx.beginPath(); ctx.arc(cx, cy, s * 0.06, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function rsDrawObserver(ctx, sx, sy, s, cell, key) {
+    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillRect(sx + s * 0.08, sy + s * 0.08, s * 0.84, s * 0.84);
+    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + s * 0.08, sy + s * 0.08, s * 0.84, s * 0.84);
+    const d = RS_DIR[cell.rotation];
+    const cx = sx + s / 2, cy = sy + s / 2;
+    const pulsing = rsScheduledObservers.has(key);
+    // "Obiektyw" na froncie (kierunek obserwacji) — podświetla się dokładnie
+    // przez 1 tick, gdy zaplanowany jest impuls.
+    ctx.fillStyle = pulsing ? '#ff6b1a' : '#8a8fa8';
+    ctx.beginPath(); ctx.arc(cx + d[0] * s * 0.3, cy + d[1] * s * 0.3, s * 0.12, 0, Math.PI * 2); ctx.fill();
+  }
+
   function rsDrawLever(ctx, sx, sy, s, cell) {
     ctx.fillStyle = cssVar('--border', '#2a2d3a');
     ctx.fillRect(sx + s * 0.3, sy + s * 0.6, s * 0.4, s * 0.3);
@@ -1224,6 +1399,8 @@
     if (cell.type === 'block') rsDrawBlock(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'wire') rsDrawWire(ctx, sx, sy, s, x, y, key);
     else if (cell.type === 'repeater') rsDrawRepeater(ctx, sx, sy, s, cell, key);
+    else if (cell.type === 'comparator') rsDrawComparator(ctx, sx, sy, s, cell, key);
+    else if (cell.type === 'observer') rsDrawObserver(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'lever') rsDrawLever(ctx, sx, sy, s, cell);
     else if (cell.type === 'button') rsDrawButton(ctx, sx, sy, s, key);
     else if (cell.type === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
@@ -1300,6 +1477,10 @@
         power: Array.from(rsLastPower.entries()),
         blockPowered: Array.from(rsBlockPoweredPrev.entries()),
         scheduledRepeaters: Array.from(rsScheduledRepeaters.entries()),
+        scheduledComparators: Array.from(rsScheduledComparators.entries()),
+        comparatorOutputPrev: Array.from(rsComparatorOutputPrev.entries()),
+        scheduledObservers: Array.from(rsScheduledObservers.entries()),
+        observerPrevSig: Array.from(rsObserverPrevSig.entries()),
         cells: Array.from(rsWorld.entries()),
       };
     },
