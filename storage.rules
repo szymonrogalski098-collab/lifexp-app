@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// LifeXP — reguły Firebase Storage
+// Wgranie: Firebase Console → Storage → zakładka "Rules" → wklej → Publish.
+// Jedyne użycie Storage w apce: 1 screenshot per zgłoszenie błędu, w
+// bugReports/{uid}/{plik} — właściciel może wgrać do SWOJEGO folderu,
+// właściciel + admin systemu zgłoszeń mogą odczytać.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /bugReports/{uid}/{fileName} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid || request.auth.token.email == 'szymonrogalski098@gmail.com');
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 4 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null
+        && (request.auth.uid == uid || request.auth.token.email == 'szymonrogalski098@gmail.com');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

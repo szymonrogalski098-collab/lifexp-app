@@ -65,17 +65,25 @@ service cloud.firestore {
     // widzieć zgłoszenia wszystkich kont jedną kolekcją. Zgłaszający widzi tylko
     // swoje własne; tylko admin widzi wszystkie i może zmieniać status/kasować.
     match /bugReports/{id} {
+      // bonusGranted/bonusUsed nie mogą być ustawiane przy tworzeniu (tylko admin
+      // przyznaje bonus przy akceptacji, patrz update niżej) — inaczej zgłaszający
+      // mógłby sam sobie przyznać dodatkowe zgłoszenie już na starcie.
       allow create: if isSignedIn()
         && request.resource.data.reporterUid == request.auth.uid
-        && request.resource.data.status in ['new', 'spam'];
+        && request.resource.data.status in ['new', 'spam']
+        && !('bonusGranted' in request.resource.data)
+        && !('bonusUsed' in request.resource.data);
       allow read:   if isSignedIn() && (resource.data.reporterUid == request.auth.uid || isBugAdmin());
       allow delete: if isBugAdmin();
-      // Admin może zmieniać wszystko (status itd.). Zgłaszający może zmienić TYLKO
-      // pole `messages` (dopisanie odpowiedzi w wątku) na swoim zgłoszeniu.
+      // Admin może zmieniać wszystko (status, bonusGranted itd.). Zgłaszający może
+      // zmienić TYLKO `messages` (odpowiedź w wątku) i `bonusUsed` — a `bonusUsed`
+      // wyłącznie na true (zużycie bonusu), nigdy z powrotem na false (nie da się
+      // "odnowić" bonusu samemu).
       allow update: if isBugAdmin() || (
         isSignedIn()
         && resource.data.reporterUid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'bonusUsed'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['bonusUsed']) || request.resource.data.bonusUsed == true)
       );
     }
 
