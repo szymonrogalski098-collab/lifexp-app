@@ -2051,6 +2051,7 @@
           redstoneHint: 'Drag to pan, pinch/wheel to zoom. Pick a tool below, then tap the grid.',
           rsToolSelect: 'Select', rsToolBlock: 'Block', rsToolWire: 'Wire', rsToolTorch: 'Torch',
           rsToolRepeater: 'Repeater', rsToolComparator: 'Comparator', rsToolCompMode: 'Comparator mode', rsToolObserver: 'Observer',
+          rsToolPiston: 'Piston', rsToolStickyPiston: 'Sticky piston', rsToolNoteBlock: 'Note block',
           rsToolLever: 'Lever', rsToolButton: 'Button', rsToolLamp: 'Lamp', rsToolEraser: 'Eraser',
           rsClearWorld: 'Clear world',
           rsConfirmClear: "Erase your entire circuit? This can't be undone.",
@@ -2372,6 +2373,7 @@
           redstoneHint: 'Przeciągnij, by przesunąć widok, uszczypnij/scrolluj, by przybliżyć. Wybierz narzędzie i tapnij siatkę.',
           rsToolSelect: 'Zaznacz', rsToolBlock: 'Blok', rsToolWire: 'Przewód', rsToolTorch: 'Pochodnia',
           rsToolRepeater: 'Wzmacniacz', rsToolComparator: 'Komparator', rsToolCompMode: 'Tryb komparatora', rsToolObserver: 'Observer',
+          rsToolPiston: 'Tłok', rsToolStickyPiston: 'Lepki tłok', rsToolNoteBlock: 'Blok nutowy',
           rsToolLever: 'Dźwignia', rsToolButton: 'Przycisk', rsToolLamp: 'Lampa', rsToolEraser: 'Gumka',
           rsClearWorld: 'Wyczyść świat',
           rsConfirmClear: 'Usunąć cały obwód? Tego nie można cofnąć.',
@@ -5888,8 +5890,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.18';
+    const APP_VERSION = '2026.07.19';
     const CHANGELOG = [
+      { version: '2026.07.19', items: [
+        { pl: '🔴 Obwody Redstone: doszły Comparator, Observer, Piston, Sticky Piston i Note Block — tłoki fizycznie przesuwają bloki (łańcuchowo), Note Block gra dźwięk po impulsie (zmień wysokość tonu tapnięciem)', en: '🔴 Redstone Circuits: added Comparator, Observer, Piston, Sticky Piston and Note Block — pistons physically push blocks (chained), Note Block plays a sound on a pulse (tap to change pitch)' },
+      ]},
       { version: '2026.07.18', items: [
         { pl: '🎁 Jeśli Twoje zgłoszenie zostanie zaakceptowane, dostajesz dodatkowe zgłoszenie do wykorzystania poza dziennym limitem', en: '🎁 If your report gets accepted, you get one extra report to use beyond the daily limit' },
       ]},

@@ -827,6 +827,8 @@
   const RS_TICK_MS = 100;
   const RS_REPEATER_DELAY = 1;   // ticki
   const RS_BUTTON_TICKS = 10;    // ~1s przy 10 tickach/s
+  const RS_PISTON_MAX_PUSH = 12; // max długość łańcucha bloków do popchnięcia (jak w Minecrafcie)
+  const RS_NOTE_FLASH_TICKS = 3;  // wizualny błysk Note Blocka po zagraniu (tylko render, nie logika)
   const RS_MIN_SCALE = 14, RS_MAX_SCALE = 64; // px na komórkę
   const RS_ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const RS_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // rotation 0=E,1=S,2=W,3=N (kierunek WYJŚCIA przekaźnika)
@@ -844,6 +846,11 @@
   let rsComparatorOutputPrev = new Map(); // ulotne — ostatnia zastosowana siła wyjścia (do rysowania + sygnatur Observera)
   let rsScheduledObservers = new Map();    // ulotne — key -> { dueTick } (impuls jednorazowy, siła zawsze 15)
   let rsObserverPrevSig = new Map();       // ulotne — ostatnia sygnatura obserwowanej komórki (do wykrywania zmian)
+  let rsPistonPoweredPrev = new Map();     // ulotne — stan zasilenia tłoków z poprzedniego ticku (do wykrywania zbocza)
+  let rsScheduledPistons = new Map();      // ulotne — key -> { dueTick, action: 'extend'|'retract' }
+  let rsNoteBlockPoweredPrev = new Map();  // ulotne — stan zasilenia Note Blocków z poprzedniego ticku
+  let rsNoteBlockPulse = new Map();        // ulotne — key -> tick do którego trwa wizualny błysk po zagraniu
+  let rsAudioCtx = null;                   // leniwie tworzony przy pierwszym dźwięku (wymaga gestu użytkownika)
   let rsSimTimer = 0;
   let rsSaveT = 0;
   let rsW = 0, rsH = 0;
@@ -879,6 +886,31 @@
     rsComparatorOutputPrev = new Map();
     rsScheduledObservers = new Map();
     rsObserverPrevSig = new Map();
+    rsPistonPoweredPrev = new Map();
+    rsScheduledPistons = new Map();
+    rsNoteBlockPoweredPrev = new Map();
+    rsNoteBlockPulse = new Map();
+  }
+
+  // Prosty syntezowany dźwięk (Web Audio, bez plików/bibliotek) — zakres i
+  // częstotliwości jak w Minecrafcie: 25 wysokości (F#3..F#5), półton na krok.
+  function rsPlayNote(pitch) {
+    try {
+      if (!rsAudioCtx) rsAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (rsAudioCtx.state === 'suspended') rsAudioCtx.resume();
+      const freq = 185.00 * Math.pow(2, pitch / 12);
+      const osc = rsAudioCtx.createOscillator();
+      const gain = rsAudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const now = rsAudioCtx.currentTime;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+      osc.connect(gain).connect(rsAudioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } catch (e) {}
   }
 
   function rsSaveWorld() {
@@ -898,6 +930,8 @@
     if (tool === 'repeater') return { type: 'repeater', rotation: 0 };
     if (tool === 'comparator') return { type: 'comparator', rotation: 0, mode: 'compare' };
     if (tool === 'observer') return { type: 'observer', rotation: 0 };
+    if (tool === 'piston' || tool === 'sticky_piston') return { type: tool, rotation: 0, extended: false };
+    if (tool === 'noteblock') return { type: 'noteblock', pitch: 0 };
     if (tool === 'lever') return { type: 'lever', on: false };
     if (tool === 'block') return { type: 'block', torch: false };
     return { type: tool }; // wire, button, lamp
@@ -911,8 +945,10 @@
   }
 
   // Dotknięcie komórki (cx,cy) — zachowanie zależy od wybranego narzędzia:
-  // - "select": obraca przekaźnik/komparator/observer, przełącza dźwignię,
-  //   naciska przycisk; blok/przewód/pochodnia/lampa — nic (brak akcji).
+  // - "select": obraca przekaźnik/komparator/observer/tłok (tłok tylko gdy NIE
+  //   jest wysunięty — obracanie w trakcie pchania zostawiłoby popchnięte
+  //   bloki w niespójnym stanie), przełącza dźwignię, naciska przycisk,
+  //   zmienia wysokość tonu Note Blocka (z podglądem dźwięku od razu).
   // - "torch": WYJĄTEK od "zajęte pole = nic" — dotyka istniejącego Bloku bez
   //   pochodni i ją dołącza (2D-owy odpowiednik "postaw pochodnię na bloku").
   // - "compmode": WYJĄTEK analogiczny do "torch" — dotyka istniejącego
@@ -927,6 +963,8 @@
     if (rsTool === 'select') {
       if (!cell) return;
       if (cell.type === 'repeater' || cell.type === 'comparator' || cell.type === 'observer') cell.rotation = (cell.rotation + 1) % 4;
+      else if ((cell.type === 'piston' || cell.type === 'sticky_piston') && !cell.extended) cell.rotation = (cell.rotation + 1) % 4;
+      else if (cell.type === 'noteblock') { cell.pitch = (cell.pitch + 1) % 25; rsPlayNote(cell.pitch); }
       else if (cell.type === 'lever') cell.on = !cell.on;
       else if (cell.type === 'button') rsButtonActive.set(key, rsTick + RS_BUTTON_TICKS);
       else return;
@@ -939,6 +977,10 @@
       rsComparatorOutputPrev.delete(key);
       rsScheduledObservers.delete(key);
       rsObserverPrevSig.delete(key);
+      rsPistonPoweredPrev.delete(key);
+      rsScheduledPistons.delete(key);
+      rsNoteBlockPoweredPrev.delete(key);
+      rsNoteBlockPulse.delete(key);
     } else if (rsTool === 'torch') {
       if (cell && cell.type === 'block' && !cell.torch) cell.torch = true;
       else return;
@@ -988,7 +1030,60 @@
       case 'repeater': return 'repeater:' + c.rotation + ':' + (rsScheduledRepeaters.has(key) ? 1 : 0);
       case 'comparator': return 'comparator:' + c.rotation + ':' + c.mode + ':' + (rsComparatorOutputPrev.get(key) || 0);
       case 'lamp': return 'lamp:' + ((power.get(key) || 0) > 0 ? 1 : 0);
+      case 'piston': case 'sticky_piston': return c.type + ':' + c.rotation + ':' + (c.extended ? 1 : 0);
+      case 'noteblock': return 'noteblock:' + c.pitch + ':' + (rsNoteBlockPoweredPrev.get(key) ? 1 : 0);
       default: return c.type;
+    }
+  }
+
+  // Wysuwa tłok (o kluczu `key`, komórka `cell`) — jeśli już wysunięty, nic
+  // nie robi (idempotentne, jak w Minecrafcie). Szuka łańcucha kolejnych
+  // Bloków przed sobą w kierunku pchania; jeśli kończy się pustym polem (i nie
+  // przekracza RS_PISTON_MAX_PUSH), przesuwa CAŁY łańcuch o 1 pole — inaczej
+  // (cokolwiek nie-blokowego blokuje drogę, albo łańcuch za długi) nic się nie
+  // dzieje, zgodnie z zachowaniem prawdziwego tłoka "zablokowanego".
+  function rsPistonExtend(key, cell) {
+    if (cell.extended) return;
+    const [x, y] = rsParseKey(key);
+    const d = RS_DIR[cell.rotation];
+    const chain = [];
+    let cx = x + d[0], cy = y + d[1];
+    while (true) {
+      const there = rsWorld.get(rsKey(cx, cy));
+      if (!there) break; // puste pole — koniec łańcucha, da się pchnąć
+      if (there.type !== 'block') return; // cokolwiek nie-blokowego — zablokowane
+      chain.push([cx, cy]);
+      if (chain.length > RS_PISTON_MAX_PUSH) return; // za długi łańcuch — zablokowane
+      cx += d[0]; cy += d[1];
+    }
+    // Przesuń łańcuch OD KOŃCA (żeby nie nadpisać jeszcze nieprzeniesionych pól).
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const [bx, by] = chain[i];
+      const data = rsWorld.get(rsKey(bx, by));
+      rsWorld.delete(rsKey(bx, by));
+      rsWorld.set(rsKey(bx + d[0], by + d[1]), data);
+    }
+    cell.extended = true;
+  }
+
+  // Chowa tłok. Zwykły tłok nic więcej nie robi (popchnięty blok zostaje tam,
+  // gdzie jest — jak w Minecrafcie). Sticky Piston dodatkowo ciągnie z powrotem
+  // JEDEN blok, jeśli stoi bezpośrednio "przy głowicy" (2 pola przed tłokiem —
+  // pole 1 pole przed tłokiem jest w tym modelu zawsze puste podczas wysunięcia,
+  // to tam "wraca" głowica razem z przyciągniętym blokiem).
+  function rsPistonRetract(key, cell) {
+    if (!cell.extended) return;
+    cell.extended = false;
+    if (cell.type !== 'sticky_piston') return;
+    const [x, y] = rsParseKey(key);
+    const d = RS_DIR[cell.rotation];
+    const headKey = rsKey(x + d[0], y + d[1]);
+    const attachedKey = rsKey(x + d[0] * 2, y + d[1] * 2);
+    if (rsWorld.has(headKey)) return; // coś już tam jest — nie przyciągaj (nie powinno się zdarzyć)
+    const attached = rsWorld.get(attachedKey);
+    if (attached && attached.type === 'block') {
+      rsWorld.delete(attachedKey);
+      rsWorld.set(headKey, attached);
     }
   }
 
@@ -997,8 +1092,8 @@
   // przy dopisywaniu kolejnych komponentów — kolejne fazy czytają wyniki
   // poprzednich w tym samym ticku):
   // 1. źródła sygnału  2. propagacja  3. Repeatery  4. Komparatory
-  // 5. Observers  6. (Pistony — TODO kolejna faza prac)
-  // 7. (czujniki — TODO kolejna faza prac)  8. aktualizacja bloków  9. render (poza tą funkcją)
+  // 5. Observers  6. Pistony + Note Block  8. aktualizacja bloków  9. render (poza tą funkcją)
+  // (Faza 7 "czujniki" celowo pominięta — poza zakresem tej rundy prac.)
   function rsTick_() {
     rsTick++;
 
@@ -1036,6 +1131,19 @@
           directedInjections.push({ pos: rsKey(...rsBackOf(x, y, cell.rotation)), strength: 15 });
         }
         rsScheduledObservers.delete(key);
+      }
+    }
+    // 1c) Tłoki zaplanowane w POPRZEDNIM ticku faktycznie się teraz
+    //     wysuwają/chowają (przesunięcie bloków w rsWorld) — PRZED propagacją,
+    //     żeby sygnał w tym ticku widział już nowy układ siatki.
+    for (const [key, sched] of rsScheduledPistons) {
+      if (sched.dueTick <= rsTick) {
+        const cell = rsWorld.get(key);
+        if (cell && (cell.type === 'piston' || cell.type === 'sticky_piston')) {
+          if (sched.action === 'extend') rsPistonExtend(key, cell);
+          else rsPistonRetract(key, cell);
+        }
+        rsScheduledPistons.delete(key);
       }
     }
     // 1b) Źródła wszechkierunkowe: pochodnie (wg stanu Bloku z POPRZEDNIEGO
@@ -1134,6 +1242,40 @@
       }
       rsObserverPrevSig.set(key, sig);
     }
+
+    // FAZA 6: Pistony + Note Block.
+    // Tłoki: aktywują się zasilone OD TYŁU (ta sama konwencja co Repeater/
+    // Comparator), reagują na ZBOCZE (nie-zasilony->zasilony = wysunięcie,
+    // odwrotnie = schowanie) z tym samym 1-tickowym opóźnieniem co reszta
+    // komponentów kierunkowych (spójność czasowa silnika) — samo przesunięcie
+    // bloków wykonuje się na POCZĄTKU kolejnego ticku (FAZA 1c).
+    const nextPistonPowered = new Map();
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'piston' && cell.type !== 'sticky_piston') continue;
+      const [x, y] = rsParseKey(key);
+      const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
+      const poweredNow = rsCellPowerFor(inKey, power, torchLitNow) > 0;
+      nextPistonPowered.set(key, poweredNow);
+      const wasPowered = rsPistonPoweredPrev.get(key) || false;
+      if (poweredNow && !wasPowered) rsScheduledPistons.set(key, { dueTick: rsTick + RS_REPEATER_DELAY, action: 'extend' });
+      else if (!poweredNow && wasPowered) rsScheduledPistons.set(key, { dueTick: rsTick + RS_REPEATER_DELAY, action: 'retract' });
+    }
+    rsPistonPoweredPrev = nextPistonPowered;
+
+    // Note Block: niekierunkowy (zasilenie z DOWOLNEJ sąsiedniej strony, jak
+    // Lampa), gra dźwięk na ZBOCZU nie-zasilony->zasilony — jednorazowo, nie
+    // na okrągło przy trzymanym sygnale (jak Observer).
+    const nextNoteBlockPowered = new Map();
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'noteblock') continue;
+      const poweredNow = (power.get(key) || 0) > 0;
+      nextNoteBlockPowered.set(key, poweredNow);
+      if (poweredNow && !(rsNoteBlockPoweredPrev.get(key) || false)) {
+        rsPlayNote(cell.pitch);
+        rsNoteBlockPulse.set(key, rsTick + RS_NOTE_FLASH_TICKS);
+      }
+    }
+    rsNoteBlockPoweredPrev = nextNoteBlockPowered;
 
     // FAZA 8: aktualizacja bloków — zapisz stan zasilenia Bloków z TEGO ticku,
     // użyje go dopiero NASTĘPNY tick przy sprawdzaniu pochodni.
@@ -1234,9 +1376,11 @@
     const el = $('games-toolbar');
     if (!el) return;
     el.style.display = 'flex';
-    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'compmode', 'observer', 'lever', 'button', 'lamp', 'eraser'];
+    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'compmode', 'observer',
+      'piston', 'sticky_piston', 'noteblock', 'lever', 'button', 'lamp', 'eraser'];
     const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch',
       repeater: 'rsToolRepeater', comparator: 'rsToolComparator', compmode: 'rsToolCompMode', observer: 'rsToolObserver',
+      piston: 'rsToolPiston', sticky_piston: 'rsToolStickyPiston', noteblock: 'rsToolNoteBlock',
       lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', eraser: 'rsToolEraser' };
     el.innerHTML = tools.map((id) =>
       `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}" data-rs-tool="${id}">${t(labelKeys[id])}</button>`
@@ -1260,6 +1404,10 @@
       rsComparatorOutputPrev = new Map();
       rsScheduledObservers = new Map();
       rsObserverPrevSig = new Map();
+      rsPistonPoweredPrev = new Map();
+      rsScheduledPistons = new Map();
+      rsNoteBlockPoweredPrev = new Map();
+      rsNoteBlockPulse = new Map();
       setScore(0);
       rsScheduleSave();
     };
@@ -1365,6 +1513,46 @@
     ctx.beginPath(); ctx.arc(cx + d[0] * s * 0.3, cy + d[1] * s * 0.3, s * 0.12, 0, Math.PI * 2); ctx.fill();
   }
 
+  function rsDrawPiston(ctx, sx, sy, s, cell, x, y) {
+    const sticky = cell.type === 'sticky_piston';
+    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
+    const d = RS_DIR[cell.rotation];
+    const cx = sx + s / 2, cy = sy + s / 2;
+    // Strzałka kierunku pchania — kolor odróżnia sticky (zielony) od zwykłego (szary).
+    ctx.fillStyle = sticky ? '#4ecca3' : '#8a8fa8';
+    ctx.beginPath();
+    ctx.moveTo(cx + d[0] * s * 0.32, cy + d[1] * s * 0.32);
+    ctx.lineTo(cx + d[0] * s * 0.1 - d[1] * s * 0.14, cy + d[1] * s * 0.1 - d[0] * s * 0.14);
+    ctx.lineTo(cx + d[0] * s * 0.1 + d[1] * s * 0.14, cy + d[1] * s * 0.1 + d[0] * s * 0.14);
+    ctx.closePath();
+    ctx.fill();
+    if (cell.extended) {
+      // "Ramię" tłoka — pasek wchodzący w sąsiednią komórkę w kierunku pchania
+      // (to pole jest w tym modelu zawsze puste podczas wysunięcia, więc
+      // rysowanie na nim jest bezpieczne — nic tam nie koliduje).
+      const front = rsWorldToScreen(x + d[0], y + d[1]);
+      ctx.fillStyle = sticky ? '#2f8a68' : '#6b7280';
+      if (d[0] !== 0) ctx.fillRect(front.sx + (d[0] > 0 ? 0 : s * 0.55), front.sy + s * 0.35, s * 0.45, s * 0.3);
+      else ctx.fillRect(front.sx + s * 0.35, front.sy + (d[1] > 0 ? 0 : s * 0.55), s * 0.3, s * 0.45);
+    }
+  }
+
+  function rsDrawNoteBlock(ctx, sx, sy, s, cell, key) {
+    const flashing = (rsNoteBlockPulse.get(key) || 0) > rsTick;
+    ctx.fillStyle = flashing ? '#8a5a2a' : cssVar('--border', '#2a2d3a');
+    ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
+    // Symbol nutki + numer wysokości tonu (0-24), podświetlone przy graniu.
+    ctx.fillStyle = flashing ? '#ffd700' : '#c9a96e';
+    ctx.beginPath(); ctx.arc(sx + s * 0.4, sy + s * 0.62, s * 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(sx + s * 0.47, sy + s * 0.28, s * 0.05, s * 0.34);
+    ctx.fillStyle = cssVar('--text2', '#8a8fa8');
+    ctx.font = Math.round(s * 0.22) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(cell.pitch), sx + s * 0.72, sy + s * 0.35);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+
   function rsDrawLever(ctx, sx, sy, s, cell) {
     ctx.fillStyle = cssVar('--border', '#2a2d3a');
     ctx.fillRect(sx + s * 0.3, sy + s * 0.6, s * 0.4, s * 0.3);
@@ -1401,6 +1589,8 @@
     else if (cell.type === 'repeater') rsDrawRepeater(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'comparator') rsDrawComparator(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'observer') rsDrawObserver(ctx, sx, sy, s, cell, key);
+    else if (cell.type === 'piston' || cell.type === 'sticky_piston') rsDrawPiston(ctx, sx, sy, s, cell, x, y);
+    else if (cell.type === 'noteblock') rsDrawNoteBlock(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'lever') rsDrawLever(ctx, sx, sy, s, cell);
     else if (cell.type === 'button') rsDrawButton(ctx, sx, sy, s, key);
     else if (cell.type === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
@@ -1442,6 +1632,7 @@
         if (rsSimTimer) { clearInterval(rsSimTimer); rsSimTimer = 0; }
         clearTimeout(rsSaveT);
         rsSaveWorld();
+        if (rsAudioCtx) { rsAudioCtx.close().catch(() => {}); rsAudioCtx = null; }
         const tb = $('games-toolbar');
         if (tb) { tb.innerHTML = ''; tb.style.display = 'none'; }
       },
@@ -1481,6 +1672,9 @@
         comparatorOutputPrev: Array.from(rsComparatorOutputPrev.entries()),
         scheduledObservers: Array.from(rsScheduledObservers.entries()),
         observerPrevSig: Array.from(rsObserverPrevSig.entries()),
+        pistonPoweredPrev: Array.from(rsPistonPoweredPrev.entries()),
+        scheduledPistons: Array.from(rsScheduledPistons.entries()),
+        noteBlockPoweredPrev: Array.from(rsNoteBlockPoweredPrev.entries()),
         cells: Array.from(rsWorld.entries()),
       };
     },
