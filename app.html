@@ -1038,15 +1038,6 @@
               <textarea id="bug-desc" maxlength="400" rows="5" style="width:100%;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px" placeholder="Opisz co się stało, czego się spodziewałeś i jak to powtórzyć..." data-i18n-placeholder="bugReport.descPh" oninput="updateBugCharCount()"></textarea>
               <div class="text2" id="bug-char-count" style="text-align:right;margin-top:4px;font-size:12px">0 / 400</div>
             </div>
-            <div class="form-group">
-              <label data-i18n="bugReport.fieldImage">Screenshot (opcjonalnie)</label>
-              <input type="file" id="bug-image" accept="image/*" onchange="onBugImageChange(event)">
-              <p class="text2" id="bug-image-hint" style="font-size:12px;margin-top:4px" data-i18n="bugReport.imageHint">Max 4 MB, JPG/PNG/WebP.</p>
-              <div id="bug-image-preview" style="display:none;margin-top:8px">
-                <img id="bug-image-preview-img" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid var(--border)">
-                <button type="button" class="btn-ghost btn-sm" style="margin-top:6px" onclick="clearBugImage()" data-i18n="bugReport.removeImage">Usuń zdjęcie</button>
-              </div>
-            </div>
             <p class="text2" id="bug-rate-note" style="display:none;color:var(--warn);margin-bottom:10px" data-i18n="bugReport.rateLimited">Możesz wysłać tylko 1 zgłoszenie dziennie. Spróbuj jutro.</p>
             <p class="text2" id="bug-bonus-note" style="display:none;color:var(--accent2);margin-bottom:10px" data-i18n="bugReport.bonusAvailable">🎁 Masz dodatkowe zgłoszenie do wykorzystania (zaakceptowane zgłoszenie dało Ci bonus) — możesz wysłać mimo dziennego limitu.</p>
             <button class="btn-primary" id="bug-submit-btn" style="width:100%" onclick="submitBugReport()" data-i18n="bugReport.submit">Wyślij zgłoszenie</button>
@@ -1733,7 +1724,6 @@
       doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
       collection, addDoc, query, where, orderBy, limit, getDocs, increment, onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -1743,10 +1733,6 @@
       localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
     });
     const messaging = getMessaging(app);
-    // Storage: TYLKO screenshot w zgłoszeniach błędów (bugReports/{uid}/...) — pierwsze
-    // użycie Storage w tej apce, patrz storage.rules (trzeba wkleić ręcznie w konsoli
-    // Firebase, tak jak firestore.rules).
-    const storage = getStorage(app);
 
     // ── i18n (Faza 5: Dashboard + Ustawienia) ──────────────
     const I18N_RESOURCES = {
@@ -2000,9 +1986,6 @@
           fieldArea: 'Where did it happen?', areaOther: 'Other',
           fieldDesc: 'Description', descPh: 'Describe what happened, what you expected, and how to reproduce it...',
           charCount: '{{cur}} / {{max}}',
-          fieldImage: 'Screenshot (optional)', imageHint: 'Max 4 MB, JPG/PNG/WebP.',
-          removeImage: 'Remove image', imageWrongType: 'That file is not an image.',
-          imageTooLarge: 'Image is too large (max 4 MB).',
           bonusAvailable: '🎁 You have an extra report available (an accepted report earned you a bonus) — you can send this despite the daily limit.',
           bonusGrantedTag: 'earned a bonus report',
           submit: 'Send report', sent: 'Bug report sent. Thanks!',
@@ -2323,9 +2306,6 @@
           fieldArea: 'Gdzie się zdarzyło?', areaOther: 'Inne',
           fieldDesc: 'Opis', descPh: 'Opisz co się stało, czego się spodziewałeś i jak to powtórzyć...',
           charCount: '{{cur}} / {{max}}',
-          fieldImage: 'Screenshot (opcjonalnie)', imageHint: 'Max 4 MB, JPG/PNG/WebP.',
-          removeImage: 'Usuń zdjęcie', imageWrongType: 'To nie jest plik obrazu.',
-          imageTooLarge: 'Zdjęcie jest za duże (max 4 MB).',
           bonusAvailable: '🎁 Masz dodatkowe zgłoszenie do wykorzystania (zaakceptowane zgłoszenie dało Ci bonus) — możesz wysłać mimo dziennego limitu.',
           bonusGrantedTag: 'dało bonusowe zgłoszenie',
           submit: 'Wyślij zgłoszenie', sent: 'Zgłoszenie wysłane. Dzięki!',
@@ -5482,36 +5462,6 @@
     let bugSpamKeywords = [];
     let bugAdminTab = 'new';    // 'new' | 'spam' | 'postponed' | 'history'
     let bugExpandedId = null;   // rozwinięty wątek (akordeon — jeden naraz)
-    let bugImageFile = null;    // wybrany plik screenshotu (przed uploadem), max 1 na zgłoszenie
-    const BUG_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
-
-    window.onBugImageChange = (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) { clearBugImage(); return; }
-      if (!file.type.startsWith('image/')) {
-        toast(i18next.t('bugReport.imageWrongType'), 'error');
-        e.target.value = '';
-        return;
-      }
-      if (file.size > BUG_IMAGE_MAX_BYTES) {
-        toast(i18next.t('bugReport.imageTooLarge'), 'error');
-        e.target.value = '';
-        return;
-      }
-      bugImageFile = file;
-      const img = document.getElementById('bug-image-preview-img');
-      const wrap = document.getElementById('bug-image-preview');
-      img.src = URL.createObjectURL(file);
-      wrap.style.display = 'block';
-    };
-
-    window.clearBugImage = () => {
-      bugImageFile = null;
-      const input = document.getElementById('bug-image');
-      const wrap = document.getElementById('bug-image-preview');
-      if (input) input.value = '';
-      if (wrap) wrap.style.display = 'none';
-    };
 
     function bugAreaLabel(key) {
       const map = {
@@ -5614,7 +5564,6 @@
           <div class="bug-item-detail-pad">
             <div class="text2" style="margin-bottom:6px">${dateStr}${r.status === 'spam' ? ' · ' + bugTimeLeftLabel(r) : ''}${r.bonusGranted ? ' · 🎁 ' + i18next.t('bugReport.bonusGrantedTag') : ''}</div>
             <p style="font-size:14px;line-height:1.6;margin-bottom:2px">${escapeHtml(r.description)}</p>
-            ${r.imageUrl ? `<a href="${r.imageUrl}" target="_blank" rel="noopener"><img src="${r.imageUrl}" alt="" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--border);margin:8px 0;display:block"></a>` : ''}
             <div id="bug-thread-${r.id}">${bugThreadHTML(r)}</div>
             ${bugReplyBoxHTML(r)}
             ${actions ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${actions}</div>` : ''}
@@ -5766,18 +5715,9 @@
       const btn = document.getElementById('bug-submit-btn');
       btn.disabled = true;
       try {
-        let imageUrl = null;
-        if (bugImageFile) {
-          const safeName = bugImageFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-          const path = `bugReports/${currentUser.uid}/${Date.now()}_${safeName}`;
-          const fileRef = storageRef(storage, path);
-          await uploadBytes(fileRef, bugImageFile);
-          imageUrl = await getDownloadURL(fileRef);
-        }
         await addDoc(collection(db, 'bugReports'), {
           reporterUid: currentUser.uid, reporterName: userProfile.name || 'Użytkownik',
           title, area, description: desc, status, messages: [], createdAt: new Date(),
-          ...(imageUrl ? { imageUrl } : {}),
         });
         if (bonusReport) {
           // Zużywamy istniejący bonus zamiast blokować — dzienny limit i tak już
@@ -5792,7 +5732,6 @@
         document.getElementById('bug-title').value = '';
         document.getElementById('bug-area').value = '';
         document.getElementById('bug-desc').value = '';
-        clearBugImage();
         updateBugCharCount();
 
         await loadMyBugReports();
@@ -5950,7 +5889,6 @@
     const APP_VERSION = '2026.07.18';
     const CHANGELOG = [
       { version: '2026.07.18', items: [
-        { pl: '📎 Zgłoś błąd: możesz dołączyć 1 screenshot (max 4 MB)', en: '📎 Report a bug: you can attach 1 screenshot (max 4 MB)' },
         { pl: '🎁 Jeśli Twoje zgłoszenie zostanie zaakceptowane, dostajesz dodatkowe zgłoszenie do wykorzystania poza dziennym limitem', en: '🎁 If your report gets accepted, you get one extra report to use beyond the daily limit' },
       ]},
       { version: '2026.07.17', items: [
