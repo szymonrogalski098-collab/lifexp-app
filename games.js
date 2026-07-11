@@ -818,12 +818,16 @@
   // ── Redstone (piaskownica obwodów) ────────────────────
   // 2D, widok z góry, inspirowane redstone z Minecrafta. Sygnał 0-15, zanika o 1
   // na komórkę przewodu. Pochodnia stoi NA Bloku i jest bramką NOT — gaśnie gdy
-  // Blok jest zasilony skądinąd. Ważne: sprawdzamy to wg stanu Bloku z
-  // POPRZEDNIEGO ticku (rsBlockPoweredPrev), nie bieżącego — dzięki temu pętla
-  // zwrotna (pochodnia zasilająca przez przewód własny blok) nie zapętla się w
-  // nieskończoność w jednym ticku, tylko mruga raz na tick, dokładnie jak
-  // prawdziwy "torch clock" w Minecrafcie. Symulacja tyka niezależnie od pętli
-  // rAF renderu (setInterval) — inny rytm niż płynna kamera/wejście.
+  // Blok jest zasilony skądinąd. WAŻNE (poprawione po testach): zwykły przewód
+  // NIGDY nie zasila bloku własnej pochodni — inaczej pochodnia podłączona do
+  // wyjścia swojego przewodu migałaby bez końca (przewód odbijał jej sygnał
+  // z powrotem na jej blok). Inwersja liczy się TYLKO od bezpośredniego,
+  // prawdziwego źródła dotykającego bloku (dźwignia/przycisk/inna pochodnia) —
+  // patrz wyjątek w relayInto i FAZA 8. Sprawdzane wg stanu Bloku z
+  // POPRZEDNIEGO ticku (rsBlockPoweredPrev), nie bieżącego, żeby ewentualna
+  // celowa pętla przez inne komponenty (np. przez Repeater) nie zapętliła się
+  // w nieskończoność w jednym ticku. Symulacja tyka niezależnie od pętli rAF
+  // renderu (setInterval) — inny rytm niż płynna kamera/wejście.
   const RS_TICK_MS = 100;
   const RS_REPEATER_DELAY = 1;   // ticki
   const RS_BUTTON_TICKS = 10;    // ~1s przy 10 tickach/s
@@ -833,6 +837,11 @@
   const RS_ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const RS_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // rotation 0=E,1=S,2=W,3=N (kierunek WYJŚCIA przekaźnika)
   const RS_WIRE_OFF = [74, 20, 20], RS_WIRE_ON = [255, 107, 26];
+  // Redstone renderuje się ZAWSZE w kolorach motywu LifeXP (ciemny), niezależnie
+  // od wybranego motywu apki (Apple/Gold) — jasne motywy dawały słaby/niewidoczny
+  // kontrast dla ciemnych klocków. Reszta strony (toolbar, tło strony) nadal
+  // podąża za globalnym motywem — to dotyczy tylko treści samego canvasu.
+  const RS_BG = '#1e2029', RS_BORDER = '#2a2d3a', RS_TEXT2 = '#8a8fa8';
 
   let rsWorld = new Map();              // "x,y" -> {type, rotation?, torch?, on?} (ZAPISYWANE)
   let rsCamera = { x: 0, y: 0, scale: 28 }; // (ZAPISYWANE razem ze światem)
@@ -1174,6 +1183,11 @@
       if (level <= 0) return;
       const c = rsWorld.get(pos);
       if (!c) return;
+      // Blok Z POCHODNIĄ nigdy nie jest zasilany przez zwykły przewód — inaczej
+      // przewód podłączony do wyjścia własnej pochodni odbijałby jej sygnał
+      // z powrotem na jej blok i pochodnia migałaby bez końca. Inwersja liczy
+      // się TYLKO od bezpośredniego źródła obok bloku (patrz FAZA 8 niżej).
+      if (c.type === 'block' && c.torch) return;
       if ((power.get(pos) || 0) >= level) return;
       power.set(pos, level);
       if (c.type === 'wire') buckets[level].push(pos);
@@ -1278,10 +1292,27 @@
     rsNoteBlockPoweredPrev = nextNoteBlockPowered;
 
     // FAZA 8: aktualizacja bloków — zapisz stan zasilenia Bloków z TEGO ticku,
-    // użyje go dopiero NASTĘPNY tick przy sprawdzaniu pochodni.
+    // użyje go dopiero NASTĘPNY tick przy sprawdzaniu pochodni. Blok BEZ
+    // pochodni: zwykłe zasilenie z mapy `power` (zwykła ciekawostka, nic go
+    // nie odbiera). Blok Z pochodnią: inwersja liczy się TYLKO od
+    // bezpośredniego, prawdziwego źródła dotykającego bloku (dźwignia/
+    // przycisk/inna świecąca pochodnia) — NIGDY od zwykłego przewodu (patrz
+    // wyjątek w relayInto wyżej), inaczej podłączenie pochodni do własnego
+    // przewodu migałoby bez końca zamiast dawać stabilne zasilenie.
     const nextBlockPowered = new Map();
     for (const [key, cell] of rsWorld) {
-      if (cell.type === 'block') nextBlockPowered.set(key, (power.get(key) || 0) > 0);
+      if (cell.type !== 'block') continue;
+      if (!cell.torch) { nextBlockPowered.set(key, (power.get(key) || 0) > 0); continue; }
+      const [x, y] = rsParseKey(key);
+      let poweredByOther = false;
+      for (const [nx, ny] of rsNeighbors(x, y)) {
+        const nc = rsWorld.get(rsKey(nx, ny));
+        if (!nc) continue;
+        if (nc.type === 'lever' && nc.on) { poweredByOther = true; break; }
+        if (nc.type === 'button' && (rsButtonActive.get(rsKey(nx, ny)) || 0) > rsTick) { poweredByOther = true; break; }
+        if (nc.type === 'block' && nc.torch && torchLitNow.get(rsKey(nx, ny))) { poweredByOther = true; break; }
+      }
+      nextBlockPowered.set(key, poweredByOther);
     }
     rsBlockPoweredPrev = nextBlockPowered;
     rsLastPower = power; // tylko do rysowania
@@ -1420,7 +1451,7 @@
   }
 
   function rsDrawGrid(ctx, W, H) {
-    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillStyle = RS_BG;
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = 'rgba(255,255,255,.06)';
     ctx.lineWidth = 1;
@@ -1434,7 +1465,7 @@
   }
 
   function rsDrawBlock(ctx, sx, sy, s, cell, key) {
-    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillStyle = RS_BORDER;
     ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
     if (cell.torch) {
       const on = !rsBlockPoweredPrev.get(key);
@@ -1466,9 +1497,9 @@
   }
 
   function rsDrawRepeater(ctx, sx, sy, s, cell, key) {
-    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillStyle = RS_BG;
     ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
-    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.strokeStyle = RS_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
     const active = rsScheduledRepeaters.has(key);
@@ -1480,9 +1511,9 @@
   }
 
   function rsDrawComparator(ctx, sx, sy, s, cell, key) {
-    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillStyle = RS_BG;
     ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
-    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.strokeStyle = RS_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
     const out = rsComparatorOutputPrev.get(key) || 0;
@@ -1499,9 +1530,9 @@
   }
 
   function rsDrawObserver(ctx, sx, sy, s, cell, key) {
-    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillStyle = RS_BG;
     ctx.fillRect(sx + s * 0.08, sy + s * 0.08, s * 0.84, s * 0.84);
-    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.strokeStyle = RS_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.08, sy + s * 0.08, s * 0.84, s * 0.84);
     const d = RS_DIR[cell.rotation];
@@ -1515,7 +1546,7 @@
 
   function rsDrawPiston(ctx, sx, sy, s, cell, x, y) {
     const sticky = cell.type === 'sticky_piston';
-    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillStyle = RS_BORDER;
     ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
     const d = RS_DIR[cell.rotation];
     const cx = sx + s / 2, cy = sy + s / 2;
@@ -1540,13 +1571,13 @@
 
   function rsDrawNoteBlock(ctx, sx, sy, s, cell, key) {
     const flashing = (rsNoteBlockPulse.get(key) || 0) > rsTick;
-    ctx.fillStyle = flashing ? '#8a5a2a' : cssVar('--border', '#2a2d3a');
+    ctx.fillStyle = flashing ? '#8a5a2a' : RS_BORDER;
     ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
     // Symbol nutki + numer wysokości tonu (0-24), podświetlone przy graniu.
     ctx.fillStyle = flashing ? '#ffd700' : '#c9a96e';
     ctx.beginPath(); ctx.arc(sx + s * 0.4, sy + s * 0.62, s * 0.1, 0, Math.PI * 2); ctx.fill();
     ctx.fillRect(sx + s * 0.47, sy + s * 0.28, s * 0.05, s * 0.34);
-    ctx.fillStyle = cssVar('--text2', '#8a8fa8');
+    ctx.fillStyle = RS_TEXT2;
     ctx.font = Math.round(s * 0.22) + 'px sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(String(cell.pitch), sx + s * 0.72, sy + s * 0.35);
@@ -1554,7 +1585,7 @@
   }
 
   function rsDrawLever(ctx, sx, sy, s, cell) {
-    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillStyle = RS_BORDER;
     ctx.fillRect(sx + s * 0.3, sy + s * 0.6, s * 0.4, s * 0.3);
     ctx.strokeStyle = cell.on ? '#4ecca3' : '#8a8fa8';
     ctx.lineWidth = Math.max(2, s * 0.1);
@@ -1566,7 +1597,7 @@
 
   function rsDrawButton(ctx, sx, sy, s, key) {
     const active = (rsButtonActive.get(key) || 0) > rsTick;
-    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillStyle = RS_BORDER;
     ctx.fillRect(sx + s * 0.25, sy + s * 0.4, s * 0.5, s * 0.2);
     ctx.fillStyle = active ? '#ff6b1a' : '#8a8fa8';
     ctx.fillRect(sx + s * 0.35, sy + (active ? s * 0.42 : s * 0.36), s * 0.3, s * 0.12);
@@ -1576,7 +1607,7 @@
     const lit = (rsLastPower.get(key) || 0) > 0;
     ctx.fillStyle = lit ? '#fff3c0' : '#3a3d4d';
     ctx.beginPath(); ctx.arc(sx + s / 2, sy + s / 2, s * 0.32, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.strokeStyle = RS_BORDER;
     ctx.lineWidth = 1;
     ctx.stroke();
   }
