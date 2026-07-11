@@ -2056,6 +2056,12 @@
           rsClearWorld: 'Clear world',
           rsConfirmClear: "Erase your entire circuit? This can't be undone.",
           rsConfirmClearOk: 'Clear',
+          rsPanelRotate: 'Rotate',
+          rsPanelDelay: 'Delay',
+          rsPanelMode: 'Mode',
+          rsModeCompare: 'Compare',
+          rsModeSubtract: 'Subtract',
+          rsPanelClose: 'Close',
         },
       }},
       pl: { translation: {
@@ -2378,6 +2384,12 @@
           rsClearWorld: 'Wyczyść świat',
           rsConfirmClear: 'Usunąć cały obwód? Tego nie można cofnąć.',
           rsConfirmClearOk: 'Wyczyść',
+          rsPanelRotate: 'Obróć',
+          rsPanelDelay: 'Opóźnienie',
+          rsPanelMode: 'Tryb',
+          rsModeCompare: 'Porównanie',
+          rsModeSubtract: 'Odejmowanie',
+          rsPanelClose: 'Zamknij',
         },
       }},
     };
@@ -4228,6 +4240,10 @@
         cancel.onclick = () => finish(false);
       });
     }
+    // games.js is a separate classic-script IIFE (not this module) and calls
+    // confirmDialog() directly (e.g. Redstone's "Clear world") — must be on
+    // window, same as the reverse export window.LifeXPGames.
+    window.confirmDialog = confirmDialog;
 
     async function addChore(choreId) {
       const chore = choreDefById(choreId);

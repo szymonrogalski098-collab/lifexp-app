@@ -406,7 +406,7 @@ input:focus, select:focus { border-color: var(--accent); }
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.7);
-  z-index: 1000;
+  z-index: 2100; /* above .games-fs #games-play (2000) so dialogs stay visible in fullscreen games */
   align-items: center;
   justify-content: center;
 }

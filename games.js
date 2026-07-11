@@ -818,21 +818,28 @@
   // ── Redstone (piaskownica obwodów) ────────────────────
   // 2D, widok z góry, inspirowane redstone z Minecrafta. Sygnał 0-15, zanika o 1
   // na komórkę przewodu. Pochodnia stoi NA Bloku i jest bramką NOT — gaśnie gdy
-  // Blok jest zasilony skądinąd. WAŻNE (poprawione po testach): zwykły przewód
-  // NIGDY nie zasila bloku własnej pochodni — inaczej pochodnia podłączona do
-  // wyjścia swojego przewodu migałaby bez końca (przewód odbijał jej sygnał
-  // z powrotem na jej blok). Inwersja liczy się TYLKO od bezpośredniego,
-  // prawdziwego źródła dotykającego bloku (dźwignia/przycisk/inna pochodnia) —
-  // patrz wyjątek w relayInto i FAZA 8. Sprawdzane wg stanu Bloku z
-  // POPRZEDNIEGO ticku (rsBlockPoweredPrev), nie bieżącego, żeby ewentualna
-  // celowa pętla przez inne komponenty (np. przez Repeater) nie zapętliła się
-  // w nieskończoność w jednym ticku. Symulacja tyka niezależnie od pętli rAF
-  // renderu (setInterval) — inny rytm niż płynna kamera/wejście.
+  // Blok jest zasilony skądinąd. WAŻNE: zwykły przewód NIGDY nie zasila Bloku
+  // pochodni (patrz `direct` w relayInto, FAZA 2) — inaczej przewód, którym
+  // pochodnia właśnie wysyła swój sygnał, natychmiast odbiłby go z powrotem
+  // na jej własny Blok W TYM SAMYM ticku (migotanie z maksymalną częstotliwością;
+  // sprawdzone empirycznie, 1-tickowy poślizg NIC tu nie chroni, bo to odbicie
+  // o zerowym dystansie w obrębie jednej propagacji, nie pętla w czasie).
+  // Odpowiada to realnej regule Minecrafta: "pochodnia nie jest zasilana przez
+  // przewód, który sama zasila". To, czego przewód NIE MOŻE, mogą za to
+  // Przekaźnik/Komparator dotykające Bloku pochodni WPROST (bez przewodu
+  // pomiędzy) — są kierunkowe (czytają z przeciwnej strony niż wychodzą) i mają
+  // własne opóźnienie, więc bezpiecznie ją odwracają — to jedyny sposób
+  // budowania zegarów/pętli z pochodni w tym silniku (np. Pochodnia -wire->
+  // wejście Przekaźnika, wyjście tego Przekaźnika dotyka z powrotem Bloku
+  // Pochodni wprost). Symulacja tyka niezależnie od pętli rAF renderu
+  // (setInterval) — inny rytm niż płynna kamera/wejście.
   const RS_TICK_MS = 100;
   const RS_REPEATER_DELAY = 1;   // ticki
   const RS_BUTTON_TICKS = 10;    // ~1s przy 10 tickach/s
   const RS_PISTON_MAX_PUSH = 12; // max długość łańcucha bloków do popchnięcia (jak w Minecrafcie)
   const RS_NOTE_FLASH_TICKS = 3;  // wizualny błysk Note Blocka po zagraniu (tylko render, nie logika)
+  const RS_DENIED_FLASH_TICKS = 4; // czerwony błysk gdy stawianie/pochodnia odrzucone (zajęte pole)
+  const RS_PISTON_ANIM_MS = 150;  // czas animacji wysuwania/chowania ramienia tłoka (tylko render, rAF, nie tick)
   const RS_MIN_SCALE = 14, RS_MAX_SCALE = 64; // px na komórkę
   const RS_ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const RS_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // rotation 0=E,1=S,2=W,3=N (kierunek WYJŚCIA przekaźnika)
@@ -842,6 +849,12 @@
   // kontrast dla ciemnych klocków. Reszta strony (toolbar, tło strony) nadal
   // podąża za globalnym motywem — to dotyczy tylko treści samego canvasu.
   const RS_BG = '#1e2029', RS_BORDER = '#2a2d3a', RS_TEXT2 = '#8a8fa8';
+  // Tło/obramowanie Repeatera/Komparatora/Observera — celowo WYRAŹNIE jaśniejsze
+  // niż RS_BG/RS_BORDER (które są prawie nie do odróżnienia od tła/siatki
+  // canvasu), inaczej te trzy komponenty są ledwo widoczne, zwłaszcza przy
+  // małym przybliżeniu — patrz zgłoszenie "niektóre bloki są ledwo widzialne".
+  const RS_COMPONENT_BG = '#343850', RS_COMPONENT_BORDER = '#565c80';
+  const RS_DENIED_COLOR = '#ff4d4d';
 
   let rsWorld = new Map();              // "x,y" -> {type, rotation?, torch?, on?} (ZAPISYWANE)
   let rsCamera = { x: 0, y: 0, scale: 28 }; // (ZAPISYWANE razem ze światem)
@@ -859,6 +872,9 @@
   let rsScheduledPistons = new Map();      // ulotne — key -> { dueTick, action: 'extend'|'retract' }
   let rsNoteBlockPoweredPrev = new Map();  // ulotne — stan zasilenia Note Blocków z poprzedniego ticku
   let rsNoteBlockPulse = new Map();        // ulotne — key -> tick do którego trwa wizualny błysk po zagraniu
+  let rsDeniedFlash = new Map();           // ulotne — key -> tick do którego trwa czerwony błysk "odrzucono"
+  let rsPistonAnim = new Map();            // ulotne — key -> { from, extending, t0 } (animacja ramienia, tylko render)
+  let rsPanelKey = null;                   // ulotne — klucz komórki z otwartym panelem ustawień ("select" na Repeater/Comparator)
   let rsAudioCtx = null;                   // leniwie tworzony przy pierwszym dźwięku (wymaga gestu użytkownika)
   let rsSimTimer = 0;
   let rsSaveT = 0;
@@ -899,6 +915,9 @@
     rsScheduledPistons = new Map();
     rsNoteBlockPoweredPrev = new Map();
     rsNoteBlockPulse = new Map();
+    rsDeniedFlash = new Map();
+    rsPistonAnim = new Map();
+    rsPanelKey = null;
   }
 
   // Prosty syntezowany dźwięk (Web Audio, bez plików/bibliotek) — zakres i
@@ -936,7 +955,7 @@
   }
 
   function rsDefaultCell(tool) {
-    if (tool === 'repeater') return { type: 'repeater', rotation: 0 };
+    if (tool === 'repeater') return { type: 'repeater', rotation: 0, delay: 1 };
     if (tool === 'comparator') return { type: 'comparator', rotation: 0, mode: 'compare' };
     if (tool === 'observer') return { type: 'observer', rotation: 0 };
     if (tool === 'piston' || tool === 'sticky_piston') return { type: tool, rotation: 0, extended: false };
@@ -954,24 +973,29 @@
   }
 
   // Dotknięcie komórki (cx,cy) — zachowanie zależy od wybranego narzędzia:
-  // - "select": obraca przekaźnik/komparator/observer/tłok (tłok tylko gdy NIE
-  //   jest wysunięty — obracanie w trakcie pchania zostawiłoby popchnięte
-  //   bloki w niespójnym stanie), przełącza dźwignię, naciska przycisk,
-  //   zmienia wysokość tonu Note Blocka (z podglądem dźwięku od razu).
+  // - "select": na Repeaterze/Komparatorze otwiera panel ustawień (obrót +
+  //   opóźnienie albo tryb — patrz rsOpenPanel/rsRenderPanel) zamiast obracać
+  //   od razu, bo te dwa komponenty mają dodatkowe parametry poza obrotem.
+  //   Na Observerze/tłoku (tłok tylko gdy NIE jest wysunięty — obracanie w
+  //   trakcie pchania zostawiłoby popchnięte bloki w niespójnym stanie) nadal
+  //   obraca wprost — nie mają nic więcej do ustawienia. Przełącza dźwignię,
+  //   naciska przycisk, zmienia wysokość tonu Note Blocka (z podglądem
+  //   dźwięku od razu).
   // - "torch": WYJĄTEK od "zajęte pole = nic" — dotyka istniejącego Bloku bez
   //   pochodni i ją dołącza (2D-owy odpowiednik "postaw pochodnię na bloku").
-  // - "compmode": WYJĄTEK analogiczny do "torch" — dotyka istniejącego
-  //   Komparatora i przełącza mu tryb compare/subtract (osobne narzędzie, bo
-  //   "select" na Komparatorze już obraca go, tak jak Repeater).
-  // - "eraser": usuwa cokolwiek stoi na polu.
-  // - inne narzędzie: stawia nowy klocek na PUSTYM polu (zajęte = nic, najpierw
-  //   trzeba wymazać).
+  // - "eraser": usuwa cokolwiek stoi na polu. Na Głowicy Tłoka (Piston Head)
+  //   chowa najpierw właściciela (żeby nie zostawić osieroconego "wysuniętego"
+  //   tłoka bez jego głowicy).
+  // - inne narzędzie: stawia nowy klocek na PUSTYM polu (zajęte = nic — próba
+  //   postawienia na zajętym polu daje krótki czerwony błysk "odrzucono", żeby
+  //   było jasne, że coś tam już jest, a nie że stawianie klocków nie działa).
   function rsHandleTap(cx, cy) {
     const key = rsKey(cx, cy);
     const cell = rsWorld.get(key);
     if (rsTool === 'select') {
-      if (!cell) return;
-      if (cell.type === 'repeater' || cell.type === 'comparator' || cell.type === 'observer') cell.rotation = (cell.rotation + 1) % 4;
+      if (!cell) { rsClosePanel(); return; }
+      if (cell.type === 'repeater' || cell.type === 'comparator') { rsOpenPanel(key); return; }
+      else if (cell.type === 'observer') cell.rotation = (cell.rotation + 1) % 4;
       else if ((cell.type === 'piston' || cell.type === 'sticky_piston') && !cell.extended) cell.rotation = (cell.rotation + 1) % 4;
       else if (cell.type === 'noteblock') { cell.pitch = (cell.pitch + 1) % 25; rsPlayNote(cell.pitch); }
       else if (cell.type === 'lever') cell.on = !cell.on;
@@ -979,7 +1003,14 @@
       else return;
     } else if (rsTool === 'eraser') {
       if (!cell) return;
-      rsWorld.delete(key);
+      if (cell.type === 'piston_head') {
+        const owner = rsWorld.get(cell.owner);
+        if (owner) rsPistonRetract(cell.owner, owner); // usuwa też samą głowicę
+        else rsWorld.delete(key); // osierocona głowica (nie powinno się zdarzyć) — po prostu usuń
+      } else {
+        rsWorld.delete(key);
+      }
+      if (key === rsPanelKey) rsClosePanel();
       rsScheduledRepeaters.delete(key);
       rsButtonActive.delete(key);
       rsScheduledComparators.delete(key);
@@ -992,12 +1023,9 @@
       rsNoteBlockPulse.delete(key);
     } else if (rsTool === 'torch') {
       if (cell && cell.type === 'block' && !cell.torch) cell.torch = true;
-      else return;
-    } else if (rsTool === 'compmode') {
-      if (cell && cell.type === 'comparator') cell.mode = (cell.mode === 'compare') ? 'subtract' : 'compare';
-      else return;
+      else { rsDeniedFlash.set(key, rsTick + RS_DENIED_FLASH_TICKS); return; }
     } else {
-      if (cell) return;
+      if (cell) { rsDeniedFlash.set(key, rsTick + RS_DENIED_FLASH_TICKS); return; }
       rsWorld.set(key, rsDefaultCell(rsTool));
     }
     rsUpdateBestFromSize();
@@ -1045,12 +1073,52 @@
     }
   }
 
+  // Krótki syntezowany "stuk" tłoka (ten sam leniwy rsAudioCtx co rsPlayNote)
+  // — opadający ton przy wysuwaniu, rosnący przy chowaniu, żeby oba kierunki
+  // brzmiały wyraźnie inaczej.
+  function rsPlayPistonSound(extending) {
+    try {
+      if (!rsAudioCtx) rsAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (rsAudioCtx.state === 'suspended') rsAudioCtx.resume();
+      const now = rsAudioCtx.currentTime;
+      const osc = rsAudioCtx.createOscillator();
+      const gain = rsAudioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(extending ? 90 : 60, now);
+      osc.frequency.exponentialRampToValueAtTime(extending ? 45 : 130, now + 0.12);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.16, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.connect(gain).connect(rsAudioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch (e) {}
+  }
+
+  // Postęp animacji ramienia tłoka 0→1 (schowany→wysunięty), TYLKO do
+  // rysowania — niezależny od ticku symulacji (rAF płynny, tick 100ms nie
+  // jest). rsPistonAnim trzyma znacznik czasu ustawiony w rsPistonExtend/
+  // Retract; po zakończeniu animacji wpis jest sprzątany, a funkcja wraca do
+  // zwracania samego (statycznego) `cell.extended`.
+  function rsPistonAnimProgress(key, cell) {
+    const anim = rsPistonAnim.get(key);
+    if (!anim) return cell.extended ? 1 : 0;
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const t = Math.min(1, (now - anim.t0) / RS_PISTON_ANIM_MS);
+    if (t >= 1) { rsPistonAnim.delete(key); return anim.extending ? 1 : 0; }
+    return anim.extending ? t : (1 - t);
+  }
+
   // Wysuwa tłok (o kluczu `key`, komórka `cell`) — jeśli już wysunięty, nic
   // nie robi (idempotentne, jak w Minecrafcie). Szuka łańcucha kolejnych
   // Bloków przed sobą w kierunku pchania; jeśli kończy się pustym polem (i nie
   // przekracza RS_PISTON_MAX_PUSH), przesuwa CAŁY łańcuch o 1 pole — inaczej
   // (cokolwiek nie-blokowego blokuje drogę, albo łańcuch za długi) nic się nie
-  // dzieje, zgodnie z zachowaniem prawdziwego tłoka "zablokowanego".
+  // dzieje, zgodnie z zachowaniem prawdziwego tłoka "zablokowanego". Pole tuż
+  // przed tłokiem (zawsze wolne po przesunięciu łańcucha) dostaje realną
+  // komórkę 'piston_head' — bez tego głowica była czystą dekoracją rysowaną
+  // NA WIERZCHU dowolnego klocka, który ktoś tam postawił w międzyczasie
+  // (efekt "stackowania"), i inny tłok mógł swobodnie pchać blok prosto w nią.
   function rsPistonExtend(key, cell) {
     if (cell.extended) return;
     const [x, y] = rsParseKey(key);
@@ -1060,7 +1128,7 @@
     while (true) {
       const there = rsWorld.get(rsKey(cx, cy));
       if (!there) break; // puste pole — koniec łańcucha, da się pchnąć
-      if (there.type !== 'block') return; // cokolwiek nie-blokowego — zablokowane
+      if (there.type !== 'block') return; // cokolwiek nie-blokowego (w tym Głowica innego tłoka) — zablokowane
       chain.push([cx, cy]);
       if (chain.length > RS_PISTON_MAX_PUSH) return; // za długi łańcuch — zablokowane
       cx += d[0]; cy += d[1];
@@ -1072,23 +1140,29 @@
       rsWorld.delete(rsKey(bx, by));
       rsWorld.set(rsKey(bx + d[0], by + d[1]), data);
     }
+    rsWorld.set(rsKey(x + d[0], y + d[1]), { type: 'piston_head', owner: key });
     cell.extended = true;
+    rsPistonAnim.set(key, { extending: true, t0: (typeof performance !== 'undefined' ? performance.now() : Date.now()) });
+    rsPlayPistonSound(true);
   }
 
-  // Chowa tłok. Zwykły tłok nic więcej nie robi (popchnięty blok zostaje tam,
-  // gdzie jest — jak w Minecrafcie). Sticky Piston dodatkowo ciągnie z powrotem
-  // JEDEN blok, jeśli stoi bezpośrednio "przy głowicy" (2 pola przed tłokiem —
-  // pole 1 pole przed tłokiem jest w tym modelu zawsze puste podczas wysunięcia,
-  // to tam "wraca" głowica razem z przyciągniętym blokiem).
+  // Chowa tłok — usuwa najpierw jego Głowicę (patrz rsPistonExtend). Zwykły
+  // tłok nic więcej nie robi (popchnięty blok zostaje tam, gdzie jest — jak w
+  // Minecrafcie). Sticky Piston dodatkowo ciągnie z powrotem JEDEN blok, jeśli
+  // stoi bezpośrednio "przy głowicy" (2 pola przed tłokiem — pole 1 pole przed
+  // tłokiem jest właśnie zwolnione przez usunięcie Głowicy, to tam "wraca"
+  // razem z przyciągniętym blokiem).
   function rsPistonRetract(key, cell) {
     if (!cell.extended) return;
     cell.extended = false;
-    if (cell.type !== 'sticky_piston') return;
     const [x, y] = rsParseKey(key);
     const d = RS_DIR[cell.rotation];
     const headKey = rsKey(x + d[0], y + d[1]);
+    rsWorld.delete(headKey);
+    rsPistonAnim.set(key, { extending: false, t0: (typeof performance !== 'undefined' ? performance.now() : Date.now()) });
+    rsPlayPistonSound(false);
+    if (cell.type !== 'sticky_piston') return;
     const attachedKey = rsKey(x + d[0] * 2, y + d[1] * 2);
-    if (rsWorld.has(headKey)) return; // coś już tam jest — nie przyciągaj (nie powinno się zdarzyć)
     const attached = rsWorld.get(attachedKey);
     if (attached && attached.type === 'block') {
       rsWorld.delete(attachedKey);
@@ -1179,43 +1253,56 @@
     // przekaźnika/komparatora na jego wejście).
     const power = new Map();
     const buckets = Array.from({ length: 16 }, () => []);
-    const relayInto = (pos, level) => {
+    // `direct` = true tylko dla wywołań z omniSources/directedInjections
+    // poniżej (bezpośredni dotyk: dźwignia/przycisk/inna pochodnia/wyjście
+    // przekaźnika lub komparatora). Blok Z POCHODNIĄ przyjmuje zasilenie
+    // TYLKO gdy direct === true — NIGDY z ogólnej propagacji przewodu
+    // (pętla niżej wywołuje relayInto bez trzeciego argumentu = false).
+    // Powód: przewód zasilany PRZEZ pochodnię zawsze jest też jej sąsiadem,
+    // więc zwykła propagacja natychmiast odbiłaby jej własny sygnał z
+    // powrotem na jej Blok W TYM SAMYM ticku (migotanie z maksymalną
+    // częstotliwością, niezależnie od opóźnień) — to nie jest pętla PRZEZ
+    // inne komponenty, tylko bezpośrednie odbicie o dystansie zero, którego
+    // nie da się bezpiecznie ominąć samym 1-tickowym poślizgiem. Odpowiada
+    // realnej regule Minecrafta: "pochodnia nie jest zasilana przez przewód,
+    // który sama zasila". Przekaźnik/komparator NIE mają tego problemu — są
+    // kierunkowe (czytają wejście z przeciwnej strony niż wyjście) i mają
+    // własne opóźnienie, więc mogą bezpiecznie odwracać pochodnię, do której
+    // dotykają wprost (patrz FAZA 1a/1b niżej) — to jedyny sposób budowania
+    // zegarów/pętli z pochodni w tym silniku (przewód sam z siebie nie może).
+    const relayInto = (pos, level, direct) => {
       if (level <= 0) return;
       const c = rsWorld.get(pos);
       if (!c) return;
-      // Blok Z POCHODNIĄ nigdy nie jest zasilany przez zwykły przewód — inaczej
-      // przewód podłączony do wyjścia własnej pochodni odbijałby jej sygnał
-      // z powrotem na jej blok i pochodnia migałaby bez końca. Inwersja liczy
-      // się TYLKO od bezpośredniego źródła obok bloku (patrz FAZA 8 niżej).
-      if (c.type === 'block' && c.torch) return;
+      if (c.type === 'block' && c.torch && !direct) return;
       if ((power.get(pos) || 0) >= level) return;
       power.set(pos, level);
       if (c.type === 'wire') buckets[level].push(pos);
     };
     for (const key of omniSources) {
       const [x, y] = rsParseKey(key);
-      for (const [nx, ny] of rsNeighbors(x, y)) relayInto(rsKey(nx, ny), 15);
+      for (const [nx, ny] of rsNeighbors(x, y)) relayInto(rsKey(nx, ny), 15, true);
     }
-    for (const inj of directedInjections) relayInto(inj.pos, inj.strength);
+    for (const inj of directedInjections) relayInto(inj.pos, inj.strength, true);
     for (let lvl = 15; lvl >= 1; lvl--) {
       for (const pos of buckets[lvl]) {
         if (power.get(pos) !== lvl) continue; // wpis nieaktualny, ktoś już nadpisał mocniejszym
         const [x, y] = rsParseKey(pos);
-        for (const [nx, ny] of rsNeighbors(x, y)) relayInto(rsKey(nx, ny), lvl - 1);
+        for (const [nx, ny] of rsNeighbors(x, y)) relayInto(rsKey(nx, ny), lvl - 1, false);
       }
     }
 
     // FAZA 3: Repeatery — sprawdź TYLKO pole od strony wejścia (rotation+180°)
     // — ta jednostronność daje efekt diody (blokada przepływu zwrotnego z
     // wyjścia). Jeśli zasilone i jeszcze nic nie zaplanowano, zaplanuj wyjście
-    // na kolejny tick (ciągłe zasilanie = ciągłe odpalanie co tick, z
-    // 1-tickowym opóźnieniem, jak prawdziwy przekaźnik).
+    // za `cell.delay` ticków (1-4, ustawiane w panelu ustawień — "select" na
+    // Repeaterze — domyślnie 1, jak świeżo postawiony w Minecrafcie).
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'repeater') continue;
       const [x, y] = rsParseKey(key);
       const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
       if (rsCellPowerFor(inKey, power, torchLitNow) > 0 && !rsScheduledRepeaters.has(key)) {
-        rsScheduledRepeaters.set(key, { dueTick: rsTick + RS_REPEATER_DELAY });
+        rsScheduledRepeaters.set(key, { dueTick: rsTick + (cell.delay || 1) });
       }
     }
 
@@ -1291,28 +1378,18 @@
     }
     rsNoteBlockPoweredPrev = nextNoteBlockPowered;
 
-    // FAZA 8: aktualizacja bloków — zapisz stan zasilenia Bloków z TEGO ticku,
-    // użyje go dopiero NASTĘPNY tick przy sprawdzaniu pochodni. Blok BEZ
-    // pochodni: zwykłe zasilenie z mapy `power` (zwykła ciekawostka, nic go
-    // nie odbiera). Blok Z pochodnią: inwersja liczy się TYLKO od
-    // bezpośredniego, prawdziwego źródła dotykającego bloku (dźwignia/
-    // przycisk/inna świecąca pochodnia) — NIGDY od zwykłego przewodu (patrz
-    // wyjątek w relayInto wyżej), inaczej podłączenie pochodni do własnego
-    // przewodu migałoby bez końca zamiast dawać stabilne zasilenie.
+    // FAZA 8: aktualizacja bloków — zapisz stan zasilenia Bloków z TEGO ticku
+    // prosto z mapy `power`. Dla zwykłego Bloku to każde zasilenie (przewód
+    // lub źródło bezpośrednie). Dla Bloku Z POCHODNIĄ wychodzi na to samo,
+    // bo relayInto (FAZA 2, `direct`) już zagwarantował, że `power` dla TEJ
+    // komórki mogło wzrosnąć TYLKO przez bezpośredni dotyk (dźwignia/
+    // przycisk/inna pochodnia przez omniSources, przekaźnik/komparator przez
+    // directedInjections) — zwykły przewód nigdy tu nic nie wpisał. Użyje
+    // tego dopiero NASTĘPNY tick przy sprawdzaniu pochodni.
     const nextBlockPowered = new Map();
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'block') continue;
-      if (!cell.torch) { nextBlockPowered.set(key, (power.get(key) || 0) > 0); continue; }
-      const [x, y] = rsParseKey(key);
-      let poweredByOther = false;
-      for (const [nx, ny] of rsNeighbors(x, y)) {
-        const nc = rsWorld.get(rsKey(nx, ny));
-        if (!nc) continue;
-        if (nc.type === 'lever' && nc.on) { poweredByOther = true; break; }
-        if (nc.type === 'button' && (rsButtonActive.get(rsKey(nx, ny)) || 0) > rsTick) { poweredByOther = true; break; }
-        if (nc.type === 'block' && nc.torch && torchLitNow.get(rsKey(nx, ny))) { poweredByOther = true; break; }
-      }
-      nextBlockPowered.set(key, poweredByOther);
+      nextBlockPowered.set(key, (power.get(key) || 0) > 0);
     }
     rsBlockPoweredPrev = nextBlockPowered;
     rsLastPower = power; // tylko do rysowania
@@ -1407,10 +1484,10 @@
     const el = $('games-toolbar');
     if (!el) return;
     el.style.display = 'flex';
-    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'compmode', 'observer',
+    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'observer',
       'piston', 'sticky_piston', 'noteblock', 'lever', 'button', 'lamp', 'eraser'];
     const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch',
-      repeater: 'rsToolRepeater', comparator: 'rsToolComparator', compmode: 'rsToolCompMode', observer: 'rsToolObserver',
+      repeater: 'rsToolRepeater', comparator: 'rsToolComparator', observer: 'rsToolObserver',
       piston: 'rsToolPiston', sticky_piston: 'rsToolStickyPiston', noteblock: 'rsToolNoteBlock',
       lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', eraser: 'rsToolEraser' };
     el.innerHTML = tools.map((id) =>
@@ -1421,6 +1498,7 @@
       b.onclick = () => {
         rsTool = b.getAttribute('data-rs-tool');
         el.querySelectorAll('button[data-rs-tool]').forEach((x) => x.classList.toggle('is-active', x === b));
+        rsClosePanel();
       };
     });
     const clearBtn = el.querySelector('button[data-rs-clear]');
@@ -1439,9 +1517,82 @@
       rsScheduledPistons = new Map();
       rsNoteBlockPoweredPrev = new Map();
       rsNoteBlockPulse = new Map();
+      rsDeniedFlash = new Map();
+      rsPistonAnim = new Map();
+      rsClosePanel();
       setScore(0);
       rsScheduleSave();
     };
+    rsBuildPanel();
+  }
+
+  // ── Panel ustawień (Repeater/Comparator) ───────────────────────────────
+  // Zamiast osobnych przycisków w toolbarze ("select" na Repeaterze/
+  // Komparatorze dawniej po prostu obracał je od razu), dotknięcie jednego z
+  // tych dwóch komponentów narzędziem "select" otwiera mały panel pod
+  // toolbarem z obrotem + parametrem specyficznym dla typu (opóźnienie
+  // Repeatera 1-4 / tryb compare-subtract Komparatora). Ponowne dotknięcie
+  // tej samej komórki zamyka panel; zmiana narzędzia też go zamyka.
+  function rsBuildPanel() {
+    const toolbar = $('games-toolbar');
+    if (!toolbar || !toolbar.parentNode) return null;
+    let panel = $('games-rs-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'games-rs-panel';
+      panel.className = 'games-toolbar';
+      panel.style.display = 'none';
+      toolbar.parentNode.insertBefore(panel, toolbar.nextSibling);
+    }
+    return panel;
+  }
+
+  function rsOpenPanel(key) {
+    rsPanelKey = (rsPanelKey === key) ? null : key;
+    rsRenderPanel();
+  }
+
+  function rsClosePanel() {
+    if (rsPanelKey === null) return;
+    rsPanelKey = null;
+    rsRenderPanel();
+  }
+
+  function rsRenderPanel() {
+    const panel = rsBuildPanel();
+    if (!panel) return;
+    const cell = rsPanelKey ? rsWorld.get(rsPanelKey) : null;
+    if (!cell || (cell.type !== 'repeater' && cell.type !== 'comparator')) {
+      panel.style.display = 'none';
+      panel.innerHTML = '';
+      rsPanelKey = null;
+      return;
+    }
+    panel.style.display = 'flex';
+    let html = `<button class="btn-secondary btn-sm" data-rs-panel-rotate="1">↻ ${t('rsPanelRotate')}</button>`;
+    if (cell.type === 'repeater') {
+      html += `<span class="text2" style="font-size:12px;align-self:center">${t('rsPanelDelay')}:</span>`;
+      html += [1, 2, 3, 4].map((n) =>
+        `<button class="btn-secondary btn-sm${(cell.delay || 1) === n ? ' is-active' : ''}" data-rs-panel-delay="${n}">${n}</button>`
+      ).join('');
+    } else {
+      html += `<span class="text2" style="font-size:12px;align-self:center">${t('rsPanelMode')}:</span>`;
+      html += `<button class="btn-secondary btn-sm${cell.mode === 'compare' ? ' is-active' : ''}" data-rs-panel-mode="compare">${t('rsModeCompare')}</button>`;
+      html += `<button class="btn-secondary btn-sm${cell.mode === 'subtract' ? ' is-active' : ''}" data-rs-panel-mode="subtract">${t('rsModeSubtract')}</button>`;
+    }
+    html += `<button class="btn-secondary btn-sm" data-rs-panel-close="1">✕ ${t('rsPanelClose')}</button>`;
+    panel.innerHTML = html;
+
+    const rotateBtn = panel.querySelector('button[data-rs-panel-rotate]');
+    if (rotateBtn) rotateBtn.onclick = () => { cell.rotation = (cell.rotation + 1) % 4; rsScheduleSave(); };
+    panel.querySelectorAll('button[data-rs-panel-delay]').forEach((b) => {
+      b.onclick = () => { cell.delay = parseInt(b.getAttribute('data-rs-panel-delay'), 10); rsScheduleSave(); rsRenderPanel(); };
+    });
+    panel.querySelectorAll('button[data-rs-panel-mode]').forEach((b) => {
+      b.onclick = () => { cell.mode = b.getAttribute('data-rs-panel-mode'); rsScheduleSave(); rsRenderPanel(); };
+    });
+    const closeBtn = panel.querySelector('button[data-rs-panel-close]');
+    if (closeBtn) closeBtn.onclick = () => rsClosePanel();
   }
 
   // ── Rysowanie (kolory/kształty wektorowe — brak grafik, czytelność przede
@@ -1496,52 +1647,75 @@
     ctx.beginPath(); ctx.arc(cx, cy, s * (connected ? 0.1 : 0.12), 0, Math.PI * 2); ctx.fill();
   }
 
+  // Trójkątna strzałka wskazująca kierunek — współdzielona przez Repeater/
+  // Comparator/Observer/Piston, żeby "w którą stronę patrzy" było czytelne na
+  // pierwszy rzut oka (dawniej Repeater/Comparator rysowały dwie IDENTYCZNE
+  // kropki wzdłuż osi — bez żadnej wskazówki, która jest wejściem a która
+  // wyjściem).
+  function rsDrawDirArrow(ctx, cx, cy, d, s, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(cx + d[0] * s * 0.32, cy + d[1] * s * 0.32);
+    ctx.lineTo(cx + d[0] * s * 0.1 - d[1] * s * 0.14, cy + d[1] * s * 0.1 - d[0] * s * 0.14);
+    ctx.lineTo(cx + d[0] * s * 0.1 + d[1] * s * 0.14, cy + d[1] * s * 0.1 + d[0] * s * 0.14);
+    ctx.closePath();
+    ctx.fill();
+  }
+
   function rsDrawRepeater(ctx, sx, sy, s, cell, key) {
-    ctx.fillStyle = RS_BG;
+    ctx.fillStyle = RS_COMPONENT_BG;
     ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
-    ctx.strokeStyle = RS_BORDER;
+    ctx.strokeStyle = RS_COMPONENT_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
     const active = rsScheduledRepeaters.has(key);
-    ctx.fillStyle = active ? '#ff6b1a' : '#8a8fa8';
     const d = RS_DIR[cell.rotation];
     const cx = sx + s / 2, cy = sy + s / 2;
-    ctx.beginPath(); ctx.arc(cx + d[0] * s * 0.22, cy + d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx - d[0] * s * 0.22, cy - d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
+    rsDrawDirArrow(ctx, cx, cy, d, s, active ? '#ff6b1a' : '#c7cbe0');
+    // Kreski opóźnienia (1-4, ustawiane w panelu ustawień) w poprzek bliżej
+    // wejścia — jak liczba "pochodni" na Repeaterze w Minecrafcie, żeby
+    // opóźnienie było widać od razu, a nie tylko odczuwalne w czasie.
+    const perp = [-d[1], d[0]];
+    const delay = cell.delay || 1;
+    ctx.fillStyle = active ? '#ff9d52' : '#8a8fa8';
+    for (let i = 0; i < delay; i++) {
+      const t = (i - (delay - 1) / 2) * 0.22;
+      const bx = cx - d[0] * s * 0.28 + perp[0] * s * t;
+      const by = cy - d[1] * s * 0.28 + perp[1] * s * t;
+      ctx.fillRect(bx - s * 0.03, by - s * 0.03, s * 0.06, s * 0.06);
+    }
   }
 
   function rsDrawComparator(ctx, sx, sy, s, cell, key) {
-    ctx.fillStyle = RS_BG;
+    ctx.fillStyle = RS_COMPONENT_BG;
     ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
-    ctx.strokeStyle = RS_BORDER;
+    ctx.strokeStyle = RS_COMPONENT_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
     const out = rsComparatorOutputPrev.get(key) || 0;
     const d = RS_DIR[cell.rotation];
     const cx = sx + s / 2, cy = sy + s / 2;
-    // Dwie kropki jak w przekaźniku (kierunek wejście/wyjście), jasność wg
-    // aktualnej siły wyjścia — spójne z konwencją przewodu (rsDrawWire).
-    ctx.fillStyle = out > 0 ? rsLerpColor(RS_WIRE_OFF, RS_WIRE_ON, out / 15) : '#8a8fa8';
-    ctx.beginPath(); ctx.arc(cx + d[0] * s * 0.22, cy + d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx - d[0] * s * 0.22, cy - d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
+    // Strzałka = kierunek wyjścia, jasność wg aktualnej siły wyjścia — spójne
+    // z konwencją przewodu (rsDrawWire).
+    rsDrawDirArrow(ctx, cx, cy, d, s, out > 0 ? rsLerpColor(RS_WIRE_OFF, RS_WIRE_ON, out / 15) : '#c7cbe0');
     // Środkowa kropka = tryb (szara = compare, pomarańczowa = subtract).
-    ctx.fillStyle = cell.mode === 'subtract' ? '#ff6b1a' : '#5a5f70';
-    ctx.beginPath(); ctx.arc(cx, cy, s * 0.06, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = cell.mode === 'subtract' ? '#ff6b1a' : '#8a8fa8';
+    ctx.beginPath(); ctx.arc(cx, cy, s * 0.07, 0, Math.PI * 2); ctx.fill();
   }
 
   function rsDrawObserver(ctx, sx, sy, s, cell, key) {
-    ctx.fillStyle = RS_BG;
+    ctx.fillStyle = RS_COMPONENT_BG;
     ctx.fillRect(sx + s * 0.08, sy + s * 0.08, s * 0.84, s * 0.84);
-    ctx.strokeStyle = RS_BORDER;
+    ctx.strokeStyle = RS_COMPONENT_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.08, sy + s * 0.08, s * 0.84, s * 0.84);
     const d = RS_DIR[cell.rotation];
     const cx = sx + s / 2, cy = sy + s / 2;
     const pulsing = rsScheduledObservers.has(key);
-    // "Obiektyw" na froncie (kierunek obserwacji) — podświetla się dokładnie
-    // przez 1 tick, gdy zaplanowany jest impuls.
-    ctx.fillStyle = pulsing ? '#ff6b1a' : '#8a8fa8';
-    ctx.beginPath(); ctx.arc(cx + d[0] * s * 0.3, cy + d[1] * s * 0.3, s * 0.12, 0, Math.PI * 2); ctx.fill();
+    // Strzałka = kierunek OBSERWACJI (froncie), podświetla się dokładnie
+    // przez 1 tick gdy zaplanowany jest impuls (impuls wychodzi z tyłu, jak
+    // w Minecrafcie — patrz FAZA 1/5).
+    rsDrawDirArrow(ctx, cx, cy, d, s, pulsing ? '#ff6b1a' : '#c7cbe0');
   }
 
   function rsDrawPiston(ctx, sx, sy, s, cell, x, y) {
@@ -1551,21 +1725,24 @@
     const d = RS_DIR[cell.rotation];
     const cx = sx + s / 2, cy = sy + s / 2;
     // Strzałka kierunku pchania — kolor odróżnia sticky (zielony) od zwykłego (szary).
-    ctx.fillStyle = sticky ? '#4ecca3' : '#8a8fa8';
-    ctx.beginPath();
-    ctx.moveTo(cx + d[0] * s * 0.32, cy + d[1] * s * 0.32);
-    ctx.lineTo(cx + d[0] * s * 0.1 - d[1] * s * 0.14, cy + d[1] * s * 0.1 - d[0] * s * 0.14);
-    ctx.lineTo(cx + d[0] * s * 0.1 + d[1] * s * 0.14, cy + d[1] * s * 0.1 + d[0] * s * 0.14);
-    ctx.closePath();
-    ctx.fill();
-    if (cell.extended) {
-      // "Ramię" tłoka — pasek wchodzący w sąsiednią komórkę w kierunku pchania
-      // (to pole jest w tym modelu zawsze puste podczas wysunięcia, więc
-      // rysowanie na nim jest bezpieczne — nic tam nie koliduje).
-      const front = rsWorldToScreen(x + d[0], y + d[1]);
-      ctx.fillStyle = sticky ? '#2f8a68' : '#6b7280';
-      if (d[0] !== 0) ctx.fillRect(front.sx + (d[0] > 0 ? 0 : s * 0.55), front.sy + s * 0.35, s * 0.45, s * 0.3);
-      else ctx.fillRect(front.sx + s * 0.35, front.sy + (d[1] > 0 ? 0 : s * 0.55), s * 0.3, s * 0.45);
+    rsDrawDirArrow(ctx, cx, cy, d, s, sticky ? '#4ecca3' : '#c7cbe0');
+    const anim = rsPistonAnimProgress(rsKey(x, y), cell);
+    if (anim > 0) {
+      // Ramię/głowica tłoka — jeden ciągły pasek od krawędzi korpusu tłoka
+      // (a nie luźny, oderwany prostokąt na środku sąsiedniej komórki jak
+      // poprzednio) aż po wyraźną "czapeczkę" głowicy, animowany od 0 (schowany)
+      // do 1 (w pełni wysunięty) przez RS_PISTON_ANIM_MS, niezależnie od ticku
+      // symulacji (płynny rAF).
+      const bodyEdge = 0.5, headLen = 0.62 * anim;
+      const barColor = sticky ? '#2f8a68' : '#6b7280';
+      const headColor = sticky ? '#4ecca3' : '#9aa0b4';
+      ctx.fillStyle = barColor;
+      if (d[0] !== 0) ctx.fillRect(cx + d[0] * s * bodyEdge - (d[0] > 0 ? 0 : s * headLen), cy - s * 0.12, s * headLen, s * 0.24);
+      else ctx.fillRect(cx - s * 0.12, cy + d[1] * s * bodyEdge - (d[1] > 0 ? 0 : s * headLen), s * 0.24, s * headLen);
+      const headCx = cx + d[0] * s * (bodyEdge + headLen), headCy = cy + d[1] * s * (bodyEdge + headLen);
+      ctx.fillStyle = headColor;
+      if (d[0] !== 0) ctx.fillRect(headCx - s * 0.06, cy - s * 0.22, s * 0.12, s * 0.44);
+      else ctx.fillRect(cx - s * 0.22, headCy - s * 0.06, s * 0.44, s * 0.12);
     }
   }
 
@@ -1651,6 +1828,18 @@
         if (x < minX || x > maxX || y < minY || y > maxY) continue;
         rsDrawCell(ctx, x, y, cell, key);
       }
+      // Czerwony błysk "odrzucono" na polach, gdzie stawianie właśnie zawiodło
+      // bo pole jest zajęte (patrz rsHandleTap) — bez tego niepowodzenie jest
+      // ciche i wygląda jak zepsute stawianie klocków.
+      for (const [key, until] of rsDeniedFlash) {
+        if (until <= rsTick) { rsDeniedFlash.delete(key); continue; }
+        const [x, y] = rsParseKey(key);
+        const { sx, sy } = rsWorldToScreen(x, y);
+        const s = rsCamera.scale;
+        ctx.strokeStyle = RS_DENIED_COLOR;
+        ctx.lineWidth = Math.max(2, s * 0.12);
+        ctx.strokeRect(sx + 2, sy + 2, s - 4, s - 4);
+      }
     }
 
     engine = {
@@ -1666,6 +1855,9 @@
         if (rsAudioCtx) { rsAudioCtx.close().catch(() => {}); rsAudioCtx = null; }
         const tb = $('games-toolbar');
         if (tb) { tb.innerHTML = ''; tb.style.display = 'none'; }
+        const panel = $('games-rs-panel');
+        if (panel) { panel.innerHTML = ''; panel.style.display = 'none'; }
+        rsPanelKey = null;
       },
     };
     runLoop(step);
