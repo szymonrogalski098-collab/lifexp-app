@@ -1,4 +1,4 @@
-/* LifeXP — mini-gry offline (Łapacz monet, Snake, 2048).
+/* LifeXP — mini-gry offline (Łapacz monet, Snake, 2048, Redstone).
    Zasada nadrzędna: gry i punkty/Money to osobne światy — zero Firestore,
    zero punktów LifeXP. Jedyny zapis: lokalne rekordy w localStorage.
    Vanilla JS + <canvas>, bez zewnętrznych bibliotek. */
@@ -11,9 +11,10 @@
     (getComputedStyle(document.body).getPropertyValue(name) || '').trim() || fallback;
 
   const GAMES = {
-    coins:  { emoji: '🪙', nameKey: 'coinsName',  hintKey: 'coinsHint',  hsKey: 'lifexp-game-highscore-coins' },
-    snake:  { emoji: '🐍', nameKey: 'snakeName',  hintKey: 'snakeHint',  hsKey: 'lifexp-game-highscore-snake' },
-    g2048:  { emoji: '🔢', nameKey: 'g2048Name',  hintKey: 'g2048Hint',  hsKey: 'lifexp-game-highscore-2048' },
+    coins:    { emoji: '🪙', nameKey: 'coinsName',    hintKey: 'coinsHint',    hsKey: 'lifexp-game-highscore-coins' },
+    snake:    { emoji: '🐍', nameKey: 'snakeName',    hintKey: 'snakeHint',    hsKey: 'lifexp-game-highscore-snake' },
+    g2048:    { emoji: '🔢', nameKey: 'g2048Name',    hintKey: 'g2048Hint',    hsKey: 'lifexp-game-highscore-2048' },
+    redstone: { emoji: '🔴', nameKey: 'redstoneName', hintKey: 'redstoneHint', hsKey: 'lifexp-game-highscore-redstone' },
   };
 
   const getBest = (id) => { try { return parseInt(localStorage.getItem(GAMES[id].hsKey)) || 0; } catch (e) { return 0; } };
@@ -814,8 +815,465 @@
     reset();
   }
 
+  // ── Redstone (piaskownica obwodów) ────────────────────
+  // 2D, widok z góry, inspirowane redstone z Minecrafta. Sygnał 0-15, zanika o 1
+  // na komórkę przewodu. Pochodnia stoi NA Bloku i jest bramką NOT — gaśnie gdy
+  // Blok jest zasilony skądinąd. Ważne: sprawdzamy to wg stanu Bloku z
+  // POPRZEDNIEGO ticku (rsBlockPoweredPrev), nie bieżącego — dzięki temu pętla
+  // zwrotna (pochodnia zasilająca przez przewód własny blok) nie zapętla się w
+  // nieskończoność w jednym ticku, tylko mruga raz na tick, dokładnie jak
+  // prawdziwy "torch clock" w Minecrafcie. Symulacja tyka niezależnie od pętli
+  // rAF renderu (setInterval) — inny rytm niż płynna kamera/wejście.
+  const RS_TICK_MS = 100;
+  const RS_REPEATER_DELAY = 1;   // ticki
+  const RS_BUTTON_TICKS = 10;    // ~1s przy 10 tickach/s
+  const RS_MIN_SCALE = 14, RS_MAX_SCALE = 64; // px na komórkę
+  const RS_ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const RS_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // rotation 0=E,1=S,2=W,3=N (kierunek WYJŚCIA przekaźnika)
+  const RS_WIRE_OFF = [74, 20, 20], RS_WIRE_ON = [255, 107, 26];
+
+  let rsWorld = new Map();              // "x,y" -> {type, rotation?, torch?, on?} (ZAPISYWANE)
+  let rsCamera = { x: 0, y: 0, scale: 28 }; // (ZAPISYWANE razem ze światem)
+  let rsTool = 'select';
+  let rsTick = 0;
+  let rsBlockPoweredPrev = new Map();   // ulotne — stan Bloków z poprzedniego ticku
+  let rsScheduledRepeaters = new Map(); // ulotne — key -> { dueTick }
+  let rsButtonActive = new Map();       // ulotne — key -> tick do którego przycisk aktywny
+  let rsLastPower = new Map();          // ulotne, tylko do rysowania
+  let rsSimTimer = 0;
+  let rsSaveT = 0;
+  let rsW = 0, rsH = 0;
+
+  const rsKey = (x, y) => x + ',' + y;
+  const rsParseKey = (key) => { const p = key.split(','); return [parseInt(p[0], 10), parseInt(p[1], 10)]; };
+  const rsNeighbors = (x, y) => RS_ORTHO.map(([dx, dy]) => [x + dx, y + dy]);
+  const rsRepeaterOut = (x, y, rot) => { const d = RS_DIR[rot]; return [x + d[0], y + d[1]]; };
+  const rsRepeaterIn = (x, y, rot) => { const d = RS_DIR[(rot + 2) % 4]; return [x + d[0], y + d[1]]; };
+
+  function rsLoadWorld() {
+    rsWorld = new Map();
+    rsCamera = { x: 0, y: 0, scale: 28 };
+    try {
+      const raw = localStorage.getItem('lifexp-redstone-world');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.cells)) rsWorld = new Map(parsed.cells);
+        if (parsed && parsed.cam) rsCamera = { x: parsed.cam.x || 0, y: parsed.cam.y || 0, scale: parsed.cam.scale || 28 };
+      }
+    } catch (e) {}
+    rsTick = 0;
+    rsBlockPoweredPrev = new Map();
+    rsScheduledRepeaters = new Map();
+    rsButtonActive = new Map();
+    rsLastPower = new Map();
+  }
+
+  function rsSaveWorld() {
+    try {
+      localStorage.setItem('lifexp-redstone-world', JSON.stringify({
+        v: 1, cells: Array.from(rsWorld.entries()), cam: rsCamera,
+      }));
+    } catch (e) {}
+  }
+
+  function rsScheduleSave() {
+    clearTimeout(rsSaveT);
+    rsSaveT = setTimeout(rsSaveWorld, 500);
+  }
+
+  function rsDefaultCell(tool) {
+    if (tool === 'repeater') return { type: 'repeater', rotation: 0 };
+    if (tool === 'lever') return { type: 'lever', on: false };
+    if (tool === 'block') return { type: 'block', torch: false };
+    return { type: tool }; // wire, button, lamp
+  }
+
+  function rsUpdateBestFromSize() {
+    if (rsWorld.size > getBest('redstone')) {
+      setBest('redstone', rsWorld.size);
+      setBestLabel(rsWorld.size);
+    }
+  }
+
+  // Dotknięcie komórki (cx,cy) — zachowanie zależy od wybranego narzędzia:
+  // - "select": obraca przekaźnik / przełącza dźwignię / naciska przycisk;
+  //   blok/przewód/pochodnia/lampa — nic (brak akcji do wykonania na nich).
+  // - "torch": WYJĄTEK od "zajęte pole = nic" — dotyka istniejącego Bloku bez
+  //   pochodni i ją dołącza (2D-owy odpowiednik "postaw pochodnię na bloku").
+  // - "eraser": usuwa cokolwiek stoi na polu.
+  // - inne narzędzie: stawia nowy klocek na PUSTYM polu (zajęte = nic, najpierw
+  //   trzeba wymazać).
+  function rsHandleTap(cx, cy) {
+    const key = rsKey(cx, cy);
+    const cell = rsWorld.get(key);
+    if (rsTool === 'select') {
+      if (!cell) return;
+      if (cell.type === 'repeater') cell.rotation = (cell.rotation + 1) % 4;
+      else if (cell.type === 'lever') cell.on = !cell.on;
+      else if (cell.type === 'button') rsButtonActive.set(key, rsTick + RS_BUTTON_TICKS);
+      else return;
+    } else if (rsTool === 'eraser') {
+      if (!cell) return;
+      rsWorld.delete(key);
+      rsScheduledRepeaters.delete(key);
+      rsButtonActive.delete(key);
+    } else if (rsTool === 'torch') {
+      if (cell && cell.type === 'block' && !cell.torch) cell.torch = true;
+      else return;
+    } else {
+      if (cell) return;
+      rsWorld.set(key, rsDefaultCell(rsTool));
+    }
+    rsUpdateBestFromSize();
+    rsScheduleSave();
+  }
+
+  // ── Symulacja (setInterval, ~10 ticków/s, niezależna od rAF renderu) ──
+  function rsTick_() {
+    rsTick++;
+
+    // 1) Przekaźniki zaplanowane w poprzednich tickach odpalają teraz —
+    //    kierunkowe wstrzyknięcie sygnału TYLKO w pole wyjściowe (nie dookoła).
+    const directedInjections = [];
+    for (const [key, sched] of rsScheduledRepeaters) {
+      if (sched.dueTick <= rsTick) {
+        const cell = rsWorld.get(key);
+        if (cell && cell.type === 'repeater') {
+          const [x, y] = rsParseKey(key);
+          directedInjections.push(rsKey(...rsRepeaterOut(x, y, cell.rotation)));
+        }
+        rsScheduledRepeaters.delete(key);
+      }
+    }
+
+    // 2) Źródła wszechkierunkowe: pochodnie (wg stanu Bloku z POPRZEDNIEGO
+    //    ticku — to jest ten 1-tickowy lag łamiący pętlę zwrotną), dźwignie
+    //    włączone, przyciski wciąż aktywne.
+    const omniSources = [];
+    for (const [key, cell] of rsWorld) {
+      if (cell.type === 'block' && cell.torch && !rsBlockPoweredPrev.get(key)) omniSources.push(key);
+      else if (cell.type === 'lever' && cell.on) omniSources.push(key);
+      else if (cell.type === 'button' && (rsButtonActive.get(key) || 0) > rsTick) omniSources.push(key);
+    }
+
+    // 3) Wielo-źródłowy BFS z zanikiem (kubełki wg siły 15→1). Każda komórka
+    //    przyjmuje tylko NAJSILNIEJSZY sygnał jaki do niej dotarł i to wystarczy
+    //    — klasyczne "shortest path z zanikiem", jeden przebieg, bez pętli.
+    //    Dalej propagują TYLKO przewody (wire) — blok/lampa/przekaźnik/dźwignia/
+    //    przycisk to zawsze ślepy zaułek (stąd brak przewodzenia przez blok i
+    //    brak "przecieku" z wyjścia przekaźnika na jego wejście).
+    const power = new Map();
+    const buckets = Array.from({ length: 16 }, () => []);
+    const relayInto = (pos, level) => {
+      if (level <= 0) return;
+      const c = rsWorld.get(pos);
+      if (!c) return;
+      if ((power.get(pos) || 0) >= level) return;
+      power.set(pos, level);
+      if (c.type === 'wire') buckets[level].push(pos);
+    };
+    for (const key of omniSources) {
+      const [x, y] = rsParseKey(key);
+      for (const [nx, ny] of rsNeighbors(x, y)) relayInto(rsKey(nx, ny), 15);
+    }
+    for (const pos of directedInjections) relayInto(pos, 15);
+    for (let lvl = 15; lvl >= 1; lvl--) {
+      for (const pos of buckets[lvl]) {
+        if (power.get(pos) !== lvl) continue; // wpis nieaktualny, ktoś już nadpisał mocniejszym
+        const [x, y] = rsParseKey(pos);
+        for (const [nx, ny] of rsNeighbors(x, y)) relayInto(rsKey(nx, ny), lvl - 1);
+      }
+    }
+
+    // 4) Przekaźniki: sprawdź TYLKO pole od strony wejścia (rotation+180°) —
+    //    to właśnie ta jednostronność daje efekt diody (blokada przepływu
+    //    zwrotnego z wyjścia). Jeśli zasilone i jeszcze nic nie zaplanowano,
+    //    zaplanuj wyjście na kolejny tick (ciągłe zasilanie = ciągłe odpalanie
+    //    co tick, z 1-tickowym opóźnieniem, jak prawdziwy przekaźnik).
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'repeater') continue;
+      const [x, y] = rsParseKey(key);
+      const inKey = rsKey(...rsRepeaterIn(x, y, cell.rotation));
+      if ((power.get(inKey) || 0) > 0 && !rsScheduledRepeaters.has(key)) {
+        rsScheduledRepeaters.set(key, { dueTick: rsTick + RS_REPEATER_DELAY });
+      }
+    }
+
+    // 5) Zapisz stan zasilenia Bloków z TEGO ticku — użyje go dopiero
+    //    NASTĘPNY tick przy sprawdzaniu pochodni (patrz komentarz na górze).
+    const nextBlockPowered = new Map();
+    for (const [key, cell] of rsWorld) {
+      if (cell.type === 'block') nextBlockPowered.set(key, (power.get(key) || 0) > 0);
+    }
+    rsBlockPoweredPrev = nextBlockPowered;
+    rsLastPower = power; // tylko do rysowania
+  }
+
+  // ── Kamera / gesty (nic podobnego nie ma jeszcze w kodzie — od zera) ──
+  function rsWorldToScreen(wx, wy) {
+    return {
+      sx: rsW / 2 + (wx - rsCamera.x) * rsCamera.scale,
+      sy: rsH / 2 + (wy - rsCamera.y) * rsCamera.scale,
+    };
+  }
+
+  function rsBindGestures(canvas) {
+    let mode = null; // 'pan' | 'pinch' | null
+    let startX = 0, startY = 0, startCamX = 0, startCamY = 0, moved = false;
+    let pinchStartDist = 0, pinchStartScale = 0;
+
+    const pointOf = (e) => { const p = e.touches ? e.touches[0] : e; return { x: p.clientX, y: p.clientY }; };
+    const dist2 = (t0, t1) => Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+    const clampScale = (s) => Math.max(RS_MIN_SCALE, Math.min(RS_MAX_SCALE, s));
+
+    function onDown(e) {
+      e.preventDefault();
+      if (e.touches && e.touches.length === 2) {
+        mode = 'pinch';
+        pinchStartDist = dist2(e.touches[0], e.touches[1]);
+        pinchStartScale = rsCamera.scale;
+        return;
+      }
+      mode = 'pan'; moved = false;
+      const p = pointOf(e);
+      startX = p.x; startY = p.y;
+      startCamX = rsCamera.x; startCamY = rsCamera.y;
+    }
+    function onMove(e) {
+      if (!mode) return;
+      e.preventDefault();
+      if (mode === 'pinch' && e.touches && e.touches.length === 2) {
+        const d = dist2(e.touches[0], e.touches[1]);
+        rsCamera.scale = clampScale(pinchStartScale * (d / Math.max(1, pinchStartDist)));
+        return;
+      }
+      if (mode === 'pan') {
+        const p = pointOf(e);
+        const dx = p.x - startX, dy = p.y - startY;
+        if (Math.hypot(dx, dy) > 6) moved = true;
+        rsCamera.x = startCamX - dx / rsCamera.scale;
+        rsCamera.y = startCamY - dy / rsCamera.scale;
+      }
+    }
+    function onUp(e) {
+      e.preventDefault();
+      if (mode === 'pan' && !moved) {
+        const rect = canvas.getBoundingClientRect();
+        const p = e.changedTouches ? e.changedTouches[0] : e;
+        const sx = (p.clientX - rect.left) * (rsW / Math.max(1, rect.width));
+        const sy = (p.clientY - rect.top) * (rsH / Math.max(1, rect.height));
+        const wx = rsCamera.x + (sx - rsW / 2) / rsCamera.scale;
+        const wy = rsCamera.y + (sy - rsH / 2) / rsCamera.scale;
+        rsHandleTap(Math.floor(wx), Math.floor(wy));
+      }
+      mode = null;
+    }
+    function onWheel(e) {
+      e.preventDefault();
+      rsCamera.scale = clampScale(rsCamera.scale * (e.deltaY < 0 ? 1.1 : 0.9));
+    }
+
+    canvas.addEventListener('touchstart', onDown, { passive: false });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onUp, { passive: false });
+    canvas.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('touchstart', onDown);
+      canvas.removeEventListener('touchmove', onMove);
+      canvas.removeEventListener('touchend', onUp);
+      canvas.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      canvas.removeEventListener('wheel', onWheel);
+    };
+  }
+
+  // ── Toolbar (prawdziwe przyciski HTML, nie rysowane na canvasie — łatwiej
+  // trafić palcem, za darmo dostają globalny fix hitboxa/tap-highlight) ──
+  function rsBuildToolbar() {
+    const el = $('games-toolbar');
+    if (!el) return;
+    el.style.display = 'flex';
+    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'lever', 'button', 'lamp', 'eraser'];
+    const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch',
+      repeater: 'rsToolRepeater', lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', eraser: 'rsToolEraser' };
+    el.innerHTML = tools.map((id) =>
+      `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}" data-rs-tool="${id}">${t(labelKeys[id])}</button>`
+    ).join('') + `<button class="btn-secondary btn-sm" data-rs-clear="1">${t('rsClearWorld')}</button>`;
+
+    el.querySelectorAll('button[data-rs-tool]').forEach((b) => {
+      b.onclick = () => {
+        rsTool = b.getAttribute('data-rs-tool');
+        el.querySelectorAll('button[data-rs-tool]').forEach((x) => x.classList.toggle('is-active', x === b));
+      };
+    });
+    const clearBtn = el.querySelector('button[data-rs-clear]');
+    if (clearBtn) clearBtn.onclick = async () => {
+      if (!(await confirmDialog(t('rsConfirmClear'), t('rsConfirmClearOk')))) return;
+      rsWorld = new Map();
+      rsScheduledRepeaters = new Map();
+      rsButtonActive = new Map();
+      rsBlockPoweredPrev = new Map();
+      rsLastPower = new Map();
+      setScore(0);
+      rsScheduleSave();
+    };
+  }
+
+  // ── Rysowanie (kolory/kształty wektorowe — brak grafik, czytelność przede
+  // wszystkim: jasność przewodu = aktualna siła sygnału, jak w prawdziwym MC) ──
+  function rsLerpColor(c1, c2, tt) {
+    return `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * tt)},${Math.round(c1[1] + (c2[1] - c1[1]) * tt)},${Math.round(c1[2] + (c2[2] - c1[2]) * tt)})`;
+  }
+
+  function rsDrawGrid(ctx, W, H) {
+    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.lineWidth = 1;
+    const halfW = (W / 2) / rsCamera.scale, halfH = (H / 2) / rsCamera.scale;
+    const minX = Math.floor(rsCamera.x - halfW) - 1, maxX = Math.ceil(rsCamera.x + halfW) + 1;
+    const minY = Math.floor(rsCamera.y - halfH) - 1, maxY = Math.ceil(rsCamera.y + halfH) + 1;
+    ctx.beginPath();
+    for (let x = minX; x <= maxX; x++) { const { sx } = rsWorldToScreen(x, 0); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); }
+    for (let y = minY; y <= maxY; y++) { const { sy } = rsWorldToScreen(0, y); ctx.moveTo(0, sy); ctx.lineTo(W, sy); }
+    ctx.stroke();
+  }
+
+  function rsDrawBlock(ctx, sx, sy, s, cell, key) {
+    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
+    if (cell.torch) {
+      const on = !rsBlockPoweredPrev.get(key);
+      ctx.fillStyle = on ? '#ff6b1a' : '#4a2a1a';
+      ctx.fillRect(sx + s / 2 - s * 0.07, sy + s * 0.2, s * 0.14, s * 0.5);
+      if (on) {
+        ctx.fillStyle = '#ffcf4d';
+        ctx.beginPath(); ctx.arc(sx + s / 2, sy + s * 0.18, s * 0.09, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  function rsDrawWire(ctx, sx, sy, s, x, y, key) {
+    const lvl = rsLastPower.get(key) || 0;
+    const color = rsLerpColor(RS_WIRE_OFF, RS_WIRE_ON, lvl / 15);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = Math.max(2, s * 0.16);
+    ctx.lineCap = 'round';
+    const cx = sx + s / 2, cy = sy + s / 2;
+    let connected = false;
+    for (const [dx, dy] of RS_ORTHO) {
+      if (rsWorld.has(rsKey(x + dx, y + dy))) {
+        connected = true;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + dx * s / 2, cy + dy * s / 2); ctx.stroke();
+      }
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, s * (connected ? 0.1 : 0.12), 0, Math.PI * 2); ctx.fill();
+  }
+
+  function rsDrawRepeater(ctx, sx, sy, s, cell, key) {
+    ctx.fillStyle = cssVar('--bg3', '#1e2029');
+    ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    const active = rsScheduledRepeaters.has(key);
+    ctx.fillStyle = active ? '#ff6b1a' : '#8a8fa8';
+    const d = RS_DIR[cell.rotation];
+    const cx = sx + s / 2, cy = sy + s / 2;
+    ctx.beginPath(); ctx.arc(cx + d[0] * s * 0.22, cy + d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - d[0] * s * 0.22, cy - d[1] * s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function rsDrawLever(ctx, sx, sy, s, cell) {
+    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillRect(sx + s * 0.3, sy + s * 0.6, s * 0.4, s * 0.3);
+    ctx.strokeStyle = cell.on ? '#4ecca3' : '#8a8fa8';
+    ctx.lineWidth = Math.max(2, s * 0.1);
+    ctx.beginPath();
+    ctx.moveTo(sx + s / 2, sy + s * 0.65);
+    ctx.lineTo(cell.on ? sx + s * 0.72 : sx + s * 0.28, sy + s * 0.28);
+    ctx.stroke();
+  }
+
+  function rsDrawButton(ctx, sx, sy, s, key) {
+    const active = (rsButtonActive.get(key) || 0) > rsTick;
+    ctx.fillStyle = cssVar('--border', '#2a2d3a');
+    ctx.fillRect(sx + s * 0.25, sy + s * 0.4, s * 0.5, s * 0.2);
+    ctx.fillStyle = active ? '#ff6b1a' : '#8a8fa8';
+    ctx.fillRect(sx + s * 0.35, sy + (active ? s * 0.42 : s * 0.36), s * 0.3, s * 0.12);
+  }
+
+  function rsDrawLamp(ctx, sx, sy, s, key) {
+    const lit = (rsLastPower.get(key) || 0) > 0;
+    ctx.fillStyle = lit ? '#fff3c0' : '#3a3d4d';
+    ctx.beginPath(); ctx.arc(sx + s / 2, sy + s / 2, s * 0.32, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = cssVar('--border', '#2a2d3a');
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function rsDrawCell(ctx, x, y, cell, key) {
+    const { sx, sy } = rsWorldToScreen(x, y);
+    const s = rsCamera.scale;
+    if (cell.type === 'block') rsDrawBlock(ctx, sx, sy, s, cell, key);
+    else if (cell.type === 'wire') rsDrawWire(ctx, sx, sy, s, x, y, key);
+    else if (cell.type === 'repeater') rsDrawRepeater(ctx, sx, sy, s, cell, key);
+    else if (cell.type === 'lever') rsDrawLever(ctx, sx, sy, s, cell);
+    else if (cell.type === 'button') rsDrawButton(ctx, sx, sy, s, key);
+    else if (cell.type === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
+  }
+
+  function startRedstone() {
+    const { canvas, ctx, W, H } = setupCanvas(1);
+    rsW = W; rsH = H;
+    rsTool = 'select';
+    rsLoadWorld();
+    rsBuildToolbar();
+    setScore(rsWorld.size);
+    setBestLabel(getBest('redstone'));
+
+    const unbindGestures = rsBindGestures(canvas);
+    if (rsSimTimer) clearInterval(rsSimTimer);
+    rsSimTimer = setInterval(rsTick_, RS_TICK_MS);
+
+    function step() {
+      ctx.clearRect(0, 0, rsW, rsH);
+      rsDrawGrid(ctx, rsW, rsH);
+      const halfW = (rsW / 2) / rsCamera.scale, halfH = (rsH / 2) / rsCamera.scale;
+      const minX = Math.floor(rsCamera.x - halfW) - 1, maxX = Math.ceil(rsCamera.x + halfW) + 1;
+      const minY = Math.floor(rsCamera.y - halfH) - 1, maxY = Math.ceil(rsCamera.y + halfH) + 1;
+      for (const [key, cell] of rsWorld) {
+        const [x, y] = rsParseKey(key);
+        if (x < minX || x > maxX || y < minY || y > maxY) continue;
+        rsDrawCell(ctx, x, y, cell, key);
+      }
+    }
+
+    engine = {
+      // Uwaga: to jedyna gra z własnym setInterval — stopEngine()/runLoop nie
+      // wiedzą o nim nic, więc MUSI być czyszczony tutaj ręcznie. Zapis też
+      // wykonujemy od razu (nie czekamy na debounce) — inaczej ostatnia zmiana
+      // sprzed wyjścia mogłaby przepaść.
+      stop() {
+        unbindGestures();
+        if (rsSimTimer) { clearInterval(rsSimTimer); rsSimTimer = 0; }
+        clearTimeout(rsSaveT);
+        rsSaveWorld();
+        const tb = $('games-toolbar');
+        if (tb) { tb.innerHTML = ''; tb.style.display = 'none'; }
+      },
+    };
+    runLoop(step);
+  }
+
   // ── API publiczne ─────────────────────────────────────
-  const STARTERS = { coins: startCoins, snake: startSnake, g2048: start2048 };
+  const STARTERS = { coins: startCoins, snake: startSnake, g2048: start2048, redstone: startRedstone };
 
   window.LifeXPGames = {
     showMenu,
@@ -832,6 +1290,18 @@
       setScore(0);
       setBestLabel(getBest(id));
       STARTERS[id]();
+    },
+    // Tylko do debugowania/testów — odczyt stanu symulacji Redstone bez
+    // polegania na renderze (przydatne np. gdy rAF nie chodzi w tle karty).
+    // Read-only, zero wpływu na rozgrywkę.
+    _debugRedstone() {
+      return {
+        tick: rsTick,
+        power: Array.from(rsLastPower.entries()),
+        blockPowered: Array.from(rsBlockPoweredPrev.entries()),
+        scheduledRepeaters: Array.from(rsScheduledRepeaters.entries()),
+        cells: Array.from(rsWorld.entries()),
+      };
     },
   };
 })();

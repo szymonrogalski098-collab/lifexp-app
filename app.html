@@ -563,7 +563,7 @@
     .broadcast-banner.offline-banner { background: var(--warn); z-index: 1190; }
 
     /* ── Gry (mini-gry offline) ── */
-    .games-menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .games-menu { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
     @media (max-width: 700px) { .games-menu { grid-template-columns: 1fr; } }
     .game-tile {
       background: var(--bg2);
@@ -609,6 +609,11 @@
       display: flex; flex-direction: column; justify-content: center; gap: 8px;
     }
     .games-fs #games-canvas { max-width: none; }
+    /* Toolbar Redstone — prawdziwe przyciski HTML (nie canvas), reużywają
+       .btn-secondary/.btn-sm + globalny fix hitboxa/tap-highlight na [onclick]. */
+    .games-toolbar { flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .games-toolbar button { padding: 6px 10px; font-size: 12px; }
+    .games-toolbar button.is-active { border-color: var(--accent); color: var(--accent); background: var(--bg3); }
     .games-fs #games-fs-exit {
       display: flex; align-items: center; justify-content: center;
       position: fixed; top: 10px; right: 10px; z-index: 2001;
@@ -1226,6 +1231,7 @@
               <span><span data-i18n="games.score">Wynik</span>: <strong id="games-score" style="color:var(--text);font-family:var(--mono)">0</strong></span>
               <span><span data-i18n="games.best">Rekord</span>: <strong id="games-best" style="color:var(--accent2);font-family:var(--mono)">0</strong></span>
             </div>
+            <div id="games-toolbar" class="games-toolbar" style="display:none"></div>
             <canvas id="games-canvas"></canvas>
             <p class="text2" id="games-hint" style="margin-top:10px;font-size:12px;text-align:center"></p>
           </div>
@@ -2038,6 +2044,13 @@
           coinsHint: 'Move the basket (drag / arrows) — catch coins, avoid bombs.',
           snakeHint: 'Arrow keys or swipe — steer the snake. Eat, grow, don\'t crash.',
           g2048Hint: 'Arrow keys or swipe — merge tiles with the same value.',
+          redstoneName: 'Redstone Circuits',
+          redstoneHint: 'Drag to pan, pinch/wheel to zoom. Pick a tool below, then tap the grid.',
+          rsToolSelect: 'Select', rsToolBlock: 'Block', rsToolWire: 'Wire', rsToolTorch: 'Torch',
+          rsToolRepeater: 'Repeater', rsToolLever: 'Lever', rsToolButton: 'Button', rsToolLamp: 'Lamp', rsToolEraser: 'Eraser',
+          rsClearWorld: 'Clear world',
+          rsConfirmClear: "Erase your entire circuit? This can't be undone.",
+          rsConfirmClearOk: 'Clear',
         },
       }},
       pl: { translation: {
@@ -2349,6 +2362,13 @@
           coinsHint: 'Przesuwaj koszyk (palec / strzałki) — łap monety, omijaj bomby.',
           snakeHint: 'Strzałki lub swipe — steruj wężem. Jedz, rośnij, nie zderzaj się.',
           g2048Hint: 'Strzałki lub swipe — łącz kafelki o tej samej wartości.',
+          redstoneName: 'Obwody Redstone',
+          redstoneHint: 'Przeciągnij, by przesunąć widok, uszczypnij/scrolluj, by przybliżyć. Wybierz narzędzie i tapnij siatkę.',
+          rsToolSelect: 'Zaznacz', rsToolBlock: 'Blok', rsToolWire: 'Przewód', rsToolTorch: 'Pochodnia',
+          rsToolRepeater: 'Wzmacniacz', rsToolLever: 'Dźwignia', rsToolButton: 'Przycisk', rsToolLamp: 'Lampa', rsToolEraser: 'Gumka',
+          rsClearWorld: 'Wyczyść świat',
+          rsConfirmClear: 'Usunąć cały obwód? Tego nie można cofnąć.',
+          rsConfirmClearOk: 'Wyczyść',
         },
       }},
     };
@@ -5837,8 +5857,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.16';
+    const APP_VERSION = '2026.07.17';
     const CHANGELOG = [
+      { version: '2026.07.17', items: [
+        { pl: '🔴 Nowa gra: Obwody Redstone — piaskownica, buduj obwody logiczne (bloki, przewody, pochodnie, przekaźniki, dźwignie, przyciski, lampy). Przeciągnij by przesunąć widok, uszczypnij/scrolluj by przybliżyć', en: '🔴 New game: Redstone Circuits — a sandbox for building logic circuits (blocks, wire, torches, repeaters, levers, buttons, lamps). Drag to pan, pinch/scroll to zoom' },
+      ]},
       { version: '2026.07.16', items: [
         { pl: '📱 Fix: hitbox po tapnięciu naprawiony do końca — poprzedni fix łapał tylko flash koloru, teraz też zaznaczanie tekstu na klikalnych elementach (prawdziwa przyczyna na niektórych telefonach)', en: '📱 Fix: the tap hitbox is now fully fixed — the previous fix only caught the color flash, this also stops text-selection on clickable elements (the real cause on some phones)' },
         { pl: '⚙️ Ustawienia: kategorie mają teraz wyraźną ramkę — łatwiej zobaczyć że to osobne, klikalne wiersze', en: '⚙️ Settings: categories now have a visible border — easier to see they’re separate, tappable rows' },
