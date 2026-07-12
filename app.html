@@ -5906,8 +5906,16 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.20';
+    const APP_VERSION = '2026.07.21';
     const CHANGELOG = [
+      { version: '2026.07.21', items: [
+        { pl: '🔴 Fix: przycisk „Wyczyść świat" w Obwodach Redstone wreszcie działa', en: '🔴 Fix: the "Clear world" button in Redstone Circuits finally works' },
+        { pl: '🔴 Fix: Przekaźnik/Komparator/Observer są teraz wyraźnie widoczne (nie ledwo-widzialne na tle siatki) i mają strzałkę pokazującą, w którą stronę patrzą', en: '🔴 Fix: Repeater/Comparator/Observer are now clearly visible (no longer nearly invisible against the grid) and show an arrow for the direction they face' },
+        { pl: '🔴 Przekaźnik ma teraz regulowane opóźnienie (1-4) — tapnij go narzędziem „Zaznacz", żeby otworzyć panel ustawień (tam też tryb Komparatora, zamiast osobnego narzędzia)', en: '🔴 Repeater now has adjustable delay (1-4) — tap it with the "Select" tool to open a settings panel (Comparator mode moved there too, instead of a separate tool)' },
+        { pl: '🔴 Fix: Przekaźnik/Komparator mogą teraz odwrócić pochodnię dotykając jej bloku wprost — da się wreszcie zbudować działający zegar/pętlę', en: '🔴 Fix: Repeater/Comparator can now invert a torch by touching its block directly — you can finally build a working clock/loop' },
+        { pl: '🔴 Fix: tłok wysunięty w puste pole faktycznie je zajmuje — nie da się już postawić na nim klocka ani wepchnąć w niego bloku innym tłokiem', en: '🔴 Fix: an extended piston\'s head now actually occupies its cell — you can no longer place a block on it or push one into it with another piston' },
+        { pl: '🔴 Tłoki mają teraz dźwięk i płynną animację wysuwania/chowania ramienia', en: '🔴 Pistons now have sound and a smooth extend/retract arm animation' },
+      ]},
       { version: '2026.07.20', items: [
         { pl: '🔴 Fix: Obwody Redstone renderują się teraz zawsze w kolorach LifeXP, niezależnie od wybranego motywu apki (w Apple/Gold niektóre klocki były prawie niewidoczne)', en: '🔴 Fix: Redstone Circuits now always render in LifeXP colors regardless of your chosen app theme (some blocks were nearly invisible in Apple/Gold)' },
         { pl: '🔴 Fix: pochodnia podłączona do przewodu (bez innego źródła) już nie miga bez końca — przewód sam z siebie nie odwraca już własnej pochodni, tylko prawdziwe źródło (dźwignia/przycisk/inna pochodnia) dotykające bloku', en: '🔴 Fix: a torch connected to wire (with no other source) no longer blinks forever — plain wire no longer inverts its own torch, only a real source (lever/button/another torch) touching the block does' },
