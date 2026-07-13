@@ -5906,8 +5906,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.21';
+    const APP_VERSION = '2026.07.22';
     const CHANGELOG = [
+      { version: '2026.07.22', items: [
+        { pl: '📡 Fix: aplikacja czasem nie chciała się otworzyć w trybie samolotowym bez wcześniejszego internetu — ekran startowy jest teraz zawsze zapisany do użytku offline, nie tylko po pierwszym udanym uruchomieniu online', en: "📡 Fix: the app sometimes refused to open in airplane mode with no prior internet — the startup screen is now always saved for offline use, not just after the first successful online launch" },
+      ]},
       { version: '2026.07.21', items: [
         { pl: '🔴 Fix: przycisk „Wyczyść świat" w Obwodach Redstone wreszcie działa', en: '🔴 Fix: the "Clear world" button in Redstone Circuits finally works' },
         { pl: '🔴 Fix: Przekaźnik/Komparator/Observer są teraz wyraźnie widoczne (nie ledwo-widzialne na tle siatki) i mają strzałkę pokazującą, w którą stronę patrzą', en: '🔴 Fix: Repeater/Comparator/Observer are now clearly visible (no longer nearly invisible against the grid) and show an arrow for the direction they face' },

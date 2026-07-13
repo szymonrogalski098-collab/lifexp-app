@@ -33,12 +33,28 @@ self.addEventListener('notificationclick', (e) => {
 });
 
 // ── PWA app-shell cache ──
-const CACHE = 'lifexp-shell-v22';
+const CACHE = 'lifexp-shell-v23';
 const STATIC = ['style.css', 'manifest.json', 'icon.svg', 'games.js'];
 const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html'];
 
+// Precache STATIC *i* HTML na starcie — bez tego HTML trafiał do cache TYLKO
+// jako efekt uboczny udanej nawigacji online (patrz fetch handler niżej), więc
+// zaraz po każdym bumpie CACHE (czyli niemal po każdym deployu — activate niżej
+// czyści WSZYSTKIE inne wersje cache) świeży cache był PUSTY z HTML-i. Jeśli
+// pierwsze uruchomienie po takim bumpie trafiło się w pełni offline (tryb
+// samolotowy bez wcześniejszego online), fetch() padał, a fallback
+// (caches.match) też nic nie znajdował — to była przyczyna "nie może
+// przekierować na app.html" w trybie samolotowym. `cache: 'reload'` pomija
+// zwykły cache HTTP przy pobieraniu (spójne z network-first HTML niżej) —
+// bez tego precache mógłby złapać starą, zbuforowaną przez przeglądarkę kopię.
+const PRECACHE = STATIC.concat(HTML);
+
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIC)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.all(PRECACHE.map((url) => fetch(url, { cache: 'reload' }).then((resp) => c.put(url, resp)))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -47,6 +63,21 @@ self.addEventListener('activate', (e) => {
       .then(() => self.clients.claim())
   );
 });
+
+// Ostatnia deska ratunku, gdy fetch() padnie I nic nie ma w cache (powinno być
+// rzadkie po precache HTML wyżej, ale np. ręcznie wyczyszczone dane strony
+// mid-flight nadal by to trafiły) — respondWith(undefined) to NIE jest
+// poprawny Response, więc przeglądarka rzuca własny, niekontrolowany błąd
+// nawigacji zamiast czegokolwiek pokazać. Zawsze zwracamy PRAWDZIWY Response.
+const OFFLINE_FALLBACK = () => new Response(
+  '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+  '<title>LifeXP — offline</title><body style="margin:0;min-height:100vh;display:flex;align-items:center;' +
+  'justify-content:center;background:#0e0f13;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:24px">' +
+  '<div><h1 style="margin-bottom:8px">Brak połączenia</h1>' +
+  '<p style="color:#8a8fa8;max-width:320px">Nie udało się załadować LifeXP offline. Otwórz aplikację raz z internetem, ' +
+  'żeby zapisała się do użytku offline, a potem spróbuj ponownie.</p></div></body>',
+  { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+);
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
@@ -64,7 +95,7 @@ self.addEventListener('fetch', (e) => {
         const copy = resp.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
         return resp;
-      }).catch(() => caches.match(e.request).then((hit) => hit || caches.match('app.html')))
+      }).catch(() => caches.match(e.request).then((hit) => hit || caches.match('app.html')).then((hit) => hit || OFFLINE_FALLBACK()))
     );
   } else {
     // Cache-first: CSS, ikony itd. — szybkość, aktualizowane przy zmianie pliku.
