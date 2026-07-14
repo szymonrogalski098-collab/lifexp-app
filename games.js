@@ -973,6 +973,7 @@
     if (tool === 'piston' || tool === 'sticky_piston') return { type: tool, rotation: 0, extended: false };
     if (tool === 'noteblock') return { type: 'noteblock', pitch: 0 };
     if (tool === 'lever') return { type: 'lever', on: false };
+    if (tool === 'sign') return { type: 'sign', text: '', separate: false };
     return { type: tool }; // block, wire, button, lamp, meter, adder
   }
 
@@ -1006,7 +1007,7 @@
     const cell = rsWorld.get(key);
     if (rsTool === 'select') {
       if (!cell) { rsClosePanel(); return; }
-      if (cell.type === 'repeater' || cell.type === 'comparator') { rsOpenPanel(key); return; }
+      if (cell.type === 'repeater' || cell.type === 'comparator' || cell.type === 'sign') { rsOpenPanel(key); return; }
       else if (cell.type === 'observer' || cell.type === 'not_gate' || cell.type === 'torch') cell.rotation = (cell.rotation + 1) % 4;
       else if ((cell.type === 'piston' || cell.type === 'sticky_piston') && !cell.extended) cell.rotation = (cell.rotation + 1) % 4;
       else if (cell.type === 'noteblock') { cell.pitch = (cell.pitch + 1) % 25; rsPlayNote(cell.pitch); }
@@ -1375,7 +1376,7 @@
     // nich zawsze 0 (patrz tam), więc ten guard jest tu drugą linią obrony —
     // trzyma `power` dla tych komórek czyste, więc żaden przyszły kod czytający
     // je wprost (z pominięciem rsCellPowerFor) nie złapie tego samego wycieku.
-    const NON_CONDUCTIVE = new Set(['repeater', 'comparator', 'observer', 'piston', 'sticky_piston', 'piston_head', 'not_gate']);
+    const NON_CONDUCTIVE = new Set(['repeater', 'comparator', 'observer', 'piston', 'sticky_piston', 'piston_head', 'not_gate', 'sign']);
     const relayInto = (pos, level, direct) => {
       if (level <= 0) return;
       const c = rsWorld.get(pos);
@@ -1628,9 +1629,9 @@
     const el = $('games-toolbar');
     if (!el) return;
     el.style.display = 'flex';
-    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'observer', 'not_gate',
+    const tools = ['select', 'block', 'wire', 'torch', 'sign', 'repeater', 'comparator', 'observer', 'not_gate',
       'piston', 'sticky_piston', 'noteblock', 'lever', 'button', 'lamp', 'meter', 'adder', 'eraser'];
-    const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch',
+    const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch', sign: 'rsToolSign',
       repeater: 'rsToolRepeater', comparator: 'rsToolComparator', observer: 'rsToolObserver', not_gate: 'rsToolNotGate',
       piston: 'rsToolPiston', sticky_piston: 'rsToolStickyPiston', noteblock: 'rsToolNoteBlock',
       lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', meter: 'rsToolMeter', adder: 'rsToolAdder',
@@ -1708,17 +1709,45 @@
     rsRenderPanel();
   }
 
+  const RS_PANEL_TYPES = new Set(['repeater', 'comparator', 'sign']);
+  const RS_SIGN_MAX_LEN = 20;
+
   function rsRenderPanel() {
     const panel = rsBuildPanel();
     if (!panel) return;
     const cell = rsPanelKey ? rsWorld.get(rsPanelKey) : null;
-    if (!cell || (cell.type !== 'repeater' && cell.type !== 'comparator')) {
+    if (!cell || !RS_PANEL_TYPES.has(cell.type)) {
       panel.style.display = 'none';
       panel.innerHTML = '';
       rsPanelKey = null;
       return;
     }
     panel.style.display = 'flex';
+
+    if (cell.type === 'sign') {
+      // Tabliczka nie ma obrotu (czysta etykieta) — panel to tylko pole
+      // tekstowe (limit RS_SIGN_MAX_LEN znaków) + przełącznik "połącz z
+      // sąsiadami" (patrz rsDrawSignsOverlay: sąsiednie Tabliczki z
+      // separate=false renderują się jako jedna wspólna tabliczka).
+      panel.innerHTML =
+        `<input type="text" maxlength="${RS_SIGN_MAX_LEN}" placeholder="${t('rsPanelSignPlaceholder')}" style="width:130px;padding:4px 8px;font-size:12px" data-rs-panel-sign-text="1">` +
+        `<button class="btn-secondary btn-sm${cell.separate ? '' : ' is-active'}" data-rs-panel-sign-merge="1">${t('rsPanelMerge')}</button>` +
+        `<button class="btn-secondary btn-sm${cell.separate ? ' is-active' : ''}" data-rs-panel-sign-separate="1">${t('rsPanelSeparate')}</button>` +
+        `<button class="btn-secondary btn-sm" data-rs-panel-close="1">✕ ${t('rsPanelClose')}</button>`;
+      const textInput = panel.querySelector('input[data-rs-panel-sign-text]');
+      if (textInput) {
+        textInput.value = cell.text || '';
+        textInput.oninput = () => { cell.text = textInput.value.slice(0, RS_SIGN_MAX_LEN); rsScheduleSave(); };
+      }
+      const mergeBtn = panel.querySelector('button[data-rs-panel-sign-merge]');
+      if (mergeBtn) mergeBtn.onclick = () => { cell.separate = false; rsScheduleSave(); rsRenderPanel(); };
+      const separateBtn = panel.querySelector('button[data-rs-panel-sign-separate]');
+      if (separateBtn) separateBtn.onclick = () => { cell.separate = true; rsScheduleSave(); rsRenderPanel(); };
+      const closeBtn2 = panel.querySelector('button[data-rs-panel-close]');
+      if (closeBtn2) closeBtn2.onclick = () => rsClosePanel();
+      return;
+    }
+
     let html = `<button class="btn-secondary btn-sm" data-rs-panel-rotate="1">↻ ${t('rsPanelRotate')}</button>`;
     if (cell.type === 'repeater') {
       html += `<span class="text2" style="font-size:12px;align-self:center">${t('rsPanelDelay')}:</span>`;
@@ -2024,6 +2053,86 @@
     else if (cell.type === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
     else if (cell.type === 'meter') rsDrawMeter(ctx, sx, sy, s, key);
     else if (cell.type === 'adder') rsDrawAdder(ctx, sx, sy, s, key);
+    // 'sign' celowo pominięta tutaj — rysowana osobno przez
+    // rsDrawSignsOverlay (patrz step()), NA WIERZCHU wszystkiego innego, bo
+    // jej tablica bywa szersza niż jedna komórka.
+  }
+
+  // Tabliczki (Sign) — czysto informacyjne, nie przewodzą (patrz
+  // NON_CONDUCTIVE w rsTick_) i nie są pushable (piston je niszczy jak
+  // dźwignię/pochodnię). Grupuje sąsiednie Tabliczki W TYM SAMYM WIERSZU
+  // (kolejne x, ta sama y) w JEDNĄ wspólną tablicę, o ile ŻADNA z nich nie ma
+  // separate=true — tablica z separate=true zawsze rysuje się osobno, z
+  // przerwą, nawet dotykając sąsiada (dokładnie żądanie: "jak postawię dwie
+  // obok siebie robi się jedna, ale można zrobić żeby były oddzielne").
+  // Scelowo TYLKO poziomo — czytelniejsze niż też pionowe łączenie, a
+  // grupowanie zostaje proste.
+  function rsDrawSignsOverlay(ctx, minX, maxX, minY, maxY) {
+    const rows = new Map(); // y -> [{x,key,cell}, ...] posortowane po x
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'sign') continue;
+      const [x, y] = rsParseKey(key);
+      if (x < minX || x > maxX || y < minY || y > maxY) continue;
+      if (!rows.has(y)) rows.set(y, []);
+      rows.get(y).push({ x, key, cell });
+    }
+    for (const [y, list] of rows) {
+      list.sort((a, b) => a.x - b.x);
+      let i = 0;
+      while (i < list.length) {
+        const run = [list[i]];
+        if (!list[i].cell.separate) {
+          let j = i + 1;
+          while (j < list.length && list[j].x === run[run.length - 1].x + 1 && !list[j].cell.separate) {
+            run.push(list[j]);
+            j++;
+          }
+          i = j;
+        } else {
+          i++;
+        }
+        rsDrawSignRun(ctx, run, y);
+      }
+    }
+  }
+
+  function rsDrawSignRun(ctx, run, y) {
+    const s = rsCamera.scale;
+    const text = run.map((r) => r.cell.text || '').join(' ').trim();
+    ctx.font = Math.round(s * 0.32) + 'px sans-serif';
+    const textWidth = text ? ctx.measureText(text).width : 0;
+    const padding = s * 0.3;
+    const minWidthPx = run.length * s - 4;
+    const boardWidth = Math.max(minWidthPx, textWidth + padding * 2);
+    const boardHeight = s * 0.5;
+    const spanCenterWorldX = (run[0].x + run[run.length - 1].x) / 2 + 0.5;
+    const center = rsWorldToScreen(spanCenterWorldX, y + 0.5);
+    const left = center.sx - boardWidth / 2, top = center.sy - boardHeight / 2;
+    const r = Math.min(6, boardHeight / 3);
+
+    ctx.fillStyle = '#e8dcc0';
+    ctx.strokeStyle = '#8a6d3b';
+    ctx.lineWidth = Math.max(1, s * 0.04);
+    ctx.beginPath();
+    ctx.moveTo(left + r, top);
+    ctx.lineTo(left + boardWidth - r, top);
+    ctx.quadraticCurveTo(left + boardWidth, top, left + boardWidth, top + r);
+    ctx.lineTo(left + boardWidth, top + boardHeight - r);
+    ctx.quadraticCurveTo(left + boardWidth, top + boardHeight, left + boardWidth - r, top + boardHeight);
+    ctx.lineTo(left + r, top + boardHeight);
+    ctx.quadraticCurveTo(left, top + boardHeight, left, top + boardHeight - r);
+    ctx.lineTo(left, top + r);
+    ctx.quadraticCurveTo(left, top, left + r, top);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    if (text) {
+      ctx.fillStyle = '#3a2f1a';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, center.sx, center.sy + s * 0.02);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    }
   }
 
   function startRedstone() {
@@ -2062,6 +2171,9 @@
         ctx.lineWidth = Math.max(2, s * 0.12);
         ctx.strokeRect(sx + 2, sy + 2, s - 4, s - 4);
       }
+      // Tabliczki — OSOBNY przebieg, NA WIERZCHU wszystkiego (patrz
+      // rsDrawSignsOverlay): ich tablica bywa szersza niż jedna komórka.
+      rsDrawSignsOverlay(ctx, minX, maxX, minY, maxY);
     }
 
     engine = {

@@ -2049,7 +2049,7 @@
           g2048Hint: 'Arrow keys or swipe — merge tiles with the same value.',
           redstoneName: 'Redstone Circuits',
           redstoneHint: 'Drag to pan, pinch/wheel to zoom. Pick a tool below, then tap the grid.',
-          rsToolSelect: 'Select', rsToolBlock: 'Block', rsToolWire: 'Wire', rsToolTorch: 'Torch',
+          rsToolSelect: 'Select', rsToolBlock: 'Block', rsToolWire: 'Wire', rsToolTorch: 'Torch', rsToolSign: 'Sign',
           rsToolRepeater: 'Repeater', rsToolComparator: 'Comparator', rsToolCompMode: 'Comparator mode', rsToolObserver: 'Observer',
           rsToolNotGate: 'NOT Gate',
           rsToolPiston: 'Piston', rsToolStickyPiston: 'Sticky piston', rsToolNoteBlock: 'Note block',
@@ -2064,6 +2064,9 @@
           rsModeCompare: 'Compare',
           rsModeSubtract: 'Subtract',
           rsPanelClose: 'Close',
+          rsPanelMerge: 'Merge',
+          rsPanelSeparate: 'Separate',
+          rsPanelSignPlaceholder: 'Text (max 20)',
         },
       }},
       pl: { translation: {
@@ -2379,7 +2382,7 @@
           g2048Hint: 'Strzałki lub swipe — łącz kafelki o tej samej wartości.',
           redstoneName: 'Obwody Redstone',
           redstoneHint: 'Przeciągnij, by przesunąć widok, uszczypnij/scrolluj, by przybliżyć. Wybierz narzędzie i tapnij siatkę.',
-          rsToolSelect: 'Zaznacz', rsToolBlock: 'Blok', rsToolWire: 'Przewód', rsToolTorch: 'Pochodnia',
+          rsToolSelect: 'Zaznacz', rsToolBlock: 'Blok', rsToolWire: 'Przewód', rsToolTorch: 'Pochodnia', rsToolSign: 'Tabliczka',
           rsToolRepeater: 'Wzmacniacz', rsToolComparator: 'Komparator', rsToolCompMode: 'Tryb komparatora', rsToolObserver: 'Observer',
           rsToolNotGate: 'Bramka NOT',
           rsToolPiston: 'Tłok', rsToolStickyPiston: 'Lepki tłok', rsToolNoteBlock: 'Blok nutowy',
@@ -2394,6 +2397,9 @@
           rsModeCompare: 'Porównanie',
           rsModeSubtract: 'Odejmowanie',
           rsPanelClose: 'Zamknij',
+          rsPanelMerge: 'Połącz',
+          rsPanelSeparate: 'Oddziel',
+          rsPanelSignPlaceholder: 'Tekst (max 20)',
         },
       }},
     };
@@ -5910,8 +5916,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.23';
+    const APP_VERSION = '2026.07.24';
     const CHANGELOG = [
+      { version: '2026.07.24', items: [
+        { pl: '🔴 Nowy blok: Tabliczka — podpisz swoją konstrukcję tekstem (max 20 znaków). Postaw dwie obok siebie, a połączą się w jedną większą tabliczkę; w jej ustawieniach możesz je rozdzielić, żeby zostały osobne', en: '🔴 New block: Sign — label your build with text (max 20 characters). Place two next to each other and they merge into one bigger sign; toggle "Separate" in its settings to keep them apart' },
+      ]},
       { version: '2026.07.23', items: [
         { pl: '🔴 Fix: Przekaźnik/Komparator/Tłok już nie „łapią" zasilenia z boku, którego nie powinny widzieć, i mogą wreszcie odczytać drugi Przekaźnik/Komparator dotykający ich wprost (bez przewodu)', en: '🔴 Fix: Repeater/Comparator/Piston no longer pick up power from a side they should ignore, and can finally read another Repeater/Comparator touching them directly (no wire needed)' },
         { pl: '🔴 Fix: Tłok reaguje na zasilenie z dowolnej strony poza swoim frontem, nie tylko od tyłu', en: '🔴 Fix: Piston reacts to power from any side except its own front, not just its back' },
