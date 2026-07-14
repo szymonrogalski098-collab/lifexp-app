@@ -1625,20 +1625,42 @@
 
   // ── Toolbar (prawdziwe przyciski HTML, nie rysowane na canvasie — łatwiej
   // trafić palcem, za darmo dostają globalny fix hitboxa/tap-highlight) ──
+  // Pogrupowane wg funkcji zamiast jednej płaskiej, zawijającej się listy —
+  // łatwiej odnaleźć klocek w rozbudowanym zestawie narzędzi. "Clear world"
+  // dołączony na końcu grupy "tools" (obok Select/Eraser), bo koncepcyjnie to
+  // też akcja "narzędziowa", nie osobny klocek do postawienia.
+  const RS_TOOL_GROUPS = [
+    { labelKey: 'rsGroupBuilding', tools: ['block', 'wire', 'torch', 'sign'] },
+    { labelKey: 'rsGroupLogic', tools: ['repeater', 'comparator', 'observer', 'not_gate'] },
+    { labelKey: 'rsGroupMechanism', tools: ['piston', 'sticky_piston'] },
+    { labelKey: 'rsGroupIO', tools: ['lever', 'button', 'lamp', 'noteblock', 'meter', 'adder'] },
+    { labelKey: 'rsGroupTools', tools: ['select', 'eraser'] },
+  ];
+  const RS_TOOL_ICON_SIZE = 18;
+
   function rsBuildToolbar() {
     const el = $('games-toolbar');
     if (!el) return;
     el.style.display = 'flex';
-    const tools = ['select', 'block', 'wire', 'torch', 'sign', 'repeater', 'comparator', 'observer', 'not_gate',
-      'piston', 'sticky_piston', 'noteblock', 'lever', 'button', 'lamp', 'meter', 'adder', 'eraser'];
     const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch', sign: 'rsToolSign',
       repeater: 'rsToolRepeater', comparator: 'rsToolComparator', observer: 'rsToolObserver', not_gate: 'rsToolNotGate',
       piston: 'rsToolPiston', sticky_piston: 'rsToolStickyPiston', noteblock: 'rsToolNoteBlock',
       lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', meter: 'rsToolMeter', adder: 'rsToolAdder',
       eraser: 'rsToolEraser' };
-    el.innerHTML = tools.map((id) =>
-      `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}" data-rs-tool="${id}">${t(labelKeys[id])}</button>`
-    ).join('') + `<button class="btn-secondary btn-sm" data-rs-clear="1">${t('rsClearWorld')}</button>`;
+    const btnHtml = (id) =>
+      `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}" data-rs-tool="${id}">` +
+      `<canvas class="rs-tool-icon" data-rs-icon="${id}" width="${RS_TOOL_ICON_SIZE}" height="${RS_TOOL_ICON_SIZE}"></canvas>` +
+      `<span>${t(labelKeys[id])}</span></button>`;
+    el.innerHTML = RS_TOOL_GROUPS.map((g) =>
+      `<div class="rs-tool-group"><div class="rs-tool-group-label">${t(g.labelKey)}</div>` +
+      `<div class="rs-tool-group-row">${g.tools.map(btnHtml).join('')}` +
+      (g.labelKey === 'rsGroupTools' ? `<button class="btn-secondary btn-sm" data-rs-clear="1">${t('rsClearWorld')}</button>` : '') +
+      `</div></div>`
+    ).join('');
+
+    el.querySelectorAll('canvas[data-rs-icon]').forEach((c) => {
+      rsDrawToolIcon(c.getContext('2d'), c.getAttribute('data-rs-icon'), RS_TOOL_ICON_SIZE);
+    });
 
     el.querySelectorAll('button[data-rs-tool]').forEach((b) => {
       b.onclick = () => {
@@ -2133,6 +2155,76 @@
       ctx.fillText(text, center.sx, center.sy + s * 0.02);
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     }
+  }
+
+  // Ikonki przycisków toolbara — dla każdego prawdziwego typu komórki
+  // wywołują DOKŁADNIE tę samą funkcję rysującą co siatka gry (z jedną
+  // reprezentatywną komórką-przykładem, niepowiązaną kluczem z żadną mapą
+  // stanu — więc wychodzi domyślny/nieaktywny wygląd), więc ikonka fizycznie
+  // nie może rozjechać się z prawdziwym wyglądem w grze. Select/Eraser nie
+  // odpowiadają żadnej komórce, więc mają proste, osobne glify; Tabliczka jest
+  // rysowana osobnym overlayem sprzężonym z kamerą (rsDrawSignRun), więc
+  // dostaje uproszczoną wersję tej samej palety kolorów zamiast wywołania tej
+  // funkcji wprost.
+  function rsDrawToolIcon(ctx, tool, size) {
+    ctx.clearRect(0, 0, size, size);
+    const sx = 0, sy = 0, s = size;
+    const key = '__toolicon__'; // celowo nieobecny w żadnej mapie stanu
+    const rot0 = 0; // wschód — kierunek domyślny dla ikon
+    if (tool === 'block') rsDrawBlock(ctx, sx, sy, s, {}, key);
+    else if (tool === 'wire') rsDrawWire(ctx, sx, sy, s, -99999, -99999, key);
+    else if (tool === 'torch') rsDrawTorch(ctx, sx, sy, s, { rotation: rot0 }, key);
+    else if (tool === 'sign') rsDrawToolIconSign(ctx, sx, sy, s);
+    else if (tool === 'repeater') rsDrawRepeater(ctx, sx, sy, s, { rotation: rot0, delay: 1 }, key);
+    else if (tool === 'comparator') rsDrawComparator(ctx, sx, sy, s, { rotation: rot0, mode: 'compare' }, key);
+    else if (tool === 'observer') rsDrawObserver(ctx, sx, sy, s, { rotation: rot0 }, key);
+    else if (tool === 'not_gate') rsDrawNotGate(ctx, sx, sy, s, { rotation: rot0 }, key);
+    else if (tool === 'piston') rsDrawPiston(ctx, sx, sy, s, { type: 'piston', rotation: rot0, extended: false }, -99999, -99999);
+    else if (tool === 'sticky_piston') rsDrawPiston(ctx, sx, sy, s, { type: 'sticky_piston', rotation: rot0, extended: false }, -99999, -99999);
+    else if (tool === 'noteblock') rsDrawNoteBlock(ctx, sx, sy, s, { pitch: 12 }, key);
+    else if (tool === 'lever') rsDrawLever(ctx, sx, sy, s, { on: false });
+    else if (tool === 'button') rsDrawButton(ctx, sx, sy, s, key);
+    else if (tool === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
+    else if (tool === 'meter') rsDrawMeter(ctx, sx, sy, s, key);
+    else if (tool === 'adder') rsDrawAdder(ctx, sx, sy, s, key);
+    else if (tool === 'select') rsDrawToolIconSelect(ctx, sx, sy, s);
+    else if (tool === 'eraser') rsDrawToolIconEraser(ctx, sx, sy, s);
+  }
+
+  function rsDrawToolIconSign(ctx, sx, sy, s) {
+    ctx.fillStyle = '#e8dcc0';
+    ctx.strokeStyle = '#8a6d3b';
+    ctx.lineWidth = Math.max(1, s * 0.06);
+    ctx.fillRect(sx + s * 0.06, sy + s * 0.28, s * 0.88, s * 0.44);
+    ctx.strokeRect(sx + s * 0.06, sy + s * 0.28, s * 0.88, s * 0.44);
+    ctx.strokeStyle = '#3a2f1a';
+    ctx.lineWidth = Math.max(1, s * 0.05);
+    ctx.beginPath();
+    ctx.moveTo(sx + s * 0.2, sy + s * 0.5); ctx.lineTo(sx + s * 0.5, sy + s * 0.5);
+    ctx.moveTo(sx + s * 0.2, sy + s * 0.62); ctx.lineTo(sx + s * 0.65, sy + s * 0.62);
+    ctx.stroke();
+  }
+
+  function rsDrawToolIconSelect(ctx, sx, sy, s) {
+    ctx.strokeStyle = '#c7cbe0';
+    ctx.lineWidth = Math.max(1, s * 0.07);
+    ctx.setLineDash([s * 0.14, s * 0.1]);
+    ctx.strokeRect(sx + s * 0.16, sy + s * 0.16, s * 0.68, s * 0.68);
+    ctx.setLineDash([]);
+  }
+
+  function rsDrawToolIconEraser(ctx, sx, sy, s) {
+    ctx.save();
+    ctx.translate(sx + s / 2, sy + s / 2);
+    ctx.rotate(-Math.PI / 8);
+    ctx.fillStyle = '#ff6b7a';
+    ctx.fillRect(-s * 0.34, -s * 0.2, s * 0.68, s * 0.4);
+    ctx.fillStyle = '#ffb0b8';
+    ctx.fillRect(-s * 0.34, -s * 0.2, s * 0.26, s * 0.4);
+    ctx.strokeStyle = RS_COMPONENT_BORDER;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-s * 0.34, -s * 0.2, s * 0.68, s * 0.4);
+    ctx.restore();
   }
 
   function startRedstone() {

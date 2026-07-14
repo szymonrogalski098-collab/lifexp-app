@@ -610,9 +610,18 @@
     }
     .games-fs #games-canvas { max-width: none; }
     /* Toolbar Redstone — prawdziwe przyciski HTML (nie canvas), reużywają
-       .btn-secondary/.btn-sm + globalny fix hitboxa/tap-highlight na [onclick]. */
-    .games-toolbar { flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-    .games-toolbar button { padding: 6px 10px; font-size: 12px; }
+       .btn-secondary/.btn-sm + globalny fix hitboxa/tap-highlight na [onclick].
+       Pogrupowane w rzędy (budowa/logika/mechanizmy/wejście-wyjście/narzędzia)
+       zamiast jednej płaskiej, zawijającej się listy — łatwiej znaleźć klocek
+       w rozbudowanym zestawie. Każdy przycisk ma mały <canvas> po lewej,
+       rysowany TĄ SAMĄ funkcją co dany klocek na siatce gry (patrz
+       rsDrawToolIcon w games.js), więc ikonka nigdy nie może rozjechać się z
+       prawdziwym wyglądem w grze. */
+    .games-toolbar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .rs-tool-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); margin: 0 0 4px 2px; }
+    .rs-tool-group-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .games-toolbar button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
+    .rs-tool-icon { width: 18px; height: 18px; flex: none; border-radius: 3px; background: rgba(255,255,255,.05); }
     .games-toolbar button.is-active { border-color: var(--accent); color: var(--accent); background: var(--bg3); }
     .games-fs #games-fs-exit {
       display: flex; align-items: center; justify-content: center;
@@ -2056,6 +2065,8 @@
           rsToolLever: 'Lever', rsToolButton: 'Button', rsToolLamp: 'Lamp',
           rsToolMeter: 'Signal Meter', rsToolAdder: 'Signal Adder', rsToolEraser: 'Eraser',
           rsClearWorld: 'Clear world',
+          rsGroupBuilding: 'Building', rsGroupLogic: 'Logic', rsGroupMechanism: 'Mechanism',
+          rsGroupIO: 'Input / Output', rsGroupTools: 'Tools',
           rsConfirmClear: "Erase your entire circuit? This can't be undone.",
           rsConfirmClearOk: 'Clear',
           rsPanelRotate: 'Rotate',
@@ -2389,6 +2400,8 @@
           rsToolLever: 'Dźwignia', rsToolButton: 'Przycisk', rsToolLamp: 'Lampa',
           rsToolMeter: 'Miernik sygnału', rsToolAdder: 'Sumator sygnału', rsToolEraser: 'Gumka',
           rsClearWorld: 'Wyczyść świat',
+          rsGroupBuilding: 'Budowa', rsGroupLogic: 'Logika', rsGroupMechanism: 'Mechanizmy',
+          rsGroupIO: 'Wejście / Wyjście', rsGroupTools: 'Narzędzia',
           rsConfirmClear: 'Usunąć cały obwód? Tego nie można cofnąć.',
           rsConfirmClearOk: 'Wyczyść',
           rsPanelRotate: 'Obróć',
@@ -5916,8 +5929,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.24';
+    const APP_VERSION = '2026.07.25';
     const CHANGELOG = [
+      { version: '2026.07.25', items: [
+        { pl: '🔴 Toolbar Obwodów Redstone przeorganizowany w czytelne grupy (Budowa/Logika/Mechanizmy/Wejście-Wyjście/Narzędzia), a każdy przycisk ma teraz obok nazwy małą ikonkę pokazującą, jak dany klocek wygląda w grze', en: '🔴 Redstone Circuits toolbar reorganized into clear groups (Building/Logic/Mechanism/Input-Output/Tools), and every button now shows a small icon next to its name previewing what that block actually looks like' },
+      ]},
       { version: '2026.07.24', items: [
         { pl: '🔴 Nowy blok: Tabliczka — podpisz swoją konstrukcję tekstem (max 20 znaków). Postaw dwie obok siebie, a połączą się w jedną większą tabliczkę; w jej ustawieniach możesz je rozdzielić, żeby zostały osobne', en: '🔴 New block: Sign — label your build with text (max 20 characters). Place two next to each other and they merge into one bigger sign; toggle "Separate" in its settings to keep them apart' },
       ]},
