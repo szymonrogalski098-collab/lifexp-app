@@ -856,22 +856,27 @@
   const RS_COMPONENT_BG = '#343850', RS_COMPONENT_BORDER = '#565c80';
   const RS_DENIED_COLOR = '#ff4d4d';
 
-  let rsWorld = new Map();              // "x,y" -> {type, rotation?, torch?, on?} (ZAPISYWANE)
+  let rsWorld = new Map();              // "x,y" -> {type, rotation?, on?} (ZAPISYWANE)
   let rsCamera = { x: 0, y: 0, scale: 28 }; // (ZAPISYWANE razem ze światem)
   let rsTool = 'select';
   let rsTick = 0;
-  let rsBlockPoweredPrev = new Map();   // ulotne — stan Bloków z poprzedniego ticku
+  let rsTorchPoweredPrev = new Map();   // ulotne — stan WŁASNEJ komórki Pochodni z poprzedniego ticku
   let rsScheduledRepeaters = new Map(); // ulotne — key -> { dueTick }
+  let rsRepeaterActiveNow = new Set();  // ulotne — przebudowywane co tick: Repeatery, których wyjście jest DOSTARCZANE w TYM ticku (do rsSensedPower — bezpośredni dotyk Repeater→Repeater/Comparator)
   let rsButtonActive = new Map();       // ulotne — key -> tick do którego przycisk aktywny
   let rsLastPower = new Map();          // ulotne, tylko do rysowania
   let rsScheduledComparators = new Map(); // ulotne — key -> { dueTick, strength } (przeliczane co tick, nie tylko raz)
-  let rsComparatorOutputPrev = new Map(); // ulotne — ostatnia zastosowana siła wyjścia (do rysowania + sygnatur Observera)
+  let rsComparatorOutputPrev = new Map(); // ulotne — ostatnia zastosowana siła wyjścia (do rysowania + sygnatur Observera + rsSensedPower)
   let rsScheduledObservers = new Map();    // ulotne — key -> { dueTick } (impuls jednorazowy, siła zawsze 15)
   let rsObserverPrevSig = new Map();       // ulotne — ostatnia sygnatura obserwowanej komórki (do wykrywania zmian)
+  let rsObserverFiredAtTick = new Map();   // ulotne — key -> numer ticku ostatniego odpalenia (do sygnatury 'observer' — patrz rsCellSignature)
+  let rsScheduledNotGates = new Map();     // ulotne — key -> { dueTick } (jak Repeater, ale odpala gdy WEJŚCIE jest ZGASZONE)
+  let rsNotGateActiveNow = new Set();      // ulotne — przebudowywane co tick, jak rsRepeaterActiveNow
   let rsPistonPoweredPrev = new Map();     // ulotne — stan zasilenia tłoków z poprzedniego ticku (do wykrywania zbocza)
   let rsScheduledPistons = new Map();      // ulotne — key -> { dueTick, action: 'extend'|'retract' }
   let rsNoteBlockPoweredPrev = new Map();  // ulotne — stan zasilenia Note Blocków z poprzedniego ticku
   let rsNoteBlockPulse = new Map();        // ulotne — key -> tick do którego trwa wizualny błysk po zagraniu
+  let rsAdderValue = new Map();            // ulotne — key -> ostatnia zsumowana wartość Signal Addera (do rysowania)
   let rsDeniedFlash = new Map();           // ulotne — key -> tick do którego trwa czerwony błysk "odrzucono"
   let rsPistonAnim = new Map();            // ulotne — key -> { from, extending, t0 } (animacja ramienia, tylko render)
   let rsPanelKey = null;                   // ulotne — klucz komórki z otwartym panelem ustawień ("select" na Repeater/Comparator)
@@ -903,18 +908,23 @@
       }
     } catch (e) {}
     rsTick = 0;
-    rsBlockPoweredPrev = new Map();
+    rsTorchPoweredPrev = new Map();
     rsScheduledRepeaters = new Map();
+    rsRepeaterActiveNow = new Set();
     rsButtonActive = new Map();
     rsLastPower = new Map();
     rsScheduledComparators = new Map();
     rsComparatorOutputPrev = new Map();
     rsScheduledObservers = new Map();
     rsObserverPrevSig = new Map();
+    rsObserverFiredAtTick = new Map();
+    rsScheduledNotGates = new Map();
+    rsNotGateActiveNow = new Set();
     rsPistonPoweredPrev = new Map();
     rsScheduledPistons = new Map();
     rsNoteBlockPoweredPrev = new Map();
     rsNoteBlockPulse = new Map();
+    rsAdderValue = new Map();
     rsDeniedFlash = new Map();
     rsPistonAnim = new Map();
     rsPanelKey = null;
@@ -958,11 +968,12 @@
     if (tool === 'repeater') return { type: 'repeater', rotation: 0, delay: 1 };
     if (tool === 'comparator') return { type: 'comparator', rotation: 0, mode: 'compare' };
     if (tool === 'observer') return { type: 'observer', rotation: 0 };
+    if (tool === 'not_gate') return { type: 'not_gate', rotation: 0 };
+    if (tool === 'torch') return { type: 'torch', rotation: 0 };
     if (tool === 'piston' || tool === 'sticky_piston') return { type: tool, rotation: 0, extended: false };
     if (tool === 'noteblock') return { type: 'noteblock', pitch: 0 };
     if (tool === 'lever') return { type: 'lever', on: false };
-    if (tool === 'block') return { type: 'block', torch: false };
-    return { type: tool }; // wire, button, lamp
+    return { type: tool }; // block, wire, button, lamp, meter, adder
   }
 
   function rsUpdateBestFromSize() {
@@ -976,26 +987,27 @@
   // - "select": na Repeaterze/Komparatorze otwiera panel ustawień (obrót +
   //   opóźnienie albo tryb — patrz rsOpenPanel/rsRenderPanel) zamiast obracać
   //   od razu, bo te dwa komponenty mają dodatkowe parametry poza obrotem.
-  //   Na Observerze/tłoku (tłok tylko gdy NIE jest wysunięty — obracanie w
-  //   trakcie pchania zostawiłoby popchnięte bloki w niespójnym stanie) nadal
-  //   obraca wprost — nie mają nic więcej do ustawienia. Przełącza dźwignię,
-  //   naciska przycisk, zmienia wysokość tonu Note Blocka (z podglądem
-  //   dźwięku od razu).
-  // - "torch": WYJĄTEK od "zajęte pole = nic" — dotyka istniejącego Bloku bez
-  //   pochodni i ją dołącza (2D-owy odpowiednik "postaw pochodnię na bloku").
+  //   Na Observerze/NOT Gate/Pochodni/tłoku (tłok tylko gdy NIE jest
+  //   wysunięty — obracanie w trakcie pchania zostawiłoby popchnięte bloki w
+  //   niespójnym stanie) nadal obraca wprost — nie mają nic więcej do
+  //   ustawienia. Przełącza dźwignię, naciska przycisk, zmienia wysokość
+  //   tonu Note Blocka (z podglądem dźwięku od razu).
   // - "eraser": usuwa cokolwiek stoi na polu. Na Głowicy Tłoka (Piston Head)
   //   chowa najpierw właściciela (żeby nie zostawić osieroconego "wysuniętego"
   //   tłoka bez jego głowicy).
-  // - inne narzędzie: stawia nowy klocek na PUSTYM polu (zajęte = nic — próba
-  //   postawienia na zajętym polu daje krótki czerwony błysk "odrzucono", żeby
-  //   było jasne, że coś tam już jest, a nie że stawianie klocków nie działa).
+  // - inne narzędzie (w tym "torch" — Pochodnia jest teraz samodzielnym
+  //   klockiem jak Dźwignia, stawianym jednym tapnięciem na PUSTYM polu,
+  //   BEZ wymogu istniejącego Bloku): stawia nowy klocek na PUSTYM polu
+  //   (zajęte = nic — próba postawienia na zajętym polu daje krótki czerwony
+  //   błysk "odrzucono", żeby było jasne, że coś tam już jest, a nie że
+  //   stawianie klocków nie działa).
   function rsHandleTap(cx, cy) {
     const key = rsKey(cx, cy);
     const cell = rsWorld.get(key);
     if (rsTool === 'select') {
       if (!cell) { rsClosePanel(); return; }
       if (cell.type === 'repeater' || cell.type === 'comparator') { rsOpenPanel(key); return; }
-      else if (cell.type === 'observer') cell.rotation = (cell.rotation + 1) % 4;
+      else if (cell.type === 'observer' || cell.type === 'not_gate' || cell.type === 'torch') cell.rotation = (cell.rotation + 1) % 4;
       else if ((cell.type === 'piston' || cell.type === 'sticky_piston') && !cell.extended) cell.rotation = (cell.rotation + 1) % 4;
       else if (cell.type === 'noteblock') { cell.pitch = (cell.pitch + 1) % 25; rsPlayNote(cell.pitch); }
       else if (cell.type === 'lever') cell.on = !cell.on;
@@ -1017,13 +1029,14 @@
       rsComparatorOutputPrev.delete(key);
       rsScheduledObservers.delete(key);
       rsObserverPrevSig.delete(key);
+      rsObserverFiredAtTick.delete(key);
+      rsScheduledNotGates.delete(key);
+      rsTorchPoweredPrev.delete(key);
+      rsAdderValue.delete(key);
       rsPistonPoweredPrev.delete(key);
       rsScheduledPistons.delete(key);
       rsNoteBlockPoweredPrev.delete(key);
       rsNoteBlockPulse.delete(key);
-    } else if (rsTool === 'torch') {
-      if (cell && cell.type === 'block' && !cell.torch) cell.torch = true;
-      else { rsDeniedFlash.set(key, rsTick + RS_DENIED_FLASH_TICKS); return; }
     } else {
       if (cell) { rsDeniedFlash.set(key, rsTick + RS_DENIED_FLASH_TICKS); return; }
       rsWorld.set(key, rsDefaultCell(rsTool));
@@ -1033,22 +1046,50 @@
   }
 
   // Ile mocy "widzi" komponent patrzący NA komórkę `key` — albo przekazany
-  // sygnał z mapy `power` (przewód/blok/lampa/wyjście przekaźnika/komparatora),
-  // albo, jeśli ta komórka SAMA jest źródłem (dźwignia/przycisk/pochodnia na
-  // bloku), jej własna moc wprost — bo źródło nie zasila SAMEGO SIEBIE w mapie
-  // `power` (relayInto dostaje tylko jego SĄSIADÓW), a mimo to w prawdziwym
-  // Minecrafcie przekaźnik/komparator stojący TUŻ PRZY źródle (bez przewodu
-  // pomiędzy) i tak je odczytuje. Używane wszędzie tam, gdzie komponent czyta
-  // stan sąsiada na potrzeby WŁASNEJ decyzji (Repeater/Comparator), NIE w
-  // ogólnej propagacji przewodu (ta już poprawnie obsługuje źródła przez
-  // omniSources+relayInto).
+  // sygnał z mapy `power` (przewód/blok/lampa/Note Block), albo, jeśli ta
+  // komórka SAMA jest źródłem (dźwignia/przycisk/Pochodnia), jej własna moc
+  // wprost — bo źródło nie zasila SAMEGO SIEBIE w mapie `power` (relayInto
+  // dostaje tylko jego SĄSIADÓW), a mimo to w prawdziwym Minecrafcie
+  // przekaźnik/komparator stojący TUŻ PRZY źródle (bez przewodu pomiędzy) i
+  // tak je odczytuje. Repeater/Comparator/Observer/Piston/NOT Gate/Głowica
+  // Tłoka celowo zwracają TU zawsze 0 — są kierunkowe/strukturalne, nie
+  // ogólne źródła czytelne "z dowolnej strony dotyku" (patrz rsSensedPower
+  // niżej, która dodaje poprawną, KIERUNKOWĄ obsługę bezpośrednio
+  // dotykającego Repeatera/Komparatora/NOT Gate). Meter/Adder też zwracają 0
+  // — to czyste "sondy", nie mogą nic zasilać (wymóg: nie przewodzą dalej).
   function rsCellPowerFor(key, power, torchLitNow) {
     const c = rsWorld.get(key);
     if (!c) return power.get(key) || 0;
     if (c.type === 'lever') return c.on ? 15 : 0;
     if (c.type === 'button') return (rsButtonActive.get(key) || 0) > rsTick ? 15 : 0;
-    if (c.type === 'block' && c.torch) return torchLitNow.get(key) ? 15 : 0;
-    return power.get(key) || 0;
+    if (c.type === 'torch') return torchLitNow.get(key) ? 15 : 0;
+    if (c.type === 'wire' || c.type === 'block' || c.type === 'noteblock' || c.type === 'lamp') return power.get(key) || 0;
+    return 0;
+  }
+
+  // Rozszerza rsCellPowerFor o poprawną obsługę BEZPOŚREDNIO dotykającego
+  // Repeatera/Komparatora/NOT Gate (bez przewodu pomiędzy) — ich wyjście jest
+  // kierunkowe (wychodzi TYLKO z frontu), więc liczy się TYLKO gdy ich front
+  // wskazuje dokładnie na `myKey` (czyli na TEGO, kto pyta); dotyk z innej
+  // strony (bok/tył/przypadkowe sąsiedztwo) nic nie daje — dokładnie jak w
+  // Minecrafcie. Bez tego direct chaining Repeater→Repeater/Komparator w
+  // ogóle by nie działał (rsCellPowerFor sam w sobie zwraca dla nich 0), a
+  // wcześniej (błąd) to samo dawało się "wyczuć" przez przypadkowy wyciek do
+  // wspólnej mapy `power` z DOWOLNEJ strony — stąd zgłoszenie "komparator i
+  // przekaźnik są zasilane, choć nie powinny być". Używana wszędzie tam,
+  // gdzie komponent czyta konkretnego SĄSIADA na potrzeby własnej decyzji
+  // (Repeater/Comparator/NOT Gate/Piston/Adder) — NIE w ogólnej propagacji
+  // przewodu (FAZA 2, ta ma własną, symetryczną logikę).
+  function rsSensedPower(neighborKey, myKey, power, torchLitNow) {
+    const nc = rsWorld.get(neighborKey);
+    if (nc && (nc.type === 'repeater' || nc.type === 'comparator' || nc.type === 'not_gate')) {
+      const [nx, ny] = rsParseKey(neighborKey);
+      if (rsKey(...rsFrontOf(nx, ny, nc.rotation)) !== myKey) return 0;
+      if (nc.type === 'repeater') return rsRepeaterActiveNow.has(neighborKey) ? 15 : 0;
+      if (nc.type === 'not_gate') return rsNotGateActiveNow.has(neighborKey) ? 15 : 0;
+      return rsComparatorOutputPrev.get(neighborKey) || 0;
+    }
+    return rsCellPowerFor(neighborKey, power, torchLitNow);
   }
 
   // Sygnatura "co widać z zewnątrz" dla dowolnej komórki w TYM ticku — używana
@@ -1059,16 +1100,26 @@
     if (!c) return 'empty';
     switch (c.type) {
       case 'wire': return 'wire:' + (power.get(key) || 0);
-      case 'block': return 'block:' + (c.torch ? (torchLitNow.get(key) ? 'lit' : 'off') : 'plain');
+      case 'block': return 'block:plain';
+      case 'torch': return 'torch:' + c.rotation + ':' + (torchLitNow.get(key) ? 'lit' : 'off');
       case 'lever': return 'lever:' + (c.on ? 1 : 0);
       case 'button': return 'button:' + ((rsButtonActive.get(key) || 0) > rsTick ? 1 : 0);
+      // "Numer ticku ostatniego odpalenia" zamiast prostego on/off — inaczej
+      // FAZA 1 (dostarcza i OD RAZU czyści zaplanowany impuls) i FAZA 5
+      // (sprawdza sygnaturę PÓŹNIEJ w tym samym ticku) nigdy nie zdążyłyby się
+      // "minąć" na wspólnej wartości "1" — a to właśnie uniemożliwiało
+      // działanie zegara z dwóch Observerów patrzących na siebie.
+      case 'observer': return 'observer:' + c.rotation + ':' + (rsObserverFiredAtTick.get(key) || 0);
       // Przybliżenie: "czy przekaźnik właśnie widzi aktywne wejście" (ma
       // zaplanowane odpalenie) — wystarczające do wykrywania przejść on/off.
       case 'repeater': return 'repeater:' + c.rotation + ':' + (rsScheduledRepeaters.has(key) ? 1 : 0);
       case 'comparator': return 'comparator:' + c.rotation + ':' + c.mode + ':' + (rsComparatorOutputPrev.get(key) || 0);
+      case 'not_gate': return 'not_gate:' + c.rotation + ':' + (rsScheduledNotGates.has(key) ? 1 : 0);
       case 'lamp': return 'lamp:' + ((power.get(key) || 0) > 0 ? 1 : 0);
       case 'piston': case 'sticky_piston': return c.type + ':' + c.rotation + ':' + (c.extended ? 1 : 0);
       case 'noteblock': return 'noteblock:' + c.pitch + ':' + (rsNoteBlockPoweredPrev.get(key) ? 1 : 0);
+      case 'meter': return 'meter:' + (power.get(key) || 0);
+      case 'adder': return 'adder:' + (rsAdderValue.get(key) || 0);
       default: return c.type;
     }
   }
@@ -1109,16 +1160,25 @@
     return anim.extending ? t : (1 - t);
   }
 
+  // Solidne, przesuwalne klocki — jak w Minecrafcie (Note Block/Observer/
+  // lampy SĄ pushable tam, drobne "przyczepki" typu przewód/dźwignia/
+  // przekaźnik NIE są, tylko odpadają). Tłok (nie-wysunięty) też się przesuwa.
+  const RS_PISTON_PUSHABLE = new Set(['block', 'noteblock', 'observer', 'lamp', 'meter', 'adder']);
+
   // Wysuwa tłok (o kluczu `key`, komórka `cell`) — jeśli już wysunięty, nic
   // nie robi (idempotentne, jak w Minecrafcie). Szuka łańcucha kolejnych
-  // Bloków przed sobą w kierunku pchania; jeśli kończy się pustym polem (i nie
-  // przekracza RS_PISTON_MAX_PUSH), przesuwa CAŁY łańcuch o 1 pole — inaczej
-  // (cokolwiek nie-blokowego blokuje drogę, albo łańcuch za długi) nic się nie
-  // dzieje, zgodnie z zachowaniem prawdziwego tłoka "zablokowanego". Pole tuż
-  // przed tłokiem (zawsze wolne po przesunięciu łańcucha) dostaje realną
-  // komórkę 'piston_head' — bez tego głowica była czystą dekoracją rysowaną
-  // NA WIERZCHU dowolnego klocka, który ktoś tam postawił w międzyczasie
-  // (efekt "stackowania"), i inny tłok mógł swobodnie pchać blok prosto w nią.
+  // przesuwalnych klocków (RS_PISTON_PUSHABLE, plus nie-wysunięte tłoki)
+  // przed sobą w kierunku pchania. Łańcuch kończy się na: pustym polu (da się
+  // pchnąć), "przyczepce" typu przewód/Repeater/Comparator/dźwignia/przycisk/
+  // NOT Gate/Pochodnia (NIE blokuje — po prostu odpada/znika, jak redstone
+  // dust w Minecrafcie), Głowicy innego tłoka LUB już wysuniętym tłoku (te
+  // dwa BLOKUJĄ całkowicie — nie da się przez nie pchać), albo za długim
+  // łańcuchu (> RS_PISTON_MAX_PUSH, też blokuje). Pole tuż przed tłokiem
+  // (zawsze wolne po przesunięciu łańcucha / usunięciu przyczepki) dostaje
+  // realną komórkę 'piston_head' — bez tego głowica była czystą dekoracją
+  // rysowaną NA WIERZCHU dowolnego klocka, który ktoś tam postawił w
+  // międzyczasie (efekt "stackowania"), i inny tłok mógł swobodnie pchać
+  // blok prosto w nią.
   function rsPistonExtend(key, cell) {
     if (cell.extended) return;
     const [x, y] = rsParseKey(key);
@@ -1128,11 +1188,22 @@
     while (true) {
       const there = rsWorld.get(rsKey(cx, cy));
       if (!there) break; // puste pole — koniec łańcucha, da się pchnąć
-      if (there.type !== 'block') return; // cokolwiek nie-blokowego (w tym Głowica innego tłoka) — zablokowane
-      chain.push([cx, cy]);
+      if (there.type === 'piston_head') return; // głowica innego tłoka — zablokowane
+      if (there.type === 'piston' || there.type === 'sticky_piston') {
+        if (there.extended) return; // wysunięty tłok — zablokowane
+        chain.push([cx, cy]);
+      } else if (RS_PISTON_PUSHABLE.has(there.type)) {
+        chain.push([cx, cy]);
+      } else {
+        break; // "przyczepka" (przewód, Repeater, Comparator, NOT Gate, dźwignia, przycisk, Pochodnia) — nie blokuje, tu kończy się łańcuch
+      }
       if (chain.length > RS_PISTON_MAX_PUSH) return; // za długi łańcuch — zablokowane
       cx += d[0]; cy += d[1];
     }
+    // Jeśli łańcuch zatrzymał się na "przyczepce" (nie pustym polu), usuń ją
+    // — właśnie tam wyląduje Głowica.
+    const stopKey = rsKey(cx, cy);
+    if (rsWorld.has(stopKey)) rsWorld.delete(stopKey);
     // Przesuń łańcuch OD KOŃCA (żeby nie nadpisać jeszcze nieprzeniesionych pól).
     for (let i = chain.length - 1; i >= 0; i--) {
       const [bx, by] = chain[i];
@@ -1174,25 +1245,44 @@
   // Kolejność faz jest CELOWO stała i deterministyczna (nie zmieniać kolejności
   // przy dopisywaniu kolejnych komponentów — kolejne fazy czytają wyniki
   // poprzednich w tym samym ticku):
-  // 1. źródła sygnału  2. propagacja  3. Repeatery  4. Komparatory
-  // 5. Observers  6. Pistony + Note Block  8. aktualizacja bloków  9. render (poza tą funkcją)
+  // 1. źródła sygnału  2. propagacja  3. Repeatery/NOT Gate  4. Komparatory
+  // 5. Observers  6. Pistony + Note Block + Adder  8. aktualizacja Pochodni
+  // 9. render (poza tą funkcją)
   // (Faza 7 "czujniki" celowo pominięta — poza zakresem tej rundy prac.)
   function rsTick_() {
     rsTick++;
 
     // FAZA 1: źródła sygnału.
     // 1a) Kierunkowe odpalenia zaplanowane w POPRZEDNICH tickach (Repeater,
-    //     Komparator, Observer) — każdy niesie własną siłę sygnału (Repeater/
-    //     Observer zawsze 15, Komparator to co właśnie policzył).
+    //     NOT Gate, Komparator, Observer) — każdy niesie własną siłę sygnału
+    //     (Repeater/NOT Gate/Observer zawsze 15, Komparator to co właśnie
+    //     policzył). rsRepeaterActiveNow/rsNotGateActiveNow przebudowane od
+    //     zera KAŻDY tick — zawierają WYŁĄCZNIE te, których wyjście jest
+    //     dostarczane W TYM ticku (do rsSensedPower — bezpośredni dotyk
+    //     Repeater/NOT Gate → Repeater/Comparator/NOT Gate/Pochodnia/Tłok).
     const directedInjections = []; // [{ pos, strength }]
+    rsRepeaterActiveNow = new Set();
     for (const [key, sched] of rsScheduledRepeaters) {
       if (sched.dueTick <= rsTick) {
         const cell = rsWorld.get(key);
         if (cell && cell.type === 'repeater') {
           const [x, y] = rsParseKey(key);
           directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: 15 });
+          rsRepeaterActiveNow.add(key);
         }
         rsScheduledRepeaters.delete(key);
+      }
+    }
+    rsNotGateActiveNow = new Set();
+    for (const [key, sched] of rsScheduledNotGates) {
+      if (sched.dueTick <= rsTick) {
+        const cell = rsWorld.get(key);
+        if (cell && cell.type === 'not_gate') {
+          const [x, y] = rsParseKey(key);
+          directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: 15 });
+          rsNotGateActiveNow.add(key);
+        }
+        rsScheduledNotGates.delete(key);
       }
     }
     for (const [key, sched] of rsScheduledComparators) {
@@ -1212,6 +1302,7 @@
         if (cell && cell.type === 'observer') {
           const [x, y] = rsParseKey(key);
           directedInjections.push({ pos: rsKey(...rsBackOf(x, y, cell.rotation)), strength: 15 });
+          rsObserverFiredAtTick.set(key, rsTick);
         }
         rsScheduledObservers.delete(key);
       }
@@ -1229,14 +1320,14 @@
         rsScheduledPistons.delete(key);
       }
     }
-    // 1b) Źródła wszechkierunkowe: pochodnie (wg stanu Bloku z POPRZEDNIEGO
-    //     ticku — to jest ten 1-tickowy lag łamiący pętlę zwrotną), dźwignie
-    //     włączone, przyciski wciąż aktywne.
+    // 1b) Źródła wszechkierunkowe: Pochodnie (wg stanu WŁASNEJ komórki z
+    //     POPRZEDNIEGO ticku — to jest ten 1-tickowy lag łamiący pętlę
+    //     zwrotną), dźwignie włączone, przyciski wciąż aktywne.
     const omniSources = [];
-    const torchLitNow = new Map(); // klucz Bloku z pochodnią -> czy świeci W TYM ticku (do sygnatur Observera)
+    const torchLitNow = new Map(); // klucz Pochodni -> czy świeci W TYM ticku (do sygnatur Observera)
     for (const [key, cell] of rsWorld) {
-      if (cell.type === 'block' && cell.torch) {
-        const lit = !rsBlockPoweredPrev.get(key);
+      if (cell.type === 'torch') {
+        const lit = !rsTorchPoweredPrev.get(key);
         torchLitNow.set(key, lit);
         if (lit) omniSources.push(key);
       }
@@ -1248,33 +1339,48 @@
     // 15→1). Każda komórka przyjmuje tylko NAJSILNIEJSZY sygnał jaki do niej
     // dotarł i to wystarczy — klasyczne "shortest path z zanikiem", jeden
     // przebieg, bez pętli. Dalej propagują TYLKO przewody (wire) — blok/
-    // lampa/przekaźnik/komparator/dźwignia/przycisk to zawsze ślepy zaułek
-    // (stąd brak przewodzenia przez blok i brak "przecieku" z wyjścia
-    // przekaźnika/komparatora na jego wejście).
+    // lampa/przekaźnik/komparator/dźwignia/przycisk to zawsze ślepy zaułek.
     const power = new Map();
     const buckets = Array.from({ length: 16 }, () => []);
     // `direct` = true tylko dla wywołań z omniSources/directedInjections
-    // poniżej (bezpośredni dotyk: dźwignia/przycisk/inna pochodnia/wyjście
-    // przekaźnika lub komparatora). Blok Z POCHODNIĄ przyjmuje zasilenie
-    // TYLKO gdy direct === true — NIGDY z ogólnej propagacji przewodu
-    // (pętla niżej wywołuje relayInto bez trzeciego argumentu = false).
-    // Powód: przewód zasilany PRZEZ pochodnię zawsze jest też jej sąsiadem,
-    // więc zwykła propagacja natychmiast odbiłaby jej własny sygnał z
-    // powrotem na jej Blok W TYM SAMYM ticku (migotanie z maksymalną
-    // częstotliwością, niezależnie od opóźnień) — to nie jest pętla PRZEZ
-    // inne komponenty, tylko bezpośrednie odbicie o dystansie zero, którego
-    // nie da się bezpiecznie ominąć samym 1-tickowym poślizgiem. Odpowiada
-    // realnej regule Minecrafta: "pochodnia nie jest zasilana przez przewód,
-    // który sama zasila". Przekaźnik/komparator NIE mają tego problemu — są
+    // poniżej (bezpośredni dotyk: dźwignia/przycisk/inna Pochodnia/wyjście
+    // przekaźnika/komparatora/NOT Gate). Pochodnia przyjmuje zasilenie TYLKO
+    // gdy direct === true — NIGDY z ogólnej propagacji przewodu (pętla niżej
+    // wywołuje relayInto bez trzeciego argumentu = false). Powód: przewód
+    // zasilany PRZEZ Pochodnię zawsze jest też jej sąsiadem (Pochodnia emituje
+    // WSZECHKIERUNKOWO, także na własne "plecy"), więc zwykła propagacja
+    // natychmiast odbiłaby jej własny sygnał z powrotem na jej WŁASNĄ komórkę
+    // W TYM SAMYM ticku (migotanie z maksymalną częstotliwością, niezależnie
+    // od opóźnień) — to nie jest pętla PRZEZ inne komponenty, tylko
+    // bezpośrednie odbicie o dystansie zero, którego nie da się bezpiecznie
+    // ominąć samym 1-tickowym poślizgiem. Odpowiada realnej regule
+    // Minecrafta: "pochodnia nie jest zasilana przez przewód, który sama
+    // zasila". Przekaźnik/Komparator/NOT Gate NIE mają tego problemu — są
     // kierunkowe (czytają wejście z przeciwnej strony niż wyjście) i mają
-    // własne opóźnienie, więc mogą bezpiecznie odwracać pochodnię, do której
-    // dotykają wprost (patrz FAZA 1a/1b niżej) — to jedyny sposób budowania
-    // zegarów/pętli z pochodni w tym silniku (przewód sam z siebie nie może).
+    // własne opóźnienie, więc mogą bezpiecznie odwracać Pochodnię, do której
+    // dotykają wprost — to jedyny sposób budowania zegarów/pętli z Pochodni w
+    // tym silniku (przewód sam z siebie nie może).
+    //
+    // Ten sam `!direct` guard blokuje też ogólną propagację (nie bezpośrednie
+    // directedInjections/omniSources) na Repeaterze/Komparatorze/Observerze/
+    // Tłoku/Głowicy Tłoka/NOT Gate — to NIE jest ta sama ochrona co wyżej
+    // (te komponenty nie emitują wszechkierunkowo, więc nie ma ryzyka
+    // odbicia o zerowym dystansie), tylko zamknięcie osobnego, empirycznie
+    // znalezionego wycieku: bez tego dowolny przewód dotykający Repeatera/
+    // Komparatora z KTÓREJKOLWIEK strony (nie tylko od wejścia) zostawiał w
+    // `power` wartość na jego WŁASNEJ komórce, którą inny, sąsiedni komponent
+    // mógł potem błędnie odczytać jako "ten Repeater/Komparator jest
+    // zasilony" — stąd zgłoszenie "komparator/przekaźnik są zasilane/działają
+    // bezprzewodowo, choć nie powinny być". rsCellPowerFor i tak zwraca dla
+    // nich zawsze 0 (patrz tam), więc ten guard jest tu drugą linią obrony —
+    // trzyma `power` dla tych komórek czyste, więc żaden przyszły kod czytający
+    // je wprost (z pominięciem rsCellPowerFor) nie złapie tego samego wycieku.
+    const NON_CONDUCTIVE = new Set(['repeater', 'comparator', 'observer', 'piston', 'sticky_piston', 'piston_head', 'not_gate']);
     const relayInto = (pos, level, direct) => {
       if (level <= 0) return;
       const c = rsWorld.get(pos);
       if (!c) return;
-      if (c.type === 'block' && c.torch && !direct) return;
+      if (!direct && (c.type === 'torch' || NON_CONDUCTIVE.has(c.type))) return;
       if ((power.get(pos) || 0) >= level) return;
       power.set(pos, level);
       if (c.type === 'wire') buckets[level].push(pos);
@@ -1292,37 +1398,50 @@
       }
     }
 
-    // FAZA 3: Repeatery — sprawdź TYLKO pole od strony wejścia (rotation+180°)
-    // — ta jednostronność daje efekt diody (blokada przepływu zwrotnego z
-    // wyjścia). Jeśli zasilone i jeszcze nic nie zaplanowano, zaplanuj wyjście
-    // za `cell.delay` ticków (1-4, ustawiane w panelu ustawień — "select" na
-    // Repeaterze — domyślnie 1, jak świeżo postawiony w Minecrafcie).
+    // FAZA 3: Repeatery/NOT Gate — sprawdź TYLKO pole od strony wejścia
+    // (rotation+180°), przez rsSensedPower (obsługuje też bezpośrednio
+    // dotykający Repeater/Komparator/NOT Gate, nie tylko przewód/dźwignię/
+    // Pochodnię) — ta jednostronność daje efekt diody. Repeater: jeśli
+    // zasilone i jeszcze nic nie zaplanowano, zaplanuj wyjście za
+    // `cell.delay` ticków (1-4, panel ustawień). NOT Gate: dokładnie
+    // odwrotnie — zaplanuj wyjście (15) gdy wejście jest ZGASZONE, zawsze z
+    // 1-tickowym opóźnieniem (bez regulacji, prostota — to bramka logiczna,
+    // nie licznik czasu).
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'repeater') continue;
       const [x, y] = rsParseKey(key);
       const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
-      if (rsCellPowerFor(inKey, power, torchLitNow) > 0 && !rsScheduledRepeaters.has(key)) {
+      if (rsSensedPower(inKey, key, power, torchLitNow) > 0 && !rsScheduledRepeaters.has(key)) {
         rsScheduledRepeaters.set(key, { dueTick: rsTick + (cell.delay || 1) });
+      }
+    }
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'not_gate') continue;
+      const [x, y] = rsParseKey(key);
+      const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
+      if (rsSensedPower(inKey, key, power, torchLitNow) === 0 && !rsScheduledNotGates.has(key)) {
+        rsScheduledNotGates.set(key, { dueTick: rsTick + 1 });
       }
     }
 
     // FAZA 4: Komparatory — główne wejście (od tyłu wg rotacji) i dwa boczne
-    // (prostopadłe). Tryb "compare": przepuszcza główny sygnał, chyba że
-    // boczny jest SILNIEJSZY — wtedy wyjście 0. Tryb "subtract": wyjście =
-    // główny minus najsilniejszy boczny (min. 0). W przeciwieństwie do
-    // przekaźnika PRZELICZAMY co tick bezwarunkowo (wynik może się zmieniać
-    // płynnie, nie tylko włącz/wyłącz) — nadpisujemy zaplanowane wyjście, więc
-    // zawsze niesie NAJŚWIEŻSZĄ wartość z 1-tickowym opóźnieniem.
+    // (prostopadłe), przez rsSensedPower. Tryb "compare": przepuszcza główny
+    // sygnał, chyba że boczny jest SILNIEJSZY — wtedy wyjście 0. Tryb
+    // "subtract": wyjście = główny minus najsilniejszy boczny (min. 0). W
+    // przeciwieństwie do przekaźnika PRZELICZAMY co tick bezwarunkowo (wynik
+    // może się zmieniać płynnie, nie tylko włącz/wyłącz) — nadpisujemy
+    // zaplanowane wyjście, więc zawsze niesie NAJŚWIEŻSZĄ wartość z
+    // 1-tickowym opóźnieniem.
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'comparator') continue;
       const [x, y] = rsParseKey(key);
       const mainKey = rsKey(...rsBackOf(x, y, cell.rotation));
       const sideA = RS_DIR[(cell.rotation + 1) % 4];
       const sideB = RS_DIR[(cell.rotation + 3) % 4];
-      const main = rsCellPowerFor(mainKey, power, torchLitNow);
+      const main = rsSensedPower(mainKey, key, power, torchLitNow);
       const sideMax = Math.max(
-        rsCellPowerFor(rsKey(x + sideA[0], y + sideA[1]), power, torchLitNow),
-        rsCellPowerFor(rsKey(x + sideB[0], y + sideB[1]), power, torchLitNow)
+        rsSensedPower(rsKey(x + sideA[0], y + sideA[1]), key, power, torchLitNow),
+        rsSensedPower(rsKey(x + sideB[0], y + sideB[1]), key, power, torchLitNow)
       );
       const out = cell.mode === 'subtract' ? Math.max(0, main - sideMax) : (main >= sideMax ? main : 0);
       rsScheduledComparators.set(key, { dueTick: rsTick + RS_REPEATER_DELAY, strength: out });
@@ -1330,32 +1449,43 @@
 
     // FAZA 5: Observers — wykrywają zmianę sygnatury obserwowanej komórki
     // ("z przodu", wg rotacji) względem poprzedniego ticku i strzelają impuls
-    // DOKŁADNIE 1-tickowy, jednorazowo (nie na okrągło jak przekaźnik) —
-    // stąd brak warunku "!rsScheduledObservers.has(key)": to zdarzenie
-    // krawędziowe (edge-triggered), nie poziomowe (level-triggered).
+    // DOKŁADNIE 1-tickowy, jednorazowo (nie na okrągło jak przekaźnik).
+    // Brak warunku ".has()" jest CELOWY — pierwsze porównanie świeżo
+    // postawionego Observera (prevSig jeszcze nieustawione) też liczy się
+    // jako "zmiana" i odpala raz od razu, jak w Minecrafcie (Observer pulsuje
+    // przy postawieniu) — to właśnie pozwala dwóm Observerom patrzącym na
+    // siebie same wystartować w oscylację, zamiast utknąć na zawsze w 0/0.
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'observer') continue;
       const [x, y] = rsParseKey(key);
       const watchKey = rsKey(...rsFrontOf(x, y, cell.rotation));
       const sig = rsCellSignature(watchKey, power, torchLitNow);
-      if (rsObserverPrevSig.has(key) && rsObserverPrevSig.get(key) !== sig) {
+      if (rsObserverPrevSig.get(key) !== sig) {
         rsScheduledObservers.set(key, { dueTick: rsTick + RS_REPEATER_DELAY });
       }
       rsObserverPrevSig.set(key, sig);
     }
 
-    // FAZA 6: Pistony + Note Block.
-    // Tłoki: aktywują się zasilone OD TYŁU (ta sama konwencja co Repeater/
-    // Comparator), reagują na ZBOCZE (nie-zasilony->zasilony = wysunięcie,
-    // odwrotnie = schowanie) z tym samym 1-tickowym opóźnieniem co reszta
-    // komponentów kierunkowych (spójność czasowa silnika) — samo przesunięcie
-    // bloków wykonuje się na POCZĄTKU kolejnego ticku (FAZA 1c).
+    // FAZA 6: Pistony + Note Block + Adder.
+    // Tłoki: aktywują się zasilone z DOWOLNEJ strony OPRÓCZ frontu (jak w
+    // Minecrafcie — zasilenie z frontu nie aktywuje, inaczej tłok
+    // wyzwoliłby się od razu tym, co właśnie pchnął), przez rsSensedPower
+    // (więc też przez bezpośrednio dotykający Repeater/Komparator/NOT Gate).
+    // Reagują na ZBOCZE (nie-zasilony->zasilony = wysunięcie, odwrotnie =
+    // schowanie) z tym samym 1-tickowym opóźnieniem co reszta komponentów
+    // kierunkowych — samo przesunięcie bloków wykonuje się na POCZĄTKU
+    // kolejnego ticku (FAZA 1c).
     const nextPistonPowered = new Map();
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'piston' && cell.type !== 'sticky_piston') continue;
       const [x, y] = rsParseKey(key);
-      const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
-      const poweredNow = rsCellPowerFor(inKey, power, torchLitNow) > 0;
+      const frontKey = rsKey(...rsFrontOf(x, y, cell.rotation));
+      let poweredNow = false;
+      for (const [nx, ny] of rsNeighbors(x, y)) {
+        const nk = rsKey(nx, ny);
+        if (nk === frontKey) continue;
+        if (rsSensedPower(nk, key, power, torchLitNow) > 0) { poweredNow = true; break; }
+      }
       nextPistonPowered.set(key, poweredNow);
       const wasPowered = rsPistonPoweredPrev.get(key) || false;
       if (poweredNow && !wasPowered) rsScheduledPistons.set(key, { dueTick: rsTick + RS_REPEATER_DELAY, action: 'extend' });
@@ -1378,20 +1508,34 @@
     }
     rsNoteBlockPoweredPrev = nextNoteBlockPowered;
 
-    // FAZA 8: aktualizacja bloków — zapisz stan zasilenia Bloków z TEGO ticku
-    // prosto z mapy `power`. Dla zwykłego Bloku to każde zasilenie (przewód
-    // lub źródło bezpośrednie). Dla Bloku Z POCHODNIĄ wychodzi na to samo,
-    // bo relayInto (FAZA 2, `direct`) już zagwarantował, że `power` dla TEJ
-    // komórki mogło wzrosnąć TYLKO przez bezpośredni dotyk (dźwignia/
-    // przycisk/inna pochodnia przez omniSources, przekaźnik/komparator przez
-    // directedInjections) — zwykły przewód nigdy tu nic nie wpisał. Użyje
-    // tego dopiero NASTĘPNY tick przy sprawdzaniu pochodni.
-    const nextBlockPowered = new Map();
+    // Signal Adder: bierna sonda, sumuje moc SENSOWANĄ z KAŻDEJ z 4 stron
+    // osobno (rsSensedPower, żeby liczyć też bezpośrednio dotykający
+    // Repeater/Komparator/NOT Gate, nie tylko przewód) — inaczej niż Meter
+    // (które po prostu czyta wspólne `power`, patrz rsDrawMeter), bo `power`
+    // trzyma tylko JEDNĄ (najsilniejszą) wartość na komórkę, nie rozbicie
+    // per-strona. Signal Meter nie potrzebuje tu nic — czyta rsLastPower
+    // bezpośrednio przy rysowaniu, dokładnie jak Lampa.
+    const nextAdderValue = new Map();
     for (const [key, cell] of rsWorld) {
-      if (cell.type !== 'block') continue;
-      nextBlockPowered.set(key, (power.get(key) || 0) > 0);
+      if (cell.type !== 'adder') continue;
+      const [x, y] = rsParseKey(key);
+      let sum = 0;
+      for (const [nx, ny] of rsNeighbors(x, y)) sum += rsSensedPower(rsKey(nx, ny), key, power, torchLitNow);
+      nextAdderValue.set(key, sum);
     }
-    rsBlockPoweredPrev = nextBlockPowered;
+    rsAdderValue = nextAdderValue;
+
+    // FAZA 8: aktualizacja Pochodni — zapisz stan zasilenia ich WŁASNEJ
+    // komórki z TEGO ticku prosto z mapy `power` (relayInto, FAZA 2, `direct`
+    // już zagwarantował, że mogła wzrosnąć TYLKO przez bezpośredni dotyk —
+    // zwykły przewód nigdy tu nic nie wpisał). Użyje tego dopiero NASTĘPNY
+    // tick przy sprawdzaniu czy świecić.
+    const nextTorchPowered = new Map();
+    for (const [key, cell] of rsWorld) {
+      if (cell.type !== 'torch') continue;
+      nextTorchPowered.set(key, (power.get(key) || 0) > 0);
+    }
+    rsTorchPoweredPrev = nextTorchPowered;
     rsLastPower = power; // tylko do rysowania
   }
 
@@ -1484,12 +1628,13 @@
     const el = $('games-toolbar');
     if (!el) return;
     el.style.display = 'flex';
-    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'observer',
-      'piston', 'sticky_piston', 'noteblock', 'lever', 'button', 'lamp', 'eraser'];
+    const tools = ['select', 'block', 'wire', 'torch', 'repeater', 'comparator', 'observer', 'not_gate',
+      'piston', 'sticky_piston', 'noteblock', 'lever', 'button', 'lamp', 'meter', 'adder', 'eraser'];
     const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch',
-      repeater: 'rsToolRepeater', comparator: 'rsToolComparator', observer: 'rsToolObserver',
+      repeater: 'rsToolRepeater', comparator: 'rsToolComparator', observer: 'rsToolObserver', not_gate: 'rsToolNotGate',
       piston: 'rsToolPiston', sticky_piston: 'rsToolStickyPiston', noteblock: 'rsToolNoteBlock',
-      lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', eraser: 'rsToolEraser' };
+      lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', meter: 'rsToolMeter', adder: 'rsToolAdder',
+      eraser: 'rsToolEraser' };
     el.innerHTML = tools.map((id) =>
       `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}" data-rs-tool="${id}">${t(labelKeys[id])}</button>`
     ).join('') + `<button class="btn-secondary btn-sm" data-rs-clear="1">${t('rsClearWorld')}</button>`;
@@ -1506,17 +1651,22 @@
       if (!(await confirmDialog(t('rsConfirmClear'), t('rsConfirmClearOk')))) return;
       rsWorld = new Map();
       rsScheduledRepeaters = new Map();
+      rsRepeaterActiveNow = new Set();
       rsButtonActive = new Map();
-      rsBlockPoweredPrev = new Map();
+      rsTorchPoweredPrev = new Map();
       rsLastPower = new Map();
       rsScheduledComparators = new Map();
       rsComparatorOutputPrev = new Map();
       rsScheduledObservers = new Map();
       rsObserverPrevSig = new Map();
+      rsObserverFiredAtTick = new Map();
+      rsScheduledNotGates = new Map();
+      rsNotGateActiveNow = new Set();
       rsPistonPoweredPrev = new Map();
       rsScheduledPistons = new Map();
       rsNoteBlockPoweredPrev = new Map();
       rsNoteBlockPulse = new Map();
+      rsAdderValue = new Map();
       rsDeniedFlash = new Map();
       rsPistonAnim = new Map();
       rsClosePanel();
@@ -1618,15 +1768,58 @@
   function rsDrawBlock(ctx, sx, sy, s, cell, key) {
     ctx.fillStyle = RS_BORDER;
     ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
-    if (cell.torch) {
-      const on = !rsBlockPoweredPrev.get(key);
-      ctx.fillStyle = on ? '#ff6b1a' : '#4a2a1a';
-      ctx.fillRect(sx + s / 2 - s * 0.07, sy + s * 0.2, s * 0.14, s * 0.5);
-      if (on) {
-        ctx.fillStyle = '#ffcf4d';
-        ctx.beginPath(); ctx.arc(sx + s / 2, sy + s * 0.18, s * 0.09, 0, Math.PI * 2); ctx.fill();
-      }
+  }
+
+  // Pochodnia — samodzielny, obracalny klocek (już NIE flaga na Bloku): patyk
+  // + płomień narysowane OD ŚRODKA komórki w stronę `rotation` (front —
+  // "sterczy" w tę stronę), z małym "montażem" po przeciwnej stronie (back —
+  // wizualnie "ściana", do której jest przyczepiona). Kierunek jest tu czysto
+  // kosmetyczny (nie zawęża, co może ją zgasić — patrz komentarz w FAZA 2 przy
+  // relayInto: Pochodnia reaguje na zasilenie WŁASNEJ komórki z DOWOLNEJ
+  // strony, dokładnie jak w Minecrafcie, gdzie zależy to od tego, który Blok
+  // ją wspiera, a nie od jednej wybranej ściany).
+  function rsDrawTorch(ctx, sx, sy, s, cell, key) {
+    const d = RS_DIR[cell.rotation];
+    const cx = sx + s / 2, cy = sy + s / 2;
+    const lit = rsTorchLitForDraw(key);
+    // Mały "montaż" po stronie back — pokazuje, do czego jest przyczepiona.
+    ctx.fillStyle = RS_COMPONENT_BORDER;
+    ctx.fillRect(cx - d[0] * s * 0.32 - s * 0.07, cy - d[1] * s * 0.32 - s * 0.07, s * 0.14, s * 0.14);
+    ctx.fillStyle = lit ? '#ff6b1a' : '#4a2a1a';
+    ctx.fillRect(cx - s * 0.05, cy - s * 0.18, s * 0.1, s * 0.36);
+    if (lit) {
+      ctx.fillStyle = '#ffcf4d';
+      ctx.beginPath(); ctx.arc(cx, cy - s * 0.22, s * 0.09, 0, Math.PI * 2); ctx.fill();
     }
+  }
+
+  // Czy Pochodnia świeci NA POTRZEBY RYSOWANIA — poza tickiem symulacji
+  // (render rAF jest niezależny od tick 100ms) jedyny wiarygodny sygnał to
+  // rsTorchPoweredPrev (to samo, czego używa FAZA 1 do decyzji "świecić w tym
+  // ticku"): nie świeci, gdy jej WŁASNA komórka była zasilona w poprzednim ticku.
+  function rsTorchLitForDraw(key) {
+    return !rsTorchPoweredPrev.get(key);
+  }
+
+  // NOT Gate — jak Repeater (strzałka kierunku + tło), ale z okrągłą
+  // "bąbelkiem" na wejściu (klasyczny symbol negacji z bramek logicznych),
+  // żeby nie dało się go pomylić z Repeaterem na pierwszy rzut oka.
+  function rsDrawNotGate(ctx, sx, sy, s, cell, key) {
+    ctx.fillStyle = RS_COMPONENT_BG;
+    ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    ctx.strokeStyle = RS_COMPONENT_BORDER;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    const active = rsScheduledNotGates.has(key);
+    const d = RS_DIR[cell.rotation];
+    const cx = sx + s / 2, cy = sy + s / 2;
+    const color = active ? '#ff6b1a' : '#c7cbe0';
+    rsDrawDirArrow(ctx, cx, cy, d, s, color);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.5, s * 0.05);
+    ctx.beginPath();
+    ctx.arc(cx - d[0] * s * 0.3, cy - d[1] * s * 0.3, s * 0.1, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
   function rsDrawWire(ctx, sx, sy, s, x, y, key) {
@@ -1789,19 +1982,48 @@
     ctx.stroke();
   }
 
+  // Signal Meter/Adder — bierne "sondy", numer zamiast światła/dźwięku.
+  // Meter = najsilniejszy sygnał dotykający komórki (rsLastPower, jak Lampa).
+  // Adder = suma sygnałów z KAŻDEJ z 4 stron osobno (rsAdderValue, liczone w
+  // FAZA 6 — patrz tam, bo `power` trzyma tylko jedną wartość na komórkę).
+  // Żaden z nich nie przewodzi dalej (patrz rsCellPowerFor) — to gwarantuje,
+  // że wstawienie ich w środek obwodu nie przepuszcza sygnału.
+  function rsDrawMeter(ctx, sx, sy, s, key) {
+    rsDrawProbe(ctx, sx, sy, s, rsLastPower.get(key) || 0, '#8fd6ff');
+  }
+  function rsDrawAdder(ctx, sx, sy, s, key) {
+    rsDrawProbe(ctx, sx, sy, s, rsAdderValue.get(key) || 0, '#ffb84d');
+  }
+  function rsDrawProbe(ctx, sx, sy, s, value, color) {
+    ctx.fillStyle = RS_COMPONENT_BG;
+    ctx.fillRect(sx + 1, sy + 1, s - 2, s - 2);
+    ctx.strokeStyle = RS_COMPONENT_BORDER;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 1, sy + 1, s - 2, s - 2);
+    ctx.fillStyle = value > 0 ? color : RS_TEXT2;
+    ctx.font = 'bold ' + Math.round(s * 0.4) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(value), sx + s / 2, sy + s / 2 + s * 0.02);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+
   function rsDrawCell(ctx, x, y, cell, key) {
     const { sx, sy } = rsWorldToScreen(x, y);
     const s = rsCamera.scale;
     if (cell.type === 'block') rsDrawBlock(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'wire') rsDrawWire(ctx, sx, sy, s, x, y, key);
+    else if (cell.type === 'torch') rsDrawTorch(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'repeater') rsDrawRepeater(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'comparator') rsDrawComparator(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'observer') rsDrawObserver(ctx, sx, sy, s, cell, key);
+    else if (cell.type === 'not_gate') rsDrawNotGate(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'piston' || cell.type === 'sticky_piston') rsDrawPiston(ctx, sx, sy, s, cell, x, y);
     else if (cell.type === 'noteblock') rsDrawNoteBlock(ctx, sx, sy, s, cell, key);
     else if (cell.type === 'lever') rsDrawLever(ctx, sx, sy, s, cell);
     else if (cell.type === 'button') rsDrawButton(ctx, sx, sy, s, key);
     else if (cell.type === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
+    else if (cell.type === 'meter') rsDrawMeter(ctx, sx, sy, s, key);
+    else if (cell.type === 'adder') rsDrawAdder(ctx, sx, sy, s, key);
   }
 
   function startRedstone() {
@@ -1889,15 +2111,18 @@
       return {
         tick: rsTick,
         power: Array.from(rsLastPower.entries()),
-        blockPowered: Array.from(rsBlockPoweredPrev.entries()),
+        torchPowered: Array.from(rsTorchPoweredPrev.entries()),
         scheduledRepeaters: Array.from(rsScheduledRepeaters.entries()),
+        scheduledNotGates: Array.from(rsScheduledNotGates.entries()),
         scheduledComparators: Array.from(rsScheduledComparators.entries()),
         comparatorOutputPrev: Array.from(rsComparatorOutputPrev.entries()),
         scheduledObservers: Array.from(rsScheduledObservers.entries()),
         observerPrevSig: Array.from(rsObserverPrevSig.entries()),
+        observerFiredAtTick: Array.from(rsObserverFiredAtTick.entries()),
         pistonPoweredPrev: Array.from(rsPistonPoweredPrev.entries()),
         scheduledPistons: Array.from(rsScheduledPistons.entries()),
         noteBlockPoweredPrev: Array.from(rsNoteBlockPoweredPrev.entries()),
+        adderValue: Array.from(rsAdderValue.entries()),
         cells: Array.from(rsWorld.entries()),
       };
     },

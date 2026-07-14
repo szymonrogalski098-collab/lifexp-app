@@ -2051,8 +2051,10 @@
           redstoneHint: 'Drag to pan, pinch/wheel to zoom. Pick a tool below, then tap the grid.',
           rsToolSelect: 'Select', rsToolBlock: 'Block', rsToolWire: 'Wire', rsToolTorch: 'Torch',
           rsToolRepeater: 'Repeater', rsToolComparator: 'Comparator', rsToolCompMode: 'Comparator mode', rsToolObserver: 'Observer',
+          rsToolNotGate: 'NOT Gate',
           rsToolPiston: 'Piston', rsToolStickyPiston: 'Sticky piston', rsToolNoteBlock: 'Note block',
-          rsToolLever: 'Lever', rsToolButton: 'Button', rsToolLamp: 'Lamp', rsToolEraser: 'Eraser',
+          rsToolLever: 'Lever', rsToolButton: 'Button', rsToolLamp: 'Lamp',
+          rsToolMeter: 'Signal Meter', rsToolAdder: 'Signal Adder', rsToolEraser: 'Eraser',
           rsClearWorld: 'Clear world',
           rsConfirmClear: "Erase your entire circuit? This can't be undone.",
           rsConfirmClearOk: 'Clear',
@@ -2379,8 +2381,10 @@
           redstoneHint: 'Przeciągnij, by przesunąć widok, uszczypnij/scrolluj, by przybliżyć. Wybierz narzędzie i tapnij siatkę.',
           rsToolSelect: 'Zaznacz', rsToolBlock: 'Blok', rsToolWire: 'Przewód', rsToolTorch: 'Pochodnia',
           rsToolRepeater: 'Wzmacniacz', rsToolComparator: 'Komparator', rsToolCompMode: 'Tryb komparatora', rsToolObserver: 'Observer',
+          rsToolNotGate: 'Bramka NOT',
           rsToolPiston: 'Tłok', rsToolStickyPiston: 'Lepki tłok', rsToolNoteBlock: 'Blok nutowy',
-          rsToolLever: 'Dźwignia', rsToolButton: 'Przycisk', rsToolLamp: 'Lampa', rsToolEraser: 'Gumka',
+          rsToolLever: 'Dźwignia', rsToolButton: 'Przycisk', rsToolLamp: 'Lampa',
+          rsToolMeter: 'Miernik sygnału', rsToolAdder: 'Sumator sygnału', rsToolEraser: 'Gumka',
           rsClearWorld: 'Wyczyść świat',
           rsConfirmClear: 'Usunąć cały obwód? Tego nie można cofnąć.',
           rsConfirmClearOk: 'Wyczyść',
@@ -5906,8 +5910,17 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.22';
+    const APP_VERSION = '2026.07.23';
     const CHANGELOG = [
+      { version: '2026.07.23', items: [
+        { pl: '🔴 Fix: Przekaźnik/Komparator/Tłok już nie „łapią" zasilenia z boku, którego nie powinny widzieć, i mogą wreszcie odczytać drugi Przekaźnik/Komparator dotykający ich wprost (bez przewodu)', en: '🔴 Fix: Repeater/Comparator/Piston no longer pick up power from a side they should ignore, and can finally read another Repeater/Comparator touching them directly (no wire needed)' },
+        { pl: '🔴 Fix: Tłok reaguje na zasilenie z dowolnej strony poza swoim frontem, nie tylko od tyłu', en: '🔴 Fix: Piston reacts to power from any side except its own front, not just its back' },
+        { pl: '🔴 Tłok pcha teraz też Note Block/Observer/Lampę (nie tylko zwykłe Bloki); przewód/Przekaźnik/Komparator/dźwignia/przycisk/Pochodnia mu nie przeszkadzają — po prostu odpadają', en: '🔴 Piston now also pushes Note Block/Observer/Lamp (not just plain Blocks); wire/Repeater/Comparator/lever/button/Torch no longer block it — they just break off' },
+        { pl: '🔴 Fix: dwa Observery patrzące na siebie wreszcie działają jako zegar', en: '🔴 Fix: two Observers facing each other finally work as a clock' },
+        { pl: '🔴 Pochodnia to teraz samodzielny, obracalny klocek — stawiasz ją jednym tapnięciem na pustym polu, bez wymogu istniejącego Bloku', en: '🔴 Torch is now a standalone, rotatable piece — place it with one tap on any empty cell, no Block required first' },
+        { pl: '🔴 Nowe bloki: Miernik Sygnału (pokazuje najsilniejszy sygnał liczbą) i Sumator Sygnału (sumuje sygnały z wszystkich stron) — obydwa bierne, nic nie przewodzą, przydatne do budowy mini-kalkulatora', en: '🔴 New blocks: Signal Meter (shows the strongest signal as a number) and Signal Adder (sums signals from every side) — both passive, conduct nothing, handy for building a mini calculator' },
+        { pl: '🔴 Nowy blok: Bramka NOT — odwraca sygnał jak Przekaźnik + Pochodnia razem, jednym klockiem — najprostszy sposób na zbudowanie działającego zegara', en: '🔴 New block: NOT Gate — inverts a signal like a Repeater + Torch combo in a single block — the easiest way to build a working clock' },
+      ]},
       { version: '2026.07.22', items: [
         { pl: '📡 Fix: aplikacja czasem nie chciała się otworzyć w trybie samolotowym bez wcześniejszego internetu — ekran startowy jest teraz zawsze zapisany do użytku offline, nie tylko po pierwszym udanym uruchomieniu online', en: "📡 Fix: the app sometimes refused to open in airplane mode with no prior internet — the startup screen is now always saved for offline use, not just after the first successful online launch" },
       ]},
