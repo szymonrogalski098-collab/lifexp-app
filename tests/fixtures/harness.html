@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- Minimal DOM shell for driving games.js directly, bypassing app.html's
+     Firebase-gated auth flow. Mirrors exactly what setupCanvas()/rsBuildToolbar()
+     etc. in games.js expect to find by element id. -->
+<html>
+<head><meta charset="utf-8"><title>Redstone test harness</title></head>
+<body>
+  <div id="page-games" class="active">
+    <div id="games-menu" style="display:none"></div>
+    <div id="games-play" style="display:block">
+      <button id="games-fs-exit">x</button>
+      <div class="games-play-head">
+        <h3 id="games-play-title"></h3>
+        <span>Score: <strong id="games-score">0</strong></span>
+        <span>Best: <strong id="games-best">0</strong></span>
+      </div>
+      <div id="games-toolbar" class="games-toolbar" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+      <canvas id="games-canvas" width="600" height="600"></canvas>
+      <p id="games-hint"></p>
+    </div>
+  </div>
+
+  <script>
+    // games.js calls the real app.html confirmDialog() (exposed on window)
+    // for "Clear world" — stub it here so tests don't need the real modal.
+    window.confirmDialog = () => Promise.resolve(true);
+  </script>
+  <script src="../../games.js"></script>
+  <script>
+    window.__rsReady = new Promise((resolve) => {
+      (function check() {
+        if (window.LifeXPGames) resolve(); else setTimeout(check, 10);
+      })();
+    });
+  </script>
+</body>
+</html>

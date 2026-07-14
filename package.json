@@ -1,0 +1,13 @@
+{
+  "name": "lifexp-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "LifeXP — static PWA, no build step. This package.json exists only for the test suite.",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}
