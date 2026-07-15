@@ -581,10 +581,17 @@
     .game-tile .gt-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
     .game-tile .gt-best { font-size: 12px; color: var(--text2); font-family: var(--mono); }
     /* Canvas NIGDY nie może rozpychać strony w poziomie (historyczny bug pinch-zoom
-       na mobile) — szerokość rysowania ustawia JS wg kontenera, CSS tylko pilnuje 100%. */
+       na mobile) — szerokość rysowania ustawia JS wg kontenera, CSS tylko pilnuje 100%.
+       min-width:0 jest KONIECZNE odkąd canvas jest flex itemem w .games-canvas-row
+       (obok toolbara): elementy zastępowalne (canvas/img/video) w fleksie mają
+       domyślny automatyczny min-width równy ich rozmiarowi WEWNĘTRZNEMU, więc bez
+       tego canvas odmawiał skurczenia się poniżej swojej intrinsic szerokości i
+       wystawał poza prawą krawędź ekranu telefonu, gdy toolbar zajmował miejsce po
+       lewej — dokładnie ten bug, który zepchnął widoczną grę w lewo. */
     #games-canvas {
       display: block;
       width: 100%;
+      min-width: 0;
       max-width: 420px;
       margin: 0 auto;
       border-radius: 10px;
@@ -5939,8 +5946,12 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.26';
+    const APP_VERSION = '2026.07.27';
     const CHANGELOG = [
+      { version: '2026.07.27', items: [
+        { pl: '🔴 Fix: plansza Obwodów Redstone wystawała poza prawą krawędź telefonu odkąd doszła kolumna narzędzi po lewej (w zwykłym i pełnoekranowym widoku) — teraz poprawnie mieści się w szerokości ekranu', en: '🔴 Fix: the Redstone Circuits board overflowed past the right edge of the phone once the tool sidebar was added (both normal and fullscreen view) — it now correctly fits the screen width' },
+        { pl: '🔴 Ustawienia Tabliczki/Przekaźnika/Komparatora otwierają się teraz jako duże okno na środku ekranu (jak w Minecrafcie), zamiast paska wciśniętego obok toolbara, w którym nie dało się wpisać tekstu', en: '🔴 Sign/Repeater/Comparator settings now open as a large centered dialog (Minecraft-style) instead of a bar squeezed next to the toolbar where typing text didn\'t work' },
+      ]},
       { version: '2026.07.26', items: [
         { pl: '🔴 Toolbar Obwodów Redstone przeniesiony na wąską kolumnę po lewej stronie planszy (zamiast rzędów nad nią) — narzędzia są teraz zawsze widoczne, bez przewijania całej strony; ikonka nad nazwą zamiast nagłówków grup', en: '🔴 Redstone Circuits toolbar moved to a narrow column on the left of the board (instead of rows above it) — tools stay visible without scrolling the whole page; icon above the name instead of group headers' },
       ]},

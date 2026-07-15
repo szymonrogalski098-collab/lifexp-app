@@ -1717,25 +1717,41 @@
     rsBuildPanel();
   }
 
-  // ── Panel ustawień (Repeater/Comparator) ───────────────────────────────
-  // Zamiast osobnych przycisków w toolbarze ("select" na Repeaterze/
-  // Komparatorze dawniej po prostu obracał je od razu), dotknięcie jednego z
-  // tych dwóch komponentów narzędziem "select" otwiera mały panel pod
-  // toolbarem z obrotem + parametrem specyficznym dla typu (opóźnienie
-  // Repeatera 1-4 / tryb compare-subtract Komparatora). Ponowne dotknięcie
-  // tej samej komórki zamyka panel; zmiana narzędzia też go zamyka.
+  // ── Panel ustawień (Repeater/Comparator/Sign) ──────────────────────────
+  // Jak w Minecrafcie (tabliczka/piec/stół rzemieślniczy): dotknięcie jednego
+  // z tych komponentów narzędziem "select" otwiera PEŁNOEKRANOWY modal (nie
+  // mały pasek wciśnięty w toolbar) z obrotem + parametrem specyficznym dla
+  // typu (opóźnienie Repeatera 1-4 / tryb compare-subtract Komparatora /
+  // tekst+scal Tabliczki). Ponowne dotknięcie tej samej komórki zamyka panel;
+  // zmiana narzędzia też go zamyka.
+  //
+  // Świadomie NIE jest to `.games-toolbar`-owy wiersz przyklejony obok
+  // toolbara (jak wcześniej) — odkąd toolbar dostał kolumnę po lewej
+  // (.games-canvas-row), taki panel stawał się TRZECIM elementem tego
+  // samego wiersza flex, ściśniętym między toolbarem a canvasem: input
+  // tekstowy był obcięty/ledwo klikalny, a tapnięcia bywały łapane przez
+  // sąsiadujący canvas zamiast panelu. Reużywamy zamiast tego istniejący,
+  // sprawdzony wzorzec `.modal-overlay`/`.modal` (patrz app.html — te same
+  // klasy co confirmDialog/poziom-up itd.), wstawiany do document.body:
+  // position:fixed + z-index:2100 gwarantuje, że renderuje się NAD wszystkim
+  // (w tym trybem pełnoekranowym gry, z-index 2000) i nigdy nie jest
+  // przycięty przez żaden kontener układu.
   function rsBuildPanel() {
-    const toolbar = $('games-toolbar');
-    if (!toolbar || !toolbar.parentNode) return null;
-    let panel = $('games-rs-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'games-rs-panel';
-      panel.className = 'games-toolbar';
-      panel.style.display = 'none';
-      toolbar.parentNode.insertBefore(panel, toolbar.nextSibling);
+    let overlay = $('games-rs-panel-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'games-rs-panel-overlay';
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML =
+        `<div class="modal" style="max-width:340px;text-align:center">` +
+        `<h3 id="games-rs-panel-title"></h3>` +
+        `<div id="games-rs-panel-body" style="display:flex;flex-direction:column;gap:10px"></div>` +
+        `<button class="btn-secondary" style="width:100%;margin-top:18px" data-rs-panel-close="1">✕ ${t('rsPanelClose')}</button>` +
+        `</div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('button[data-rs-panel-close]').onclick = () => rsClosePanel();
     }
-    return panel;
+    return overlay;
   }
 
   function rsOpenPanel(key) {
@@ -1753,65 +1769,63 @@
   const RS_SIGN_MAX_LEN = 20;
 
   function rsRenderPanel() {
-    const panel = rsBuildPanel();
-    if (!panel) return;
+    const overlay = rsBuildPanel();
+    if (!overlay) return;
     const cell = rsPanelKey ? rsWorld.get(rsPanelKey) : null;
     if (!cell || !RS_PANEL_TYPES.has(cell.type)) {
-      panel.style.display = 'none';
-      panel.innerHTML = '';
+      overlay.classList.remove('open');
       rsPanelKey = null;
       return;
     }
-    panel.style.display = 'flex';
+    overlay.classList.add('open');
+    const title = $('games-rs-panel-title');
+    const body = $('games-rs-panel-body');
+    const labelKeys = { sign: 'rsToolSign', repeater: 'rsToolRepeater', comparator: 'rsToolComparator' };
+    if (title) title.textContent = t(labelKeys[cell.type]);
 
     if (cell.type === 'sign') {
       // Tabliczka nie ma obrotu (czysta etykieta) — panel to tylko pole
       // tekstowe (limit RS_SIGN_MAX_LEN znaków) + przełącznik "połącz z
       // sąsiadami" (patrz rsDrawSignsOverlay: sąsiednie Tabliczki z
       // separate=false renderują się jako jedna wspólna tabliczka).
-      panel.innerHTML =
-        `<input type="text" maxlength="${RS_SIGN_MAX_LEN}" placeholder="${t('rsPanelSignPlaceholder')}" style="width:130px;padding:4px 8px;font-size:12px" data-rs-panel-sign-text="1">` +
-        `<button class="btn-secondary btn-sm${cell.separate ? '' : ' is-active'}" data-rs-panel-sign-merge="1">${t('rsPanelMerge')}</button>` +
-        `<button class="btn-secondary btn-sm${cell.separate ? ' is-active' : ''}" data-rs-panel-sign-separate="1">${t('rsPanelSeparate')}</button>` +
-        `<button class="btn-secondary btn-sm" data-rs-panel-close="1">✕ ${t('rsPanelClose')}</button>`;
-      const textInput = panel.querySelector('input[data-rs-panel-sign-text]');
+      body.innerHTML =
+        `<input type="text" maxlength="${RS_SIGN_MAX_LEN}" placeholder="${t('rsPanelSignPlaceholder')}" style="width:100%;padding:10px 12px;font-size:15px;box-sizing:border-box" data-rs-panel-sign-text="1">` +
+        `<button class="btn-secondary${cell.separate ? '' : ' is-active'}" data-rs-panel-sign-merge="1">${t('rsPanelMerge')}</button>` +
+        `<button class="btn-secondary${cell.separate ? ' is-active' : ''}" data-rs-panel-sign-separate="1">${t('rsPanelSeparate')}</button>`;
+      const textInput = body.querySelector('input[data-rs-panel-sign-text]');
       if (textInput) {
         textInput.value = cell.text || '';
         textInput.oninput = () => { cell.text = textInput.value.slice(0, RS_SIGN_MAX_LEN); rsScheduleSave(); };
+        textInput.focus();
       }
-      const mergeBtn = panel.querySelector('button[data-rs-panel-sign-merge]');
+      const mergeBtn = body.querySelector('button[data-rs-panel-sign-merge]');
       if (mergeBtn) mergeBtn.onclick = () => { cell.separate = false; rsScheduleSave(); rsRenderPanel(); };
-      const separateBtn = panel.querySelector('button[data-rs-panel-sign-separate]');
+      const separateBtn = body.querySelector('button[data-rs-panel-sign-separate]');
       if (separateBtn) separateBtn.onclick = () => { cell.separate = true; rsScheduleSave(); rsRenderPanel(); };
-      const closeBtn2 = panel.querySelector('button[data-rs-panel-close]');
-      if (closeBtn2) closeBtn2.onclick = () => rsClosePanel();
       return;
     }
 
-    let html = `<button class="btn-secondary btn-sm" data-rs-panel-rotate="1">↻ ${t('rsPanelRotate')}</button>`;
+    let html = `<button class="btn-secondary" data-rs-panel-rotate="1">↻ ${t('rsPanelRotate')}</button>`;
     if (cell.type === 'repeater') {
-      html += `<span class="text2" style="font-size:12px;align-self:center">${t('rsPanelDelay')}:</span>`;
-      html += [1, 2, 3, 4].map((n) =>
-        `<button class="btn-secondary btn-sm${(cell.delay || 1) === n ? ' is-active' : ''}" data-rs-panel-delay="${n}">${n}</button>`
-      ).join('');
+      html += `<span class="text2" style="font-size:13px">${t('rsPanelDelay')}:</span>`;
+      html += `<div style="display:flex;gap:8px">` + [1, 2, 3, 4].map((n) =>
+        `<button class="btn-secondary${(cell.delay || 1) === n ? ' is-active' : ''}" style="flex:1" data-rs-panel-delay="${n}">${n}</button>`
+      ).join('') + `</div>`;
     } else {
-      html += `<span class="text2" style="font-size:12px;align-self:center">${t('rsPanelMode')}:</span>`;
-      html += `<button class="btn-secondary btn-sm${cell.mode === 'compare' ? ' is-active' : ''}" data-rs-panel-mode="compare">${t('rsModeCompare')}</button>`;
-      html += `<button class="btn-secondary btn-sm${cell.mode === 'subtract' ? ' is-active' : ''}" data-rs-panel-mode="subtract">${t('rsModeSubtract')}</button>`;
+      html += `<span class="text2" style="font-size:13px">${t('rsPanelMode')}:</span>`;
+      html += `<button class="btn-secondary${cell.mode === 'compare' ? ' is-active' : ''}" data-rs-panel-mode="compare">${t('rsModeCompare')}</button>`;
+      html += `<button class="btn-secondary${cell.mode === 'subtract' ? ' is-active' : ''}" data-rs-panel-mode="subtract">${t('rsModeSubtract')}</button>`;
     }
-    html += `<button class="btn-secondary btn-sm" data-rs-panel-close="1">✕ ${t('rsPanelClose')}</button>`;
-    panel.innerHTML = html;
+    body.innerHTML = html;
 
-    const rotateBtn = panel.querySelector('button[data-rs-panel-rotate]');
+    const rotateBtn = body.querySelector('button[data-rs-panel-rotate]');
     if (rotateBtn) rotateBtn.onclick = () => { cell.rotation = (cell.rotation + 1) % 4; rsScheduleSave(); };
-    panel.querySelectorAll('button[data-rs-panel-delay]').forEach((b) => {
+    body.querySelectorAll('button[data-rs-panel-delay]').forEach((b) => {
       b.onclick = () => { cell.delay = parseInt(b.getAttribute('data-rs-panel-delay'), 10); rsScheduleSave(); rsRenderPanel(); };
     });
-    panel.querySelectorAll('button[data-rs-panel-mode]').forEach((b) => {
+    body.querySelectorAll('button[data-rs-panel-mode]').forEach((b) => {
       b.onclick = () => { cell.mode = b.getAttribute('data-rs-panel-mode'); rsScheduleSave(); rsRenderPanel(); };
     });
-    const closeBtn = panel.querySelector('button[data-rs-panel-close]');
-    if (closeBtn) closeBtn.onclick = () => rsClosePanel();
   }
 
   // ── Rysowanie (kolory/kształty wektorowe — brak grafik, czytelność przede
@@ -2324,8 +2338,8 @@
         if (rsAudioCtx) { rsAudioCtx.close().catch(() => {}); rsAudioCtx = null; }
         const tb = $('games-toolbar');
         if (tb) { tb.innerHTML = ''; tb.style.display = 'none'; }
-        const panel = $('games-rs-panel');
-        if (panel) { panel.innerHTML = ''; panel.style.display = 'none'; }
+        const overlay = $('games-rs-panel-overlay');
+        if (overlay) overlay.classList.remove('open');
         rsPanelKey = null;
       },
     };

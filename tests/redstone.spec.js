@@ -153,7 +153,7 @@ test.describe('Repeater / Comparator directional power', () => {
     await clickTool(page, 'repeater'); await tapCell(page, 0, 0);
     await clickTool(page, 'select'); await tapCell(page, 0, 0); // opens panel
     await page.waitForTimeout(50);
-    await page.click('#games-rs-panel button[data-rs-panel-delay="4"]');
+    await page.click('#games-rs-panel-overlay button[data-rs-panel-delay="4"]');
     const cell = await cellAt(page, 0, 0);
     expect(cell.delay).toBe(4);
   });
@@ -287,8 +287,8 @@ test.describe('Sign', () => {
 
     await clickTool(page, 'select'); await tapCell(page, 0, 0);
     await page.waitForTimeout(50);
-    await page.fill('#games-rs-panel input[data-rs-panel-sign-text]', 'This text is definitely longer than twenty characters');
-    await page.dispatchEvent('#games-rs-panel input[data-rs-panel-sign-text]', 'input');
+    await page.fill('#games-rs-panel-overlay input[data-rs-panel-sign-text]', 'This text is definitely longer than twenty characters');
+    await page.dispatchEvent('#games-rs-panel-overlay input[data-rs-panel-sign-text]', 'input');
     await page.waitForTimeout(50);
     sign = await cellAt(page, 0, 0);
     expect(sign.text.length).toBe(20);
@@ -302,7 +302,7 @@ test.describe('Sign', () => {
 
     await clickTool(page, 'select'); await tapCell(page, 0, 0);
     await page.waitForTimeout(50);
-    await page.click('#games-rs-panel button[data-rs-panel-sign-separate]');
+    await page.click('#games-rs-panel-overlay button[data-rs-panel-sign-separate]');
     await page.waitForTimeout(150);
     expect(closeToWood(await pixelAt(page, 0, 0.5))).toBe(false); // gap reappears
     expect(closeToWood(await pixelAt(page, 0.5, 0.5))).toBe(true); // its own board still there
