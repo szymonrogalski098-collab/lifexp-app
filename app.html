@@ -600,9 +600,22 @@
       -webkit-tap-highlight-color: transparent;
     }
     /* Tryb pełnoekranowy — pełny ekran obejmuje SAMĄ GRĘ, nie całą apkę: chowamy
-       nagłówek i podpowiedź, zostaje tylko canvas (na cały ekran), cienki pasek
-       z wynikiem i przycisk „✕". Rozmiar canvasa liczy JS wg okna. */
+       nagłówek i podpowiedź, zostaje tylko canvas (na cały ekran, z toolbarem
+       Redstone dalej po lewej — pełny ekran NIE chowa go), cienki pasek z
+       wynikiem i przycisk „✕". Rozmiar canvasa liczy JS wg okna. */
     #games-fs-exit { display: none; }
+    /* Wejście w pełny ekran — okrągły przycisk w rogu ekranu (jak „✕" wyjścia,
+       tylko widoczny w drugą stronę: gdy NIE jesteśmy jeszcze w trybie
+       pełnoekranowym), zamiast tekstowego przycisku w nagłówku. */
+    #games-fs-enter {
+      display: flex; align-items: center; justify-content: center;
+      position: fixed; top: 10px; right: 10px; z-index: 500;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--bg2); color: var(--text); border: 1px solid var(--border);
+      font-size: 20px; line-height: 1; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .games-fs #games-fs-enter { display: none; }
     .games-fs #games-play {
       position: fixed; inset: 0; z-index: 2000;
       background: var(--bg); margin: 0; padding: 8px;
@@ -1242,12 +1255,13 @@
         <div class="games-menu" id="games-menu"></div>
 
         <div id="games-play" style="display:none">
+          <!-- Wejście w pełny ekran — widoczne tylko POZA trybem .games-fs. -->
+          <button id="games-fs-enter" onclick="LifeXPGames.toggleFullscreen()" aria-label="Pełny ekran">⛶</button>
           <!-- Przycisk wyjścia z pełnego ekranu — widoczny tylko w trybie .games-fs -->
           <button id="games-fs-exit" onclick="LifeXPGames.toggleFullscreen()" aria-label="Zamknij pełny ekran">✕</button>
           <div class="games-play-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
             <h3 id="games-play-title" style="margin:0"></h3>
             <div style="display:flex;gap:8px">
-              <button class="btn-secondary btn-sm" onclick="LifeXPGames.toggleFullscreen()" data-i18n="games.fullscreen">⛶ Pełny ekran</button>
               <button class="btn-secondary btn-sm" onclick="LifeXPGames.exit()" data-i18n="games.exit">Wyjdź do menu</button>
             </div>
           </div>
@@ -5946,8 +5960,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.27';
+    const APP_VERSION = '2026.07.28';
     const CHANGELOG = [
+      { version: '2026.07.28', items: [
+        { pl: '🖥️ Wejście w pełny ekran w grach to teraz okrągły przycisk w rogu ekranu (zamiast przycisku w nagłówku) — tap pokazuje samą grę bez niczego innego, toolbar Obwodów Redstone zostaje widoczny', en: '🖥️ Entering fullscreen in games is now a round corner button (instead of a header button) — tap shows just the game with nothing else, the Redstone Circuits toolbar stays visible' },
+      ]},
       { version: '2026.07.27', items: [
         { pl: '🔴 Fix: plansza Obwodów Redstone wystawała poza prawą krawędź telefonu odkąd doszła kolumna narzędzi po lewej (w zwykłym i pełnoekranowym widoku) — teraz poprawnie mieści się w szerokości ekranu', en: '🔴 Fix: the Redstone Circuits board overflowed past the right edge of the phone once the tool sidebar was added (both normal and fullscreen view) — it now correctly fits the screen width' },
         { pl: '🔴 Ustawienia Tabliczki/Przekaźnika/Komparatora otwierają się teraz jako duże okno na środku ekranu (jak w Minecrafcie), zamiast paska wciśniętego obok toolbara, w którym nie dało się wpisać tekstu', en: '🔴 Sign/Repeater/Comparator settings now open as a large centered dialog (Minecraft-style) instead of a bar squeezed next to the toolbar where typing text didn\'t work' },
