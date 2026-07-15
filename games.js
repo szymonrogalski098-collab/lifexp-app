@@ -938,6 +938,22 @@
         if (parsed && parsed.cam) rsCamera = { x: parsed.cam.x || 0, y: parsed.cam.y || 0, scale: parsed.cam.scale || 28 };
       }
     } catch (e) {}
+    // Samo-naprawa osieroconych Głowic Tłoka — mogły powstać przed poprawką w
+    // rsHandleTap (usuwanie ciała wysuniętego tłoka gumką kasowało tylko
+    // ciało, zostawiając Głowicę: niewidzialną, bo rsDrawCell nie ma dla niej
+    // przypadku [rysowana tylko jako część animacji RODZICA], a mimo to
+    // zajmującą pole [blokuje stawianie, zawsze "denied flash"]). Głowica
+    // jest "osierocona", gdy jej `owner` nie wskazuje na istniejący
+    // wysunięty tłok skierowany dokładnie w jej stronę.
+    for (const [key, cell] of [...rsWorld]) {
+      if (cell.type !== 'piston_head') continue;
+      const owner = rsWorld.get(cell.owner);
+      const [ox, oy] = owner ? rsParseKey(cell.owner) : [0, 0];
+      const [hx, hy] = rsParseKey(key);
+      const ownerFacesHead = owner && (owner.type === 'piston' || owner.type === 'sticky_piston') &&
+        owner.extended && RS_DIR[owner.rotation][0] === hx - ox && RS_DIR[owner.rotation][1] === hy - oy;
+      if (!ownerFacesHead) rsWorld.delete(key);
+    }
     rsTick = 0;
     rsTorchPoweredPrev = new Map();
     rsScheduledRepeaters = new Map();
@@ -1052,6 +1068,13 @@
         if (owner) rsPistonRetract(cell.owner, owner); // usuwa też samą głowicę
         else rsWorld.delete(key); // osierocona głowica (nie powinno się zdarzyć) — po prostu usuń
       } else {
+        // Wysunięty tłok trzeba najpierw SCHOWAĆ (usuwa jego Głowicę i, dla
+        // Sticky Piston, odczepia ciągnięty blok) — bez tego kasowanie samego
+        // ciała zostawiało Głowicę osieroconą: niewidzialną (rsDrawCell nie
+        // ma dla niej przypadku — rysowana tylko jako część animacji
+        // RODZICA) i zajmującą pole na zawsze (zawsze "denied flash" przy
+        // próbie postawienia czegokolwiek na niej).
+        if ((cell.type === 'piston' || cell.type === 'sticky_piston') && cell.extended) rsPistonRetract(key, cell);
         rsWorld.delete(key);
       }
       if (key === rsPanelKey) rsClosePanel();

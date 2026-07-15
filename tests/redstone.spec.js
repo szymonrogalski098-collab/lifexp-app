@@ -202,6 +202,44 @@ test.describe('Piston', () => {
     await page.waitForTimeout(400);
     expect((await cellAt(page, -2, -2)).extended).toBe(false);
   });
+
+  test('erasing an extended piston\'s body also removes its head, not just the body', async ({ page }) => {
+    await clickTool(page, 'piston'); await tapCell(page, 0, 0); // rot0 East
+    await clickTool(page, 'lever'); await tapCell(page, -1, 0);
+    await clickTool(page, 'select'); await tapCell(page, -1, 0);
+    await page.waitForTimeout(400);
+    expect(await cellAt(page, 1, 0)).toMatchObject({ type: 'piston_head' });
+
+    await clickTool(page, 'eraser'); await tapCell(page, 0, 0); // erase the BODY directly, not the head
+    expect(await cellAt(page, 0, 0)).toBeNull();
+    // The head must be gone too — an orphaned piston_head is invisible
+    // (rsDrawCell has no case for it) yet still occupies the cell, so
+    // placement there would be silently denied forever.
+    expect(await cellAt(page, 1, 0)).toBeNull();
+
+    await clickTool(page, 'block'); await tapCell(page, 1, 0);
+    expect(await cellAt(page, 1, 0)).toMatchObject({ type: 'block' });
+  });
+
+  test('an orphaned piston_head from an old/corrupted save is cleaned up on load', async ({ page }) => {
+    // Simulates exactly the bug this regression guards: a save saved BEFORE
+    // the eraser fix, where a piston's body was erased while extended,
+    // leaving its head (owner pointing at a now-missing cell) behind —
+    // invisible and blocking placement forever. rsLoadWorld() must self-heal
+    // this on load rather than requiring the player to somehow find and
+    // erase a cell they can't see.
+    await page.goto('/tests/fixtures/harness.html');
+    await page.evaluate(() => {
+      localStorage.setItem('lifexp-redstone-world', JSON.stringify({
+        cells: [['5,5', { type: 'piston_head', owner: '4,5' }]], // '4,5' does not exist
+        cam: { x: 0, y: 0, scale: 28 },
+      }));
+    });
+    await page.evaluate(() => window.__rsReady);
+    await page.evaluate(() => window.LifeXPGames.open('redstone'));
+    await page.waitForTimeout(100);
+    expect(await cellAt(page, 5, 5)).toBeNull();
+  });
 });
 
 test.describe('Observer clock', () => {

@@ -5960,8 +5960,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.30';
+    const APP_VERSION = '2026.07.31';
     const CHANGELOG = [
+      { version: '2026.07.31', items: [
+        { pl: '🔴 Fix: kasowanie gumką ciała wysuniętego tłoka zostawiało niewidzialną, niekasowalną Głowicę blokującą stawianie na tym polu na zawsze — teraz gumka chowa tłok całkowicie; stare zapisy z takimi duchami są automatycznie naprawiane przy wczytaniu', en: '🔴 Fix: erasing an extended piston\'s body left behind an invisible, un-erasable head permanently blocking placement on that cell — the eraser now retracts the piston fully; old saves with such ghost cells are auto-repaired on load' },
+      ]},
       { version: '2026.07.30', items: [
         { pl: '🖥️ Fix: plansza Obwodów Redstone na pełnym ekranie wypełnia teraz całą wysokość telefonu zamiast kwadratu z pustym pasem pod spodem — prawdziwy fullscreen, nie okno w oknie', en: '🖥️ Fix: the Redstone Circuits board in fullscreen now fills the phone\'s full height instead of a square with empty space below it — real fullscreen, not a window inside a window' },
       ]},
