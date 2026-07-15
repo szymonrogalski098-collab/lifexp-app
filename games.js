@@ -1748,7 +1748,18 @@
         `<div id="games-rs-panel-body" style="display:flex;flex-direction:column;gap:10px"></div>` +
         `<button class="btn-secondary" style="width:100%;margin-top:18px" data-rs-panel-close="1">✕ ${t('rsPanelClose')}</button>` +
         `</div>`;
-      document.body.appendChild(overlay);
+      // Dołączony do #games-play (dokładnie ten element, na którym
+      // toggleFullscreen() wywołuje requestFullscreen()), NIE do
+      // document.body: gdy prawdziwe natywne Fullscreen API faktycznie się
+      // powiedzie (nie tylko klasa .games-fs), przeglądarka renderuje element
+      // fullscreen w specjalnej "top layer" NAD całą resztą strony —
+      // position:fixed + z-index NIC nie da elementowi spoza poddrzewa tego
+      // elementu, więc modal dołączony do body stałby się kompletnie
+      // niedostępny/nieklikalny w prawdziwym trybie pełnoekranowym. Wewnątrz
+      // #games-play modal nadal poprawnie renderuje się nad canvasem/toolbarem
+      // (position:fixed pozycjonuje się względem elementu fullscreen, który
+      // i tak wypełnia cały viewport, więc wizualnie wychodzi identycznie).
+      ($('games-play') || document.body).appendChild(overlay);
       overlay.querySelector('button[data-rs-panel-close]').onclick = () => rsClosePanel();
     }
     return overlay;
@@ -2363,7 +2374,16 @@
       $('games-hint').textContent = t(GAMES[id].hintKey);
       setScore(0);
       setBestLabel(getBest(id));
-      STARTERS[id]();
+      // Obwody Redstone otwierają się od razu na pełnym ekranie (mają
+      // toolbar/panel, więc zyskują na miejscu najbardziej) — wywołanie
+      // dzieje się SYNCHRONICZNIE w tym samym stosie co kliknięcie kafelka
+      // gry (onclick="LifeXPGames.open(...)"), więc liczy się jako część tego
+      // samego gestu użytkownika i realne Fullscreen API (best-effort w
+      // toggleFullscreen) też ma szansę zadziałać, nie tylko klasa .games-fs.
+      // toggleFullscreen() sam odpala grę przez applyFs()→reinitGame(), więc
+      // NIE wołamy STARTERS[id]() drugi raz w tej gałęzi.
+      if (id === 'redstone') toggleFullscreen();
+      else STARTERS[id]();
     },
     // Tylko do debugowania/testów — odczyt stanu symulacji Redstone bez
     // polegania na renderze (przydatne np. gdy rAF nie chodzi w tle karty).

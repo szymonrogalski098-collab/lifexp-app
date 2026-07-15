@@ -19,6 +19,18 @@
     .games-canvas-row { display: flex; gap: 10px; align-items: stretch; }
     .games-toolbar { display: none; flex-direction: column; flex: none; width: 62px; gap: 5px; overflow-y: auto; }
     .games-toolbar button { display: flex; flex-direction: column; flex-shrink: 0; align-items: center; justify-content: center; gap: 3px; padding: 5px 2px; font-size: 8.5px; }
+    /* Minimal subset of app.html's .modal-overlay/.modal rules — the Redstone
+       settings panel (Sign/Repeater/Comparator) is a real .modal-overlay
+       appended to <body> (see rsBuildPanel in games.js). Without position:
+       fixed + z-index here, it renders inline in normal document flow instead
+       of floating above the canvas, so on a big enough canvas (e.g. once
+       Redstone auto-opens fullscreen) the canvas visually overlaps and
+       intercepts clicks meant for the panel's buttons — passed by coincidence
+       before only because the small non-fullscreen canvas didn't happen to
+       overlap it. Keep in sync with style.css if that pattern changes. */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 2100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #1a1b22; padding: 20px; width: 100%; max-width: 440px; margin: 16px; }
   </style>
 </head>
 <body>
