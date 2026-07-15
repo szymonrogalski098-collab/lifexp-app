@@ -102,11 +102,18 @@
   // (canvas NIGDY nie może rozpychać strony w poziomie na telefonie).
   function setupCanvas(aspect) {
     const canvas = $('games-canvas');
+    // Toolbar Redstone stoi OBOK canvasu (wąska kolumna po lewej, patrz
+    // .games-canvas-row w app.html), nie nad nim. Dla innych gier ma
+    // display:none (offsetWidth=0), więc nic tu się dla nich nie zmienia.
+    const toolbarEl = $('games-toolbar');
+    const toolbarW = toolbarEl ? toolbarEl.offsetWidth : 0;
     let cssW;
     if (fsMode) {
       // Pełny ekran = sama gra. Chowamy tytuł/hint (CSS), zostaje tylko cienki
       // pasek z wynikiem i „✕", więc canvas wypełnia niemal cały ekran (proporcje zachowane).
-      const availW = window.innerWidth - 12;
+      // Trzeba odjąć realną szerokość toolbara od dostępnej szerokości, inaczej
+      // para toolbar+canvas wystawałaby poza szerokość ekranu.
+      const availW = window.innerWidth - 12 - (toolbarW ? toolbarW + 10 : 0);
       const availH = window.innerHeight - 64;
       cssW = Math.max(240, Math.min(availW, availH / aspect, 1400));
       canvas.style.width = Math.round(cssW) + 'px';
@@ -116,6 +123,14 @@
     }
     const cssH = Math.round(cssW * aspect);
     canvas.style.height = cssH + 'px';
+    // .games-toolbar ma overflow-y:auto, ale bez wysokości jawnie ograniczonej
+    // do wysokości canvasu, flexbox rozciąga CAŁY WIERSZ do wysokości
+    // najwyższego dziecka (kolumna przycisków), nie odwrotnie — więc bez tego
+    // toolbar nigdy by się nie przewijał sam w sobie i strona rosłaby razem z
+    // nim (dokładnie ten bug, który mieliśmy naprawić). Ustawiając max-height
+    // na realną wysokość canvasu, nadmiar przycisków przewija się WEWNĄTRZ
+    // wąskiej kolumny, nigdy nie wymagając scrollowania całej strony.
+    if (toolbarEl) toolbarEl.style.maxHeight = cssH + 'px';
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
@@ -1625,18 +1640,22 @@
 
   // ── Toolbar (prawdziwe przyciski HTML, nie rysowane na canvasie — łatwiej
   // trafić palcem, za darmo dostają globalny fix hitboxa/tap-highlight) ──
-  // Pogrupowane wg funkcji zamiast jednej płaskiej, zawijającej się listy —
-  // łatwiej odnaleźć klocek w rozbudowanym zestawie narzędzi. "Clear world"
-  // dołączony na końcu grupy "tools" (obok Select/Eraser), bo koncepcyjnie to
-  // też akcja "narzędziowa", nie osobny klocek do postawienia.
+  // Pogrupowane wg funkcji (kolejność w kolumnie), ale BEZ nagłówków tekstowych
+  // — toolbar to teraz wąska pionowa kolumna po lewej stronie canvasu (patrz
+  // .games-toolbar w app.html), więc każdy dodatkowy wiersz nagłówka kosztowałby
+  // cenne miejsce w pionie. Pierwszy przycisk każdej grupy (poza pierwszą)
+  // dostaje klasę rs-group-start — sam odstęp (bez tekstu) jako subtelna
+  // wskazówka podziału. "Clear world" dołączony na końcu grupy "tools" (obok
+  // Select/Eraser), bo koncepcyjnie to też akcja "narzędziowa", nie osobny
+  // klocek do postawienia.
   const RS_TOOL_GROUPS = [
-    { labelKey: 'rsGroupBuilding', tools: ['block', 'wire', 'torch', 'sign'] },
-    { labelKey: 'rsGroupLogic', tools: ['repeater', 'comparator', 'observer', 'not_gate'] },
-    { labelKey: 'rsGroupMechanism', tools: ['piston', 'sticky_piston'] },
-    { labelKey: 'rsGroupIO', tools: ['lever', 'button', 'lamp', 'noteblock', 'meter', 'adder'] },
-    { labelKey: 'rsGroupTools', tools: ['select', 'eraser'] },
+    { tools: ['block', 'wire', 'torch', 'sign'] },
+    { tools: ['repeater', 'comparator', 'observer', 'not_gate'] },
+    { tools: ['piston', 'sticky_piston'] },
+    { tools: ['lever', 'button', 'lamp', 'noteblock', 'meter', 'adder'] },
+    { tools: ['select', 'eraser'] },
   ];
-  const RS_TOOL_ICON_SIZE = 18;
+  const RS_TOOL_ICON_SIZE = 20;
 
   function rsBuildToolbar() {
     const el = $('games-toolbar');
@@ -1647,16 +1666,15 @@
       piston: 'rsToolPiston', sticky_piston: 'rsToolStickyPiston', noteblock: 'rsToolNoteBlock',
       lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', meter: 'rsToolMeter', adder: 'rsToolAdder',
       eraser: 'rsToolEraser' };
-    const btnHtml = (id) =>
-      `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}" data-rs-tool="${id}">` +
+    const btnHtml = (id, groupStart) =>
+      `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}${groupStart ? ' rs-group-start' : ''}" data-rs-tool="${id}">` +
       `<canvas class="rs-tool-icon" data-rs-icon="${id}" width="${RS_TOOL_ICON_SIZE}" height="${RS_TOOL_ICON_SIZE}"></canvas>` +
       `<span>${t(labelKeys[id])}</span></button>`;
-    el.innerHTML = RS_TOOL_GROUPS.map((g) =>
-      `<div class="rs-tool-group"><div class="rs-tool-group-label">${t(g.labelKey)}</div>` +
-      `<div class="rs-tool-group-row">${g.tools.map(btnHtml).join('')}` +
-      (g.labelKey === 'rsGroupTools' ? `<button class="btn-secondary btn-sm" data-rs-clear="1">${t('rsClearWorld')}</button>` : '') +
-      `</div></div>`
-    ).join('');
+    el.innerHTML = RS_TOOL_GROUPS.map((g, gi) =>
+      g.tools.map((id, i) => btnHtml(id, gi > 0 && i === 0)).join('')
+    ).join('') + `<button class="btn-secondary btn-sm rs-group-start" data-rs-clear="1">` +
+      `<canvas class="rs-tool-icon" data-rs-icon="clear" width="${RS_TOOL_ICON_SIZE}" height="${RS_TOOL_ICON_SIZE}"></canvas>` +
+      `<span>${t('rsClearWorld')}</span></button>`;
 
     el.querySelectorAll('canvas[data-rs-icon]').forEach((c) => {
       rsDrawToolIcon(c.getContext('2d'), c.getAttribute('data-rs-icon'), RS_TOOL_ICON_SIZE);
@@ -2189,6 +2207,7 @@
     else if (tool === 'adder') rsDrawAdder(ctx, sx, sy, s, key);
     else if (tool === 'select') rsDrawToolIconSelect(ctx, sx, sy, s);
     else if (tool === 'eraser') rsDrawToolIconEraser(ctx, sx, sy, s);
+    else if (tool === 'clear') rsDrawToolIconClear(ctx, sx, sy, s);
   }
 
   function rsDrawToolIconSign(ctx, sx, sy, s) {
@@ -2227,12 +2246,36 @@
     ctx.restore();
   }
 
+  function rsDrawToolIconClear(ctx, sx, sy, s) {
+    ctx.strokeStyle = '#c7cbe0';
+    ctx.fillStyle = '#c7cbe0';
+    ctx.lineWidth = Math.max(1, s * 0.07);
+    ctx.fillRect(sx + s * 0.28, sy + s * 0.14, s * 0.44, s * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(sx + s * 0.36, sy + s * 0.14); ctx.lineTo(sx + s * 0.4, sy + s * 0.06);
+    ctx.lineTo(sx + s * 0.6, sy + s * 0.06); ctx.lineTo(sx + s * 0.64, sy + s * 0.14);
+    ctx.stroke();
+    ctx.strokeRect(sx + s * 0.24, sy + s * 0.24, s * 0.52, s * 0.62);
+    ctx.beginPath();
+    ctx.moveTo(sx + s * 0.38, sy + s * 0.32); ctx.lineTo(sx + s * 0.38, sy + s * 0.76);
+    ctx.moveTo(sx + s * 0.5, sy + s * 0.32); ctx.lineTo(sx + s * 0.5, sy + s * 0.76);
+    ctx.moveTo(sx + s * 0.62, sy + s * 0.32); ctx.lineTo(sx + s * 0.62, sy + s * 0.76);
+    ctx.stroke();
+  }
+
   function startRedstone() {
-    const { canvas, ctx, W, H } = setupCanvas(1);
-    rsW = W; rsH = H;
     rsTool = 'select';
     rsLoadWorld();
+    // Toolbar MUSI być zbudowany PRZED setupCanvas(): ten ostatni mierzy
+    // realną dostępną szerokość (canvas.clientWidth, zależną od tego, ile
+    // miejsca zajmuje kolumna toolbara w tym samym wierszu) i ustawia
+    // toolbarowi max-height dopasowany do wysokości canvasu — gdyby toolbar
+    // był jeszcze pusty/display:none w tym momencie, obie te wartości
+    // wyszłyby błędne (canvas myślałby, że ma więcej miejsca niż naprawdę
+    // ma, a toolbar dostałby złe ograniczenie wysokości).
     rsBuildToolbar();
+    const { canvas, ctx, W, H } = setupCanvas(1);
+    rsW = W; rsH = H;
     setScore(rsWorld.size);
     setBestLabel(getBest('redstone'));
 

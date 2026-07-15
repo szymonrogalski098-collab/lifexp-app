@@ -611,18 +611,26 @@
     .games-fs #games-canvas { max-width: none; }
     /* Toolbar Redstone — prawdziwe przyciski HTML (nie canvas), reużywają
        .btn-secondary/.btn-sm + globalny fix hitboxa/tap-highlight na [onclick].
-       Pogrupowane w rzędy (budowa/logika/mechanizmy/wejście-wyjście/narzędzia)
-       zamiast jednej płaskiej, zawijającej się listy — łatwiej znaleźć klocek
-       w rozbudowanym zestawie. Każdy przycisk ma mały <canvas> po lewej,
-       rysowany TĄ SAMĄ funkcją co dany klocek na siatce gry (patrz
-       rsDrawToolIcon w games.js), więc ikonka nigdy nie może rozjechać się z
-       prawdziwym wyglądem w grze. */
-    .games-toolbar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-    .rs-tool-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); margin: 0 0 4px 2px; }
-    .rs-tool-group-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .games-toolbar button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
-    .rs-tool-icon { width: 18px; height: 18px; flex: none; border-radius: 3px; background: rgba(255,255,255,.05); }
+       Stoi jako WĄSKA PIONOWA KOLUMNA PO LEWEJ stronie canvasu (nie nad nim) —
+       .games-canvas-row łączy je w jeden wiersz, a align-items:stretch (razem
+       z JS-owym canvas.style.height ustawianym w setupCanvas) sprawia, że
+       kolumna dopasowuje się do wysokości canvasu bez żadnej koordynacji w JS.
+       Jeśli przycisków jest więcej niż mieści się w tej wysokości, kolumna
+       przewija się SAMA W SOBIE (overflow-y) — nigdy cała strona, co było
+       pierwotną skargą (trzeba było scrollować stronę do samej góry, żeby
+       zmienić narzędzie). Bez nagłówków grup tekstowych (patrz rs-group-start
+       niżej) — każdy przycisk ma mały <canvas> NAD etykietą, rysowany TĄ SAMĄ
+       funkcją co dany klocek na siatce gry (patrz rsDrawToolIcon w games.js),
+       więc ikonka nigdy nie może rozjechać się z prawdziwym wyglądem w grze. */
+    .games-canvas-row { display: flex; gap: 10px; align-items: stretch; }
+    .games-toolbar { display: none; flex-direction: column; flex: none; width: 62px; gap: 5px; overflow-y: auto; }
+    .games-toolbar button { display: flex; flex-direction: column; flex-shrink: 0; align-items: center; justify-content: center; gap: 3px; padding: 5px 2px; font-size: 8.5px; line-height: 1.1; text-align: center; white-space: normal; }
+    .rs-tool-icon { width: 20px; height: 20px; flex: none; border-radius: 3px; background: rgba(255,255,255,.05); }
     .games-toolbar button.is-active { border-color: var(--accent); color: var(--accent); background: var(--bg3); }
+    /* Subtelny odstęp zamiast nagłówka tekstowego, żeby wizualnie odróżnić
+       grupy (budowa/logika/mechanizmy/wejście-wyjście/narzędzia) bez kosztu
+       dodatkowego wiersza wysokości. */
+    .games-toolbar button.rs-group-start { margin-top: 6px; }
     .games-fs #games-fs-exit {
       display: flex; align-items: center; justify-content: center;
       position: fixed; top: 10px; right: 10px; z-index: 2001;
@@ -1241,8 +1249,10 @@
               <span><span data-i18n="games.score">Wynik</span>: <strong id="games-score" style="color:var(--text);font-family:var(--mono)">0</strong></span>
               <span><span data-i18n="games.best">Rekord</span>: <strong id="games-best" style="color:var(--accent2);font-family:var(--mono)">0</strong></span>
             </div>
-            <div id="games-toolbar" class="games-toolbar" style="display:none"></div>
-            <canvas id="games-canvas"></canvas>
+            <div class="games-canvas-row">
+              <div id="games-toolbar" class="games-toolbar" style="display:none"></div>
+              <canvas id="games-canvas"></canvas>
+            </div>
             <p class="text2" id="games-hint" style="margin-top:10px;font-size:12px;text-align:center"></p>
           </div>
         </div>
@@ -5929,8 +5939,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.25';
+    const APP_VERSION = '2026.07.26';
     const CHANGELOG = [
+      { version: '2026.07.26', items: [
+        { pl: '🔴 Toolbar Obwodów Redstone przeniesiony na wąską kolumnę po lewej stronie planszy (zamiast rzędów nad nią) — narzędzia są teraz zawsze widoczne, bez przewijania całej strony; ikonka nad nazwą zamiast nagłówków grup', en: '🔴 Redstone Circuits toolbar moved to a narrow column on the left of the board (instead of rows above it) — tools stay visible without scrolling the whole page; icon above the name instead of group headers' },
+      ]},
       { version: '2026.07.25', items: [
         { pl: '🔴 Toolbar Obwodów Redstone przeorganizowany w czytelne grupy (Budowa/Logika/Mechanizmy/Wejście-Wyjście/Narzędzia), a każdy przycisk ma teraz obok nazwy małą ikonkę pokazującą, jak dany klocek wygląda w grze', en: '🔴 Redstone Circuits toolbar reorganized into clear groups (Building/Logic/Mechanism/Input-Output/Tools), and every button now shows a small icon next to its name previewing what that block actually looks like' },
       ]},

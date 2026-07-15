@@ -3,7 +3,24 @@
      Firebase-gated auth flow. Mirrors exactly what setupCanvas()/rsBuildToolbar()
      etc. in games.js expect to find by element id. -->
 <html>
-<head><meta charset="utf-8"><title>Redstone test harness</title></head>
+<head>
+  <meta charset="utf-8"><title>Redstone test harness</title>
+  <style>
+    /* Minimal subset of app.html's .games-canvas-row/.games-toolbar rules —
+       needed so the canvas sits at a SANE, PREDICTABLE position during tests.
+       Without this, the toolbar (a flex sibling of the canvas since the
+       toolbar redesign) renders as an unstyled, unconstrained wide row of
+       buttons, which can push the canvas far outside the viewport and cause
+       Playwright to horizontally scroll the whole page when clicking a
+       far-right button — silently breaking every test's tap-coordinate math
+       (canvasRect()'s `left` becomes scroll-relative, not the stable value
+       tests assume). Keep this in sync with app.html's real rules if that
+       layout ever changes. */
+    .games-canvas-row { display: flex; gap: 10px; align-items: stretch; }
+    .games-toolbar { display: none; flex-direction: column; flex: none; width: 62px; gap: 5px; overflow-y: auto; }
+    .games-toolbar button { display: flex; flex-direction: column; flex-shrink: 0; align-items: center; justify-content: center; gap: 3px; padding: 5px 2px; font-size: 8.5px; }
+  </style>
+</head>
 <body>
   <div id="page-games" class="active">
     <div id="games-menu" style="display:none"></div>
@@ -14,8 +31,10 @@
         <span>Score: <strong id="games-score">0</strong></span>
         <span>Best: <strong id="games-best">0</strong></span>
       </div>
-      <div id="games-toolbar" class="games-toolbar" style="display:flex;flex-wrap:wrap;gap:4px"></div>
-      <canvas id="games-canvas" width="600" height="600"></canvas>
+      <div class="games-canvas-row">
+        <div id="games-toolbar" class="games-toolbar" style="display:none"></div>
+        <canvas id="games-canvas" width="600" height="600"></canvas>
+      </div>
       <p id="games-hint"></p>
     </div>
   </div>
