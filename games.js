@@ -100,29 +100,45 @@
 
   // Zwraca { canvas, ctx, W, H } — rozmiar wg realnej szerokości kontenera
   // (canvas NIGDY nie może rozpychać strony w poziomie na telefonie).
-  function setupCanvas(aspect) {
+  // `fillFullscreen` (opcjonalny): w trybie pełnoekranowym canvas wypełnia
+  // CAŁĄ dostępną wysokość I szerokość (prostokąt dopasowany do ekranu), a
+  // nie kwadrat (aspect) wpisany w mniejszy z dwóch wymiarów — bez tego na
+  // wysokim telefonie kwadratowy canvas zajmował tylko szerokość ekranu,
+  // zostawiając pusty pasek pod spodem (wygląda jak gra w iframe, nie
+  // prawdziwy fullscreen). Redstone ma pannable/zoomable siatkę bez
+  // wymogu 1:1 (rsWorldToScreen liczy zasięg poziomy/pionowy niezależnie),
+  // więc może bezpiecznie wypełnić prostokąt zamiast kwadratu; inne gry
+  // (Snake/2048/Coins) mają siatki o STAŁYM kształcie, więc zostają przy
+  // zachowywaniu proporcji.
+  function setupCanvas(aspect, fillFullscreen) {
     const canvas = $('games-canvas');
     // Toolbar Redstone stoi OBOK canvasu (wąska kolumna po lewej, patrz
     // .games-canvas-row w app.html), nie nad nim. Dla innych gier ma
     // display:none (offsetWidth=0), więc nic tu się dla nich nie zmienia.
     const toolbarEl = $('games-toolbar');
     const toolbarW = toolbarEl ? toolbarEl.offsetWidth : 0;
-    let cssW;
+    let cssW, cssH;
     if (fsMode) {
       // Pełny ekran = sama gra. Chowamy tytuł/hint (CSS), zostaje tylko cienki
-      // pasek z wynikiem i „✕", więc canvas wypełnia niemal cały ekran (proporcje zachowane).
-      // Trzeba odjąć realną szerokość toolbara od dostępnej szerokości, inaczej
-      // para toolbar+canvas wystawałaby poza szerokość ekranu.
+      // pasek z wynikiem i „✕". Trzeba odjąć realną szerokość toolbara od
+      // dostępnej szerokości, inaczej para toolbar+canvas wystawałaby poza
+      // szerokość ekranu.
       const availW = window.innerWidth - 12 - (toolbarW ? toolbarW + 10 : 0);
       const availH = window.innerHeight - 64;
-      cssW = Math.max(240, Math.min(availW, availH / aspect, 1400));
+      if (fillFullscreen) {
+        cssW = Math.max(240, availW);
+        cssH = Math.max(240, availH);
+      } else {
+        cssW = Math.max(240, Math.min(availW, availH / aspect, 1400));
+        cssH = Math.round(cssW * aspect);
+      }
       canvas.style.width = Math.round(cssW) + 'px';
     } else {
       cssW = Math.max(200, Math.min(420, canvas.clientWidth || canvas.parentElement.clientWidth - 28));
+      cssH = Math.round(cssW * aspect);
       canvas.style.width = '';
     }
-    const cssH = Math.round(cssW * aspect);
-    canvas.style.height = cssH + 'px';
+    canvas.style.height = Math.round(cssH) + 'px';
     // .games-toolbar ma overflow-y:auto, ale bez wysokości jawnie ograniczonej
     // do wysokości canvasu, flexbox rozciąga CAŁY WIERSZ do wysokości
     // najwyższego dziecka (kolumna przycisków), nie odwrotnie — więc bez tego
@@ -2299,7 +2315,7 @@
     // wyszłyby błędne (canvas myślałby, że ma więcej miejsca niż naprawdę
     // ma, a toolbar dostałby złe ograniczenie wysokości).
     rsBuildToolbar();
-    const { canvas, ctx, W, H } = setupCanvas(1);
+    const { canvas, ctx, W, H } = setupCanvas(1, true);
     rsW = W; rsH = H;
     setScore(rsWorld.size);
     setBestLabel(getBest('redstone'));
