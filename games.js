@@ -1033,7 +1033,24 @@
     if (tool === 'noteblock') return { type: 'noteblock', pitch: 0 };
     if (tool === 'lever') return { type: 'lever', on: false };
     if (tool === 'sign') return { type: 'sign', text: '', separate: false };
+    if (tool === 'clock') return { type: 'clock', period: 2, on: true };
     return { type: tool }; // block, wire, button, lamp, meter, adder
+  }
+
+  // Zegar — samodzielne, konfigurowalne źródło impulsów: emituje wszechkierunkowo
+  // (jak dźwignia/Pochodnia) naprzemienny stan wł/wył o stałym okresie (1-4
+  // ticki na każdą fazę), WYŁĄCZNIE na podstawie globalnego licznika ticków
+  // (rsTick) i własnego okresu — bez żadnego zapisywanego stanu przejścia.
+  // Dzięki temu: (1) po wczytaniu zapisu od razu "łapie" właściwą fazę, nie
+  // trzeba nic odtwarzać; (2) w przeciwieństwie do pętli zwrotnej Bramki NOT
+  // nie może NIGDY nie ustabilizować się ani migotać nieregularnie — to
+  // czysta, deterministyczna fala prostokątna. Zwalnia z budowania pętli
+  // NOT Gate→samego-siebie albo dwóch Observerów tylko po to, żeby dostać
+  // powtarzający się sygnał zegarowy.
+  function rsClockOutputOn(cell, tick) {
+    if (!cell.on) return false;
+    const p = Math.max(1, Math.min(4, cell.period || 2));
+    return Math.floor(tick / p) % 2 === 0;
   }
 
   function rsUpdateBestFromSize() {
@@ -1066,7 +1083,7 @@
     const cell = rsWorld.get(key);
     if (rsTool === 'select') {
       if (!cell) { rsClosePanel(); return; }
-      if (cell.type === 'repeater' || cell.type === 'comparator' || cell.type === 'sign') { rsOpenPanel(key); return; }
+      if (cell.type === 'repeater' || cell.type === 'comparator' || cell.type === 'sign' || cell.type === 'clock') { rsOpenPanel(key); return; }
       else if (cell.type === 'observer' || cell.type === 'not_gate' || cell.type === 'torch') cell.rotation = (cell.rotation + 1) % 4;
       else if ((cell.type === 'piston' || cell.type === 'sticky_piston') && !cell.extended) cell.rotation = (cell.rotation + 1) % 4;
       else if (cell.type === 'noteblock') { cell.pitch = (cell.pitch + 1) % 25; rsPlayNote(cell.pitch); }
@@ -1132,6 +1149,7 @@
     if (c.type === 'lever') return c.on ? 15 : 0;
     if (c.type === 'button') return (rsButtonActive.get(key) || 0) > rsTick ? 15 : 0;
     if (c.type === 'torch') return torchLitNow.get(key) ? 15 : 0;
+    if (c.type === 'clock') return rsClockOutputOn(c, rsTick) ? 15 : 0;
     if (c.type === 'wire' || c.type === 'block' || c.type === 'noteblock' || c.type === 'lamp') return power.get(key) || 0;
     return 0;
   }
@@ -1189,6 +1207,7 @@
       case 'noteblock': return 'noteblock:' + c.pitch + ':' + (rsNoteBlockPoweredPrev.get(key) ? 1 : 0);
       case 'meter': return 'meter:' + (power.get(key) || 0);
       case 'adder': return 'adder:' + (rsAdderValue.get(key) || 0);
+      case 'clock': return 'clock:' + c.period + ':' + (c.on ? 1 : 0) + ':' + (rsClockOutputOn(c, rsTick) ? 1 : 0);
       default: return c.type;
     }
   }
@@ -1419,6 +1438,7 @@
       }
       else if (cell.type === 'lever' && cell.on) omniSources.push(key);
       else if (cell.type === 'button' && (rsButtonActive.get(key) || 0) > rsTick) omniSources.push(key);
+      else if (cell.type === 'clock' && rsClockOutputOn(cell, rsTick)) omniSources.push(key);
     }
 
     // FAZA 2: propagacja — wielo-źródłowy BFS z zanikiem (kubełki wg siły
@@ -1736,7 +1756,7 @@
     { tools: ['block', 'wire', 'torch', 'sign'] },
     { tools: ['repeater', 'comparator', 'observer', 'not_gate'] },
     { tools: ['piston', 'sticky_piston'] },
-    { tools: ['lever', 'button', 'lamp', 'noteblock', 'meter', 'adder'] },
+    { tools: ['lever', 'button', 'clock', 'lamp', 'noteblock', 'meter', 'adder'] },
     { tools: ['select', 'eraser'] },
   ];
   const RS_TOOL_ICON_SIZE = 20;
@@ -1748,7 +1768,7 @@
     const labelKeys = { select: 'rsToolSelect', block: 'rsToolBlock', wire: 'rsToolWire', torch: 'rsToolTorch', sign: 'rsToolSign',
       repeater: 'rsToolRepeater', comparator: 'rsToolComparator', observer: 'rsToolObserver', not_gate: 'rsToolNotGate',
       piston: 'rsToolPiston', sticky_piston: 'rsToolStickyPiston', noteblock: 'rsToolNoteBlock',
-      lever: 'rsToolLever', button: 'rsToolButton', lamp: 'rsToolLamp', meter: 'rsToolMeter', adder: 'rsToolAdder',
+      lever: 'rsToolLever', button: 'rsToolButton', clock: 'rsToolClock', lamp: 'rsToolLamp', meter: 'rsToolMeter', adder: 'rsToolAdder',
       eraser: 'rsToolEraser' };
     const btnHtml = (id, groupStart) =>
       `<button class="btn-secondary btn-sm${rsTool === id ? ' is-active' : ''}${groupStart ? ' rs-group-start' : ''}" data-rs-tool="${id}">` +
@@ -1862,7 +1882,7 @@
     rsRenderPanel();
   }
 
-  const RS_PANEL_TYPES = new Set(['repeater', 'comparator', 'sign']);
+  const RS_PANEL_TYPES = new Set(['repeater', 'comparator', 'sign', 'clock']);
   const RS_SIGN_MAX_LEN = 20;
 
   function rsRenderPanel() {
@@ -1877,7 +1897,7 @@
     overlay.classList.add('open');
     const title = $('games-rs-panel-title');
     const body = $('games-rs-panel-body');
-    const labelKeys = { sign: 'rsToolSign', repeater: 'rsToolRepeater', comparator: 'rsToolComparator' };
+    const labelKeys = { sign: 'rsToolSign', repeater: 'rsToolRepeater', comparator: 'rsToolComparator', clock: 'rsToolClock' };
     if (title) title.textContent = t(labelKeys[cell.type]);
 
     if (cell.type === 'sign') {
@@ -1899,6 +1919,24 @@
       if (mergeBtn) mergeBtn.onclick = () => { cell.separate = false; rsScheduleSave(); rsRenderPanel(); };
       const separateBtn = body.querySelector('button[data-rs-panel-sign-separate]');
       if (separateBtn) separateBtn.onclick = () => { cell.separate = true; rsScheduleSave(); rsRenderPanel(); };
+      return;
+    }
+
+    if (cell.type === 'clock') {
+      // Zegar jest wszechkierunkowy (jak dźwignia/Pochodnia) — brak obrotu do
+      // ustawienia. Tylko dwa parametry: wł/wył (jak dźwignia) i okres 1-4
+      // (jak opóźnienie Repeatera, ale tu = długość KAŻDEJ fazy cyklu).
+      body.innerHTML =
+        `<button class="btn-secondary${cell.on ? ' is-active' : ''}" data-rs-panel-clock-toggle="1">${cell.on ? t('rsPanelClockOn') : t('rsPanelClockOff')}</button>` +
+        `<span class="text2" style="font-size:13px">${t('rsPanelPeriod')}:</span>` +
+        `<div style="display:flex;gap:8px">` + [1, 2, 3, 4].map((n) =>
+          `<button class="btn-secondary${(cell.period || 2) === n ? ' is-active' : ''}" style="flex:1" data-rs-panel-period="${n}">${n}</button>`
+        ).join('') + `</div>`;
+      const toggleBtn = body.querySelector('button[data-rs-panel-clock-toggle]');
+      if (toggleBtn) toggleBtn.onclick = () => { cell.on = !cell.on; rsScheduleSave(); rsRenderPanel(); };
+      body.querySelectorAll('button[data-rs-panel-period]').forEach((b) => {
+        b.onclick = () => { cell.period = parseInt(b.getAttribute('data-rs-panel-period'), 10); rsScheduleSave(); rsRenderPanel(); };
+      });
       return;
     }
 
@@ -2091,6 +2129,36 @@
     rsDrawDirArrow(ctx, cx, cy, d, s, pulsing ? '#ff6b1a' : '#c7cbe0');
   }
 
+  // Zegar — tarcza z jedną wskazówką pokazującą pozycję w cyklu (pełny obrót =
+  // 2×period ticków, czyli jedna faza wł. + jedna faza wył.), żeby zmiana
+  // okresu w panelu ustawień była od razu widoczna jako szybsze/wolniejsze
+  // obracanie się wskazówki, nie tylko liczba w panelu. Kolor: wygaszony
+  // szaro-niebieski gdy wyłączony (cell.on === false), pomarańczowy gdy akurat
+  // w fazie WŁ., jasnoszary gdy włączony ale akurat w fazie WYŁ.
+  function rsDrawClock(ctx, sx, sy, s, cell, key) {
+    ctx.fillStyle = RS_COMPONENT_BG;
+    ctx.fillRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    ctx.strokeStyle = RS_COMPONENT_BORDER;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
+    const cx = sx + s / 2, cy = sy + s / 2;
+    const on = rsClockOutputOn(cell, rsTick);
+    const color = !cell.on ? '#5a5f75' : (on ? '#ff6b1a' : '#c7cbe0');
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.5, s * 0.05);
+    ctx.beginPath(); ctx.arc(cx, cy, s * 0.28, 0, Math.PI * 2); ctx.stroke();
+    const p = Math.max(1, Math.min(4, cell.period || 2));
+    const cycle = 2 * p;
+    const phase = ((rsTick % cycle) + cycle) % cycle / cycle;
+    const ang = phase * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(ang) * s * 0.24, cy + Math.sin(ang) * s * 0.24);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(cx, cy, s * 0.05, 0, Math.PI * 2); ctx.fill();
+  }
+
   function rsDrawPiston(ctx, sx, sy, s, cell, x, y) {
     const sticky = cell.type === 'sticky_piston';
     ctx.fillStyle = RS_BORDER;
@@ -2204,6 +2272,7 @@
     else if (cell.type === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
     else if (cell.type === 'meter') rsDrawMeter(ctx, sx, sy, s, key);
     else if (cell.type === 'adder') rsDrawAdder(ctx, sx, sy, s, key);
+    else if (cell.type === 'clock') rsDrawClock(ctx, sx, sy, s, cell, key);
     // 'sign' celowo pominięta tutaj — rysowana osobno przez
     // rsDrawSignsOverlay (patrz step()), NA WIERZCHU wszystkiego innego, bo
     // jej tablica bywa szersza niż jedna komórka.
@@ -2316,6 +2385,7 @@
     else if (tool === 'lamp') rsDrawLamp(ctx, sx, sy, s, key);
     else if (tool === 'meter') rsDrawMeter(ctx, sx, sy, s, key);
     else if (tool === 'adder') rsDrawAdder(ctx, sx, sy, s, key);
+    else if (tool === 'clock') rsDrawClock(ctx, sx, sy, s, { period: 2, on: true }, key);
     else if (tool === 'select') rsDrawToolIconSelect(ctx, sx, sy, s);
     else if (tool === 'eraser') rsDrawToolIconEraser(ctx, sx, sy, s);
     else if (tool === 'clear') rsDrawToolIconClear(ctx, sx, sy, s);

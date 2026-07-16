@@ -2093,7 +2093,7 @@
           rsToolRepeater: 'Repeater', rsToolComparator: 'Comparator', rsToolCompMode: 'Comparator mode', rsToolObserver: 'Observer',
           rsToolNotGate: 'NOT Gate',
           rsToolPiston: 'Piston', rsToolStickyPiston: 'Sticky piston', rsToolNoteBlock: 'Note block',
-          rsToolLever: 'Lever', rsToolButton: 'Button', rsToolLamp: 'Lamp',
+          rsToolLever: 'Lever', rsToolButton: 'Button', rsToolClock: 'Clock', rsToolLamp: 'Lamp',
           rsToolMeter: 'Signal Meter', rsToolAdder: 'Signal Adder', rsToolEraser: 'Eraser',
           rsClearWorld: 'Clear world',
           rsGroupBuilding: 'Building', rsGroupLogic: 'Logic', rsGroupMechanism: 'Mechanism',
@@ -2109,6 +2109,9 @@
           rsPanelMerge: 'Merge',
           rsPanelSeparate: 'Separate',
           rsPanelSignPlaceholder: 'Text (max 20)',
+          rsPanelPeriod: 'Period (ticks per phase)',
+          rsPanelClockOn: 'On',
+          rsPanelClockOff: 'Off',
         },
       }},
       pl: { translation: {
@@ -2428,7 +2431,7 @@
           rsToolRepeater: 'Wzmacniacz', rsToolComparator: 'Komparator', rsToolCompMode: 'Tryb komparatora', rsToolObserver: 'Observer',
           rsToolNotGate: 'Bramka NOT',
           rsToolPiston: 'Tłok', rsToolStickyPiston: 'Lepki tłok', rsToolNoteBlock: 'Blok nutowy',
-          rsToolLever: 'Dźwignia', rsToolButton: 'Przycisk', rsToolLamp: 'Lampa',
+          rsToolLever: 'Dźwignia', rsToolButton: 'Przycisk', rsToolClock: 'Zegar', rsToolLamp: 'Lampa',
           rsToolMeter: 'Miernik sygnału', rsToolAdder: 'Sumator sygnału', rsToolEraser: 'Gumka',
           rsClearWorld: 'Wyczyść świat',
           rsGroupBuilding: 'Budowa', rsGroupLogic: 'Logika', rsGroupMechanism: 'Mechanizmy',
@@ -2444,6 +2447,9 @@
           rsPanelMerge: 'Połącz',
           rsPanelSeparate: 'Oddziel',
           rsPanelSignPlaceholder: 'Tekst (max 20)',
+          rsPanelPeriod: 'Okres (ticki na fazę)',
+          rsPanelClockOn: 'Wł.',
+          rsPanelClockOff: 'Wył.',
         },
       }},
     };
@@ -5960,8 +5966,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.01';
+    const APP_VERSION = '2026.08.02';
     const CHANGELOG = [
+      { version: '2026.08.02', items: [
+        { pl: '🔴 Nowy blok: Zegar — samodzielne, konfigurowalne źródło impulsów (okres 1-4 ticki, wł/wył w ustawieniach) — nie trzeba już budować pętli z Bramki NOT albo dwóch Observerów tylko po to, żeby dostać powtarzający się sygnał', en: '🔴 New block: Clock — a self-contained, configurable pulse generator (period 1-4 ticks, on/off in settings) — no more building a NOT Gate feedback loop or two facing Observers just to get a repeating signal' },
+      ]},
       { version: '2026.08.01', items: [
         { pl: '🔴 Fix: Przekaźniki/Bramki NOT ustawione na różne opóźnienia potrafiły migotać (włączać/wyłączać się) w nieskończoność zamiast się ustabilizować — sygnał na wyjściu jest teraz trwałym stanem z opóźnionym przełączeniem (jak w prawdziwym Minecrafcie), a nie powtarzanym impulsem', en: '🔴 Fix: Repeaters/NOT Gates set to mismatched delays could flicker on/off forever instead of settling — output is now a persistent level with a delayed transition (matching real Minecraft), not a repeating pulse' },
       ]},

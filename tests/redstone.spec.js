@@ -366,6 +366,69 @@ test.describe('NOT Gate', () => {
   });
 });
 
+// New block proposed and added this round: a self-contained, configurable
+// pulse generator. Previously the ONLY ways to get a repeating signal were a
+// NOT Gate wired back into its own input, or two Observers facing each other
+// — both require building a small loop just to get a clock. The Clock block
+// is a single tile: tap to place (defaults to period 2, on), tap with
+// "select" to open its settings panel (period 1-4 ticks per phase, on/off).
+// Its output is computed purely from the global tick counter and its own
+// period/on fields (no saved transition state), so it can never desync or
+// get stuck — unlike a feedback loop, which depends on wiring being exactly
+// right and can flicker if built wrong.
+test.describe('Clock', () => {
+  test('places with defaults and the settings panel adjusts period + on/off', async ({ page }) => {
+    await clickTool(page, 'clock'); await tapCell(page, 0, 0);
+    let cell = await cellAt(page, 0, 0);
+    expect(cell).toMatchObject({ type: 'clock', period: 2, on: true });
+
+    await clickTool(page, 'select'); await tapCell(page, 0, 0); // opens panel
+    await page.waitForTimeout(50);
+    await page.click('#games-rs-panel-overlay button[data-rs-panel-period="4"]');
+    cell = await cellAt(page, 0, 0);
+    expect(cell.period).toBe(4);
+
+    await page.click('#games-rs-panel-overlay button[data-rs-panel-clock-toggle]');
+    cell = await cellAt(page, 0, 0);
+    expect(cell.on).toBe(false);
+  });
+
+  test('is a self-contained pulse generator (no lever/loop needed), and turning it off truly stops it', async ({ page }) => {
+    await clickTool(page, 'clock'); await tapCell(page, 0, 0);
+    await clickTool(page, 'lamp'); await tapCell(page, 1, 0);
+
+    const samples = [];
+    for (let i = 0; i < 16; i++) {
+      samples.push((await powerAt(page, 1, 0)) > 0 ? 1 : 0);
+      await page.waitForTimeout(100);
+    }
+    let toggles = 0;
+    for (let i = 1; i < samples.length; i++) if (samples[i] !== samples[i - 1]) toggles++;
+    expect(toggles).toBeGreaterThanOrEqual(2); // pulsing with nothing feeding it
+
+    await clickTool(page, 'select'); await tapCell(page, 0, 0);
+    await page.waitForTimeout(50);
+    await page.click('#games-rs-panel-overlay button[data-rs-panel-clock-toggle]');
+    await page.click('#games-rs-panel-overlay button[data-rs-panel-close]');
+    await page.waitForTimeout(600);
+    expect(await powerAt(page, 1, 0)).toBe(0);
+  });
+
+  test('two same-period clocks stay perfectly in phase — phase comes from the global tick, not per-block state', async ({ page }) => {
+    await clickTool(page, 'clock'); await tapCell(page, 0, 0);
+    await clickTool(page, 'lamp'); await tapCell(page, 1, 0);
+    await clickTool(page, 'clock'); await tapCell(page, 0, 5);
+    await clickTool(page, 'lamp'); await tapCell(page, 1, 5);
+    await page.waitForTimeout(50);
+    for (let i = 0; i < 10; i++) {
+      const a = (await powerAt(page, 1, 0)) > 0;
+      const b = (await powerAt(page, 1, 5)) > 0;
+      expect(a).toBe(b);
+      await page.waitForTimeout(100);
+    }
+  });
+});
+
 test.describe('Sign', () => {
   test('places with correct defaults and its text clamps at 20 characters', async ({ page }) => {
     await clickTool(page, 'sign'); await tapCell(page, 0, 0);
