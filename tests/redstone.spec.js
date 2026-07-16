@@ -157,6 +157,55 @@ test.describe('Repeater / Comparator directional power', () => {
     const cell = await cellAt(page, 0, 0);
     expect(cell.delay).toBe(4);
   });
+
+  // Regression for a real bug found while building a note-block sequencer:
+  // a chain of Repeater→Noteblock→Repeater→Noteblock... with MISMATCHED
+  // delays between consecutive repeaters (e.g. 1/2/1) never settled — the
+  // downstream repeaters flickered on/off forever instead of reaching a
+  // stable state, because a repeater's output used to be a one-tick
+  // "renewal pulse" that had to be continuously re-triggered every cycle,
+  // rather than a persisted level (like a real Minecraft repeater, whose
+  // delay only affects the transition lag, not create ongoing gaps for a
+  // constant input). Fixed by making repeater/NOT gate output a held level
+  // with delayed edges. This asserts it now reaches — and stays at — a
+  // stable state despite the mismatch, for both directions (on and off).
+  test('a chain of repeaters with MISMATCHED delays still settles into a stable state (does not flicker forever)', async ({ page }) => {
+    await clickTool(page, 'lever'); await tapCell(page, 0, 0);
+    await clickTool(page, 'repeater'); await tapCell(page, 1, 0);
+    await clickTool(page, 'noteblock'); await tapCell(page, 2, 0);
+    await clickTool(page, 'repeater'); await tapCell(page, 3, 0);
+    await clickTool(page, 'noteblock'); await tapCell(page, 4, 0);
+    await clickTool(page, 'repeater'); await tapCell(page, 5, 0);
+    await clickTool(page, 'lamp'); await tapCell(page, 6, 0);
+
+    async function setDelay(cx, cy, delay) {
+      await clickTool(page, 'select'); await tapCell(page, cx, cy);
+      await page.waitForTimeout(30);
+      await page.click(`#games-rs-panel-overlay button[data-rs-panel-delay="${delay}"]`);
+      await page.waitForTimeout(30);
+      await page.click('#games-rs-panel-overlay button[data-rs-panel-close]');
+      await page.waitForTimeout(30);
+    }
+    await setDelay(1, 0, 1);
+    await setDelay(3, 0, 2);
+    await setDelay(5, 0, 1);
+
+    await clickTool(page, 'select'); await tapCell(page, 0, 0); // lever ON
+    await page.waitForTimeout(1500); // well past any startup transient
+
+    const samples = [];
+    for (let i = 0; i < 10; i++) {
+      samples.push(await powerAt(page, 6, 0));
+      await page.waitForTimeout(100);
+    }
+    expect(new Set(samples).size).toBe(1); // no flicker: every sample identical
+    expect(samples[0]).toBeGreaterThan(0); // and it settled ON, not stuck off
+
+    // Turning the lever off must cascade all the way through and settle OFF too.
+    await clickTool(page, 'select'); await tapCell(page, 0, 0); // lever OFF
+    await page.waitForTimeout(1500);
+    expect(await powerAt(page, 6, 0)).toBe(0);
+  });
 });
 
 test.describe('Piston', () => {

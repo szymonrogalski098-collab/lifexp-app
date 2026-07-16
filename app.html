@@ -5960,8 +5960,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.07.31';
+    const APP_VERSION = '2026.08.01';
     const CHANGELOG = [
+      { version: '2026.08.01', items: [
+        { pl: '🔴 Fix: Przekaźniki/Bramki NOT ustawione na różne opóźnienia potrafiły migotać (włączać/wyłączać się) w nieskończoność zamiast się ustabilizować — sygnał na wyjściu jest teraz trwałym stanem z opóźnionym przełączeniem (jak w prawdziwym Minecrafcie), a nie powtarzanym impulsem', en: '🔴 Fix: Repeaters/NOT Gates set to mismatched delays could flicker on/off forever instead of settling — output is now a persistent level with a delayed transition (matching real Minecraft), not a repeating pulse' },
+      ]},
       { version: '2026.07.31', items: [
         { pl: '🔴 Fix: kasowanie gumką ciała wysuniętego tłoka zostawiało niewidzialną, niekasowalną Głowicę blokującą stawianie na tym polu na zawsze — teraz gumka chowa tłok całkowicie; stare zapisy z takimi duchami są automatycznie naprawiane przy wczytaniu', en: '🔴 Fix: erasing an extended piston\'s body left behind an invisible, un-erasable head permanently blocking placement on that cell — the eraser now retracts the piston fully; old saves with such ghost cells are auto-repaired on load' },
       ]},

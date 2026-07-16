@@ -892,8 +892,17 @@
   let rsTool = 'select';
   let rsTick = 0;
   let rsTorchPoweredPrev = new Map();   // ulotne — stan WŁASNEJ komórki Pochodni z poprzedniego ticku
-  let rsScheduledRepeaters = new Map(); // ulotne — key -> { dueTick }
-  let rsRepeaterActiveNow = new Set();  // ulotne — przebudowywane co tick: Repeatery, których wyjście jest DOSTARCZANE w TYM ticku (do rsSensedPower — bezpośredni dotyk Repeater→Repeater/Comparator)
+  // ulotne — key -> { dueTick, target } — ZAPLANOWANE PRZEJŚCIE wyjścia (nie
+  // "jednorazowy impuls do wystrzelenia"!). Patrz komentarz przy FAZA 3 niżej
+  // — to był kluczowy błąd naprawiony w tej rundzie: Repeater wcześniej
+  // trzymał wyjście wysoko TYLKO przez jeden tick na aktywację, więc łańcuch
+  // Repeaterów o RÓŻNYCH opóźnieniach nigdy się nie synchronizował i migał
+  // bez końca. Teraz wyjście to trwały POZIOM (rsRepeaterOutputOn), a to tu
+  // to tylko zaplanowana ZMIANA tego poziomu za `delay` ticków — dokładnie
+  // jak w prawdziwym Minecrafcie (opóźnienie symetryczne dla zbocza w górę i w dół).
+  let rsScheduledRepeaters = new Map();
+  let rsRepeaterOutputOn = new Set();    // ulotne — TRWAŁY stan wyjścia (on/off), nie tylko "ten jeden tick"
+  let rsRepeaterActiveNow = new Set();  // ulotne — przebudowywane co tick: Repeatery, których wyjście jest DOSTARCZANE w TYM ticku (do rsSensedPower — bezpośredni dotyk Repeater→Repeater/Comparator); zawsze === rsRepeaterOutputOn w danym ticku, osobny Set żeby nie mieszać "trwałego stanu" z "co dokładnie doręczono w tym ticku"
   let rsButtonActive = new Map();       // ulotne — key -> tick do którego przycisk aktywny
   let rsLastPower = new Map();          // ulotne, tylko do rysowania
   let rsScheduledComparators = new Map(); // ulotne — key -> { dueTick, strength } (przeliczane co tick, nie tylko raz)
@@ -901,8 +910,9 @@
   let rsScheduledObservers = new Map();    // ulotne — key -> { dueTick } (impuls jednorazowy, siła zawsze 15)
   let rsObserverPrevSig = new Map();       // ulotne — ostatnia sygnatura obserwowanej komórki (do wykrywania zmian)
   let rsObserverFiredAtTick = new Map();   // ulotne — key -> numer ticku ostatniego odpalenia (do sygnatury 'observer' — patrz rsCellSignature)
-  let rsScheduledNotGates = new Map();     // ulotne — key -> { dueTick } (jak Repeater, ale odpala gdy WEJŚCIE jest ZGASZONE)
+  let rsScheduledNotGates = new Map();     // ulotne — key -> { dueTick, target } (jak rsScheduledRepeaters, ale logika odwrócona — patrz FAZA 3)
   let rsNotGateActiveNow = new Set();      // ulotne — przebudowywane co tick, jak rsRepeaterActiveNow
+  let rsNotGateOutputOn = new Set();       // ulotne — TRWAŁY stan wyjścia, jak rsRepeaterOutputOn
   let rsPistonPoweredPrev = new Map();     // ulotne — stan zasilenia tłoków z poprzedniego ticku (do wykrywania zbocza)
   let rsScheduledPistons = new Map();      // ulotne — key -> { dueTick, action: 'extend'|'retract' }
   let rsNoteBlockPoweredPrev = new Map();  // ulotne — stan zasilenia Note Blocków z poprzedniego ticku
@@ -957,6 +967,7 @@
     rsTick = 0;
     rsTorchPoweredPrev = new Map();
     rsScheduledRepeaters = new Map();
+    rsRepeaterOutputOn = new Set();
     rsRepeaterActiveNow = new Set();
     rsButtonActive = new Map();
     rsLastPower = new Map();
@@ -967,6 +978,7 @@
     rsObserverFiredAtTick = new Map();
     rsScheduledNotGates = new Map();
     rsNotGateActiveNow = new Set();
+    rsNotGateOutputOn = new Set();
     rsPistonPoweredPrev = new Map();
     rsScheduledPistons = new Map();
     rsNoteBlockPoweredPrev = new Map();
@@ -1079,6 +1091,7 @@
       }
       if (key === rsPanelKey) rsClosePanel();
       rsScheduledRepeaters.delete(key);
+      rsRepeaterOutputOn.delete(key);
       rsButtonActive.delete(key);
       rsScheduledComparators.delete(key);
       rsComparatorOutputPrev.delete(key);
@@ -1086,6 +1099,7 @@
       rsObserverPrevSig.delete(key);
       rsObserverFiredAtTick.delete(key);
       rsScheduledNotGates.delete(key);
+      rsNotGateOutputOn.delete(key);
       rsTorchPoweredPrev.delete(key);
       rsAdderValue.delete(key);
       rsPistonPoweredPrev.delete(key);
@@ -1165,11 +1179,11 @@
       // "minąć" na wspólnej wartości "1" — a to właśnie uniemożliwiało
       // działanie zegara z dwóch Observerów patrzących na siebie.
       case 'observer': return 'observer:' + c.rotation + ':' + (rsObserverFiredAtTick.get(key) || 0);
-      // Przybliżenie: "czy przekaźnik właśnie widzi aktywne wejście" (ma
-      // zaplanowane odpalenie) — wystarczające do wykrywania przejść on/off.
-      case 'repeater': return 'repeater:' + c.rotation + ':' + (rsScheduledRepeaters.has(key) ? 1 : 0);
+      // Prawdziwy, TRWAŁY stan wyjścia (nie "czy akurat coś zaplanowano") —
+      // wystarczające i teraz poprawne do wykrywania przejść on/off.
+      case 'repeater': return 'repeater:' + c.rotation + ':' + (rsRepeaterOutputOn.has(key) ? 1 : 0);
       case 'comparator': return 'comparator:' + c.rotation + ':' + c.mode + ':' + (rsComparatorOutputPrev.get(key) || 0);
-      case 'not_gate': return 'not_gate:' + c.rotation + ':' + (rsScheduledNotGates.has(key) ? 1 : 0);
+      case 'not_gate': return 'not_gate:' + c.rotation + ':' + (rsNotGateOutputOn.has(key) ? 1 : 0);
       case 'lamp': return 'lamp:' + ((power.get(key) || 0) > 0 ? 1 : 0);
       case 'piston': case 'sticky_piston': return c.type + ':' + c.rotation + ':' + (c.extended ? 1 : 0);
       case 'noteblock': return 'noteblock:' + c.pitch + ':' + (rsNoteBlockPoweredPrev.get(key) ? 1 : 0);
@@ -1308,37 +1322,54 @@
     rsTick++;
 
     // FAZA 1: źródła sygnału.
-    // 1a) Kierunkowe odpalenia zaplanowane w POPRZEDNICH tickach (Repeater,
-    //     NOT Gate, Komparator, Observer) — każdy niesie własną siłę sygnału
-    //     (Repeater/NOT Gate/Observer zawsze 15, Komparator to co właśnie
-    //     policzył). rsRepeaterActiveNow/rsNotGateActiveNow przebudowane od
-    //     zera KAŻDY tick — zawierają WYŁĄCZNIE te, których wyjście jest
-    //     dostarczane W TYM ticku (do rsSensedPower — bezpośredni dotyk
-    //     Repeater/NOT Gate → Repeater/Comparator/NOT Gate/Pochodnia/Tłok).
+    // 1a) Repeater/NOT Gate: wyjście to TRWAŁY POZIOM (rsRepeaterOutputOn /
+    //     rsNotGateOutputOn), nie jednorazowy impuls — dokładnie jak w
+    //     prawdziwym Minecrafcie, gdzie opóźnienie działa jak linia
+    //     opóźniająca (delay line): wejście trzyma się stałe → wyjście
+    //     TEŻ trzyma się stałe, tylko przesunięte w czasie o `delay` ticków,
+    //     dla obu zboczy (włączenia i wyłączenia).
+    //
+    //     Najpierw stosujemy zaplanowane ZMIANY tego poziomu, których termin
+    //     właśnie minął (rsScheduledRepeaters/rsScheduledNotGates — patrz
+    //     FAZA 3, gdzie są planowane). Potem, NIEZALEŻNIE od tego czy coś się
+    //     dziś zmieniło, wstrzykujemy sygnał dla KAŻDEGO Repeatera/NOT Gate,
+    //     którego wyjście jest AKTUALNIE włączone — co tick, nie tylko w
+    //     ticku przejścia. Bez tego drugiego kroku (błąd naprawiony w tej
+    //     rundzie) wyjście było "gorące" tylko przez JEDEN tick na aktywację,
+    //     więc Repeater zasilany przez inny Repeater o INNYM opóźnieniu nigdy
+    //     nie widział sygnału ciągłego — tylko przerywany, w rytmie różnicy
+    //     opóźnień — i migał bez końca zamiast się ustabilizować (zgłoszenie:
+    //     "te repeatery co chwila się włączają i wyłączają, oprócz
+    //     pierwszego" — pierwszy dotykał dźwigni, czyli PRAWDZIWIE ciągłego
+    //     źródła, więc problem był niewidoczny akurat na nim).
     const directedInjections = []; // [{ pos, strength }]
-    rsRepeaterActiveNow = new Set();
     for (const [key, sched] of rsScheduledRepeaters) {
       if (sched.dueTick <= rsTick) {
-        const cell = rsWorld.get(key);
-        if (cell && cell.type === 'repeater') {
-          const [x, y] = rsParseKey(key);
-          directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: 15 });
-          rsRepeaterActiveNow.add(key);
-        }
+        if (sched.target) rsRepeaterOutputOn.add(key); else rsRepeaterOutputOn.delete(key);
         rsScheduledRepeaters.delete(key);
       }
     }
-    rsNotGateActiveNow = new Set();
+    rsRepeaterActiveNow = new Set();
+    for (const key of rsRepeaterOutputOn) {
+      const cell = rsWorld.get(key);
+      if (!cell || cell.type !== 'repeater') { rsRepeaterOutputOn.delete(key); continue; }
+      const [x, y] = rsParseKey(key);
+      directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: 15 });
+      rsRepeaterActiveNow.add(key);
+    }
     for (const [key, sched] of rsScheduledNotGates) {
       if (sched.dueTick <= rsTick) {
-        const cell = rsWorld.get(key);
-        if (cell && cell.type === 'not_gate') {
-          const [x, y] = rsParseKey(key);
-          directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: 15 });
-          rsNotGateActiveNow.add(key);
-        }
+        if (sched.target) rsNotGateOutputOn.add(key); else rsNotGateOutputOn.delete(key);
         rsScheduledNotGates.delete(key);
       }
+    }
+    rsNotGateActiveNow = new Set();
+    for (const key of rsNotGateOutputOn) {
+      const cell = rsWorld.get(key);
+      if (!cell || cell.type !== 'not_gate') { rsNotGateOutputOn.delete(key); continue; }
+      const [x, y] = rsParseKey(key);
+      directedInjections.push({ pos: rsKey(...rsFrontOf(x, y, cell.rotation)), strength: 15 });
+      rsNotGateActiveNow.add(key);
     }
     for (const [key, sched] of rsScheduledComparators) {
       if (sched.dueTick <= rsTick) {
@@ -1456,26 +1487,40 @@
     // FAZA 3: Repeatery/NOT Gate — sprawdź TYLKO pole od strony wejścia
     // (rotation+180°), przez rsSensedPower (obsługuje też bezpośrednio
     // dotykający Repeater/Komparator/NOT Gate, nie tylko przewód/dźwignię/
-    // Pochodnię) — ta jednostronność daje efekt diody. Repeater: jeśli
-    // zasilone i jeszcze nic nie zaplanowano, zaplanuj wyjście za
-    // `cell.delay` ticków (1-4, panel ustawień). NOT Gate: dokładnie
-    // odwrotnie — zaplanuj wyjście (15) gdy wejście jest ZGASZONE, zawsze z
-    // 1-tickowym opóźnieniem (bez regulacji, prostota — to bramka logiczna,
-    // nie licznik czasu).
+    // Pochodnię) — ta jednostronność daje efekt diody.
+    //
+    // Wyjście to POZIOM (patrz FAZA 1), więc tu tylko DECYDUJEMY, czy trzeba
+    // zaplanować jego ZMIANĘ — a nie "czy coś wystrzelić". Cel = to, czym
+    // wyjście POWINNO się stać, gdyby zmiana zaszła teraz (dla Repeatera:
+    // = aktualny stan wejścia; dla NOT Gate: odwrotność). Jeśli ten cel jest
+    // RÓŻNY od tego, do czego już zmierzamy (albo już trwałego stanu wyjścia,
+    // jeśli nic nie jest akurat zaplanowane, albo celu ISTNIEJĄCEGO
+    // zaplanowanego przejścia) — nadpisujemy zaplanowaną zmianę nowym celem,
+    // zawsze granym za `delay` ticków od TERAZ (Repeater: 1-4, panel
+    // ustawień; NOT Gate: zawsze 1, bez regulacji — prostota, to bramka
+    // logiczna, nie licznik czasu). Dzięki temu wejście trzymające się stałe
+    // daje wyjście trzymające się stałe (po jednym opóźnieniu), zamiast
+    // migającego co `delay` ticków impulsu — dokładnie jak w Minecrafcie.
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'repeater') continue;
       const [x, y] = rsParseKey(key);
       const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
-      if (rsSensedPower(inKey, key, power, torchLitNow) > 0 && !rsScheduledRepeaters.has(key)) {
-        rsScheduledRepeaters.set(key, { dueTick: rsTick + (cell.delay || 1) });
+      const sensedOn = rsSensedPower(inKey, key, power, torchLitNow) > 0;
+      const pending = rsScheduledRepeaters.get(key);
+      const headingTo = pending ? pending.target : rsRepeaterOutputOn.has(key);
+      if (sensedOn !== headingTo) {
+        rsScheduledRepeaters.set(key, { dueTick: rsTick + (cell.delay || 1), target: sensedOn });
       }
     }
     for (const [key, cell] of rsWorld) {
       if (cell.type !== 'not_gate') continue;
       const [x, y] = rsParseKey(key);
       const inKey = rsKey(...rsBackOf(x, y, cell.rotation));
-      if (rsSensedPower(inKey, key, power, torchLitNow) === 0 && !rsScheduledNotGates.has(key)) {
-        rsScheduledNotGates.set(key, { dueTick: rsTick + 1 });
+      const desiredOn = rsSensedPower(inKey, key, power, torchLitNow) === 0; // odwrócone: świeci gdy WEJŚCIE zgaszone
+      const pending = rsScheduledNotGates.get(key);
+      const headingTo = pending ? pending.target : rsNotGateOutputOn.has(key);
+      if (desiredOn !== headingTo) {
+        rsScheduledNotGates.set(key, { dueTick: rsTick + 1, target: desiredOn });
       }
     }
 
@@ -1731,6 +1776,7 @@
       if (!(await confirmDialog(t('rsConfirmClear'), t('rsConfirmClearOk')))) return;
       rsWorld = new Map();
       rsScheduledRepeaters = new Map();
+      rsRepeaterOutputOn = new Set();
       rsRepeaterActiveNow = new Set();
       rsButtonActive = new Map();
       rsTorchPoweredPrev = new Map();
@@ -1742,6 +1788,7 @@
       rsObserverFiredAtTick = new Map();
       rsScheduledNotGates = new Map();
       rsNotGateActiveNow = new Set();
+      rsNotGateOutputOn = new Set();
       rsPistonPoweredPrev = new Map();
       rsScheduledPistons = new Map();
       rsNoteBlockPoweredPrev = new Map();
@@ -1943,7 +1990,7 @@
     ctx.strokeStyle = RS_COMPONENT_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
-    const active = rsScheduledNotGates.has(key);
+    const active = rsNotGateOutputOn.has(key);
     const d = RS_DIR[cell.rotation];
     const cx = sx + s / 2, cy = sy + s / 2;
     const color = active ? '#ff6b1a' : '#c7cbe0';
@@ -1994,7 +2041,7 @@
     ctx.strokeStyle = RS_COMPONENT_BORDER;
     ctx.lineWidth = 1;
     ctx.strokeRect(sx + s * 0.1, sy + s * 0.1, s * 0.8, s * 0.8);
-    const active = rsScheduledRepeaters.has(key);
+    const active = rsRepeaterOutputOn.has(key);
     const d = RS_DIR[cell.rotation];
     const cx = sx + s / 2, cy = sy + s / 2;
     rsDrawDirArrow(ctx, cx, cy, d, s, active ? '#ff6b1a' : '#c7cbe0');
@@ -2433,7 +2480,9 @@
         power: Array.from(rsLastPower.entries()),
         torchPowered: Array.from(rsTorchPoweredPrev.entries()),
         scheduledRepeaters: Array.from(rsScheduledRepeaters.entries()),
+        repeaterOutputOn: Array.from(rsRepeaterOutputOn),
         scheduledNotGates: Array.from(rsScheduledNotGates.entries()),
+        notGateOutputOn: Array.from(rsNotGateOutputOn),
         scheduledComparators: Array.from(rsScheduledComparators.entries()),
         comparatorOutputPrev: Array.from(rsComparatorOutputPrev.entries()),
         scheduledObservers: Array.from(rsScheduledObservers.entries()),
