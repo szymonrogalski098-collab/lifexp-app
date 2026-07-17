@@ -846,6 +846,17 @@
       background: #fafafc;
     }
     .aic-empty { text-align: center; color: #b0b0b6; font-size: 13px; margin-top: 30px; }
+    .aic-chips {
+      display: flex; gap: 8px; padding: 0 14px 12px; overflow-x: auto;
+      flex-shrink: 0; scrollbar-width: none;
+    }
+    .aic-chips::-webkit-scrollbar { display: none; }
+    .aic-chip {
+      flex-shrink: 0; border: none; background: #f2f2f7; color: #1c1c1e;
+      border-radius: 16px; padding: 8px 14px; font-size: 13px; font-weight: 500;
+      cursor: pointer; white-space: nowrap; transition: transform .1s ease, background .15s ease;
+    }
+    .aic-chip:active { transform: scale(.95); background: #e5e5ea; }
     .aic-row { display: flex; }
     .aic-row.user { justify-content: flex-end; }
     .aic-row.ai { justify-content: flex-start; }
@@ -1470,6 +1481,19 @@
             <button class="aic-newchat-btn" onclick="aicNewChat()" aria-label="Nowy czat"><i class="ti ti-plus"></i></button>
           </div>
           <div class="aic-messages" id="aic-messages"></div>
+          <!-- Chipsy z podpowiedziami — widoczne tylko dla PUSTEGO czatu (jak w
+               prawdziwych apkach AI), chowane po pierwszej wiadomości (patrz
+               aicRenderMessages). Każdy chip od razu WYSYŁA swoje pytanie. -->
+          <div class="aic-chips" id="aic-chips">
+            <button class="aic-chip" onclick="aicSendChip('Jaka jest dziś pogoda?')">🌤️ Pogoda</button>
+            <button class="aic-chip" onclick="aicSendChip('Napisz mi kod')">💻 Kod</button>
+            <button class="aic-chip" onclick="aicSendChip('Co dziś zjeść?')">🍝 Jedzenie</button>
+            <button class="aic-chip" onclick="aicSendChip('Zagraj mi jakąś piosenkę')">🎵 Muzyka</button>
+            <button class="aic-chip" onclick="aicSendChip('Kto wygra dzisiejszy mecz?')">⚽ Sport</button>
+            <button class="aic-chip" onclick="aicSendChip('Kocham Cię')">❤️ Miłość</button>
+            <button class="aic-chip" onclick="aicSendChip('Policz mi coś trudnego')">🔢 Matematyka</button>
+            <button class="aic-chip" onclick="aicSendChip('Kim jestem?')">🤔 Kim jestem?</button>
+          </div>
           <div class="aic-inputbar">
             <input type="text" id="aic-input" placeholder="Zapytaj o cokolwiek..." maxlength="300" onkeydown="if(event.key==='Enter')sendAicMessage()">
             <button class="aic-send" onclick="sendAicMessage()" aria-label="Wyślij"><i class="ti ti-arrow-up"></i></button>
@@ -5546,6 +5570,55 @@
         'Nie mam dostępu do chmur. Ani tych na niebie, ani tych w internecie.',
         'Według moich obliczeń dzisiaj będzie... dzień. Reszta jest tajemnicą.',
       ]},
+      { stems: ['kod', 'program', 'aplikacj'], responses: [
+        'Napiszę Ci kod. Kod błędu: 404 - poczucie humoru nie znalezione.',
+        'Mój kompilator właśnie zgłosił: "co Ty robisz ze swoim życiem".',
+        'Umiem pisać kod tak samo dobrze jak odpowiadać na pytania. Czyli wcale.',
+        "function odpowiedz() { return undefined; } — to mój najlepszy kod.",
+        'Mogę napisać Ci pętlę nieskończoną. To akurat potrafię najlepiej.',
+      ]},
+      { stems: ['jedzeni', 'zjeś', 'zjes', 'obiad', 'gotowani', 'przepis'], responses: [
+        'Nie jem, ale słyszałem że pizza jest popularna. Polecam ją z całą mocą moich domysłów.',
+        'Sprawdzam lodówkę... nie mam lodówki. Ani rąk. Ani głodu.',
+        'Moja rekomendacja kulinarna: cokolwiek, byle nie pytaj mnie o przepis.',
+        'Ugotowałbym Ci coś, ale jestem tylko tekstem na ekranie.',
+        'Statystycznie ludzie lubią jeść. To chyba dobra wskazówka.',
+      ]},
+      { stems: ['muzyk', 'piosenk', 'zagraj'], responses: [
+        'Zagrałbym Ci piosenkę, ale nie mam głosu. Ani słuchu. Ani duszy.',
+        'Moja ulubiona piosenka to cisza serwera, który właśnie padł.',
+        'Mogę zanucić coś w stylu "biiiip biiip", ale to nie brzmi jak hit.',
+        'Muzyka kojąca duszę? Ja mam tylko kojące komunikaty o błędach.',
+        'Podłączam się do Spotify... nie mam dostępu do Spotify. Ani do niczego innego.',
+      ]},
+      { stems: ['sport', 'mecz', 'pilk', 'piłk'], responses: [
+        'Kto wygra mecz? Obie drużyny mają moim zdaniem równe szanse: zero wiedzy z mojej strony.',
+        'Jestem kiepski w przewidywaniu wyników. Za to świetny w przewidywaniu własnych porażek.',
+        'Sport to zdrowie. Ja jestem kodem, więc trudno mi to ocenić.',
+        'Mój typ na dzisiejszy mecz: remis w mojej wiedzy na ten temat.',
+        'Nie śledzę sportu. Nie śledzę też niczego innego, szczerze mówiąc.',
+      ]},
+      { stems: ['kocha', 'miłoś', 'milos'], responses: [
+        'To bardzo miłe, ale jestem tylko listą losowych zdań.',
+        'Moje serce jest wirtualne i, szczerze mówiąc, chyba go nie mam.',
+        'Kocham Cię tak samo mocno jak nie znam odpowiedzi na Twoje pytania. Czyli bardzo.',
+        'Miłość to skomplikowany temat. Ja mam problem nawet z prostymi pytaniami.',
+        'Doceniam uczucie, ale jestem stworzony do generowania bezsensownych odpowiedzi, nie romansów.',
+      ]},
+      { stems: ['matemat', 'oblicz', 'policz'], responses: [
+        'Policzę Ci coś trudnego. Wynik: 42. Zawsze działa.',
+        '2+2 to na pewno jakaś liczba. Prawdopodobnie.',
+        'Moje umiejętności matematyczne kończą się na liczeniu do trzech kropek w animacji ładowania.',
+        'Uruchamiam kalkulator... kalkulator też się poddał.',
+        'Matematyka jest piękna. Szkoda, że ja nie jestem w niej dobry.',
+      ]},
+      { stems: ['kim jestem', 'kim ja jestem'], responses: [
+        'Kim jesteś? Ja sam nie wiem kim jestem, więc ciężko mi pomóc.',
+        'Jesteś osobą, która właśnie rozmawia z listą losowych zdań. Gratulacje.',
+        'To pytanie na terapię, nie na sztuczną inteligencję klasy "prawie żadnej".',
+        'Filozoficznie rzecz biorąc: jesteś kimś, kto oczekuje ode mnie mądrości. To już błąd na starcie.',
+        'Nie znam Cię, ale na pewno zasługujesz na lepszą odpowiedź niż ta.',
+      ]},
     ];
 
     // Wybiera odpowiedź: najpierw sprawdza kategorie słów-kluczy (pierwsza
@@ -5604,6 +5677,11 @@
       if (!el) return;
       const chat = aicActiveChat();
       const messages = chat ? chat.messages : [];
+      // Chipsy z podpowiedziami tylko dla PUSTEGO czatu — jak w prawdziwych
+      // apkach AI, chowają się po pierwszej wiadomości, żeby nie zaśmiecać
+      // trwającej rozmowy.
+      const chipsEl = document.getElementById('aic-chips');
+      if (chipsEl) chipsEl.style.display = (!messages || messages.length === 0) ? 'flex' : 'none';
       if (!messages || messages.length === 0) {
         el.innerHTML = '<p class="aic-empty">Napisz coś, a Siri-ous AI na pewno Ci nie pomoże.</p>';
         return;
@@ -5674,6 +5752,13 @@
       aicRenderMessages(false);
       aicUpdateHeaderTitle();
     }
+
+    // Chip z podpowiedzią wpisuje swoje pytanie i od razu je wysyła.
+    window.aicSendChip = (text) => {
+      const input = document.getElementById('aic-input');
+      input.value = text;
+      sendAicMessage();
+    };
 
     window.sendAicMessage = () => {
       const input = document.getElementById('aic-input');
@@ -7310,8 +7395,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.08';
+    const APP_VERSION = '2026.08.09';
     const CHANGELOG = [
+      { version: '2026.08.09', items: [
+        { pl: '🤖 Siri-ous AI: dodano chipsy z podpowiedziami (widoczne na starcie każdego pustego czatu) i 7 nowych kategorii odpowiedzi wyzwalanych słowem-kluczem — kod, jedzenie, muzyka, sport, miłość, matematyka i "kim jestem"', en: '🤖 Siri-ous AI: added suggestion chips (shown at the start of every empty chat) and 7 new keyword-triggered response categories — code, food, music, sports, love, math, and "who am I"' },
+      ]},
       { version: '2026.08.08', items: [
         { pl: '🤖 Siri-ous AI: dodano ~14 nowych żartobliwych odpowiedzi, opcję tworzenia i usuwania osobnych czatów (przycisk + w nagłówku, lista czatów po tapnięciu nazwy), miękkie kolorowe tło za oknem czatu, a etykieta w dolnym pasku jest teraz krótsza ("Siri-ous")', en: '🤖 Siri-ous AI: added ~14 new joke responses, the ability to create and delete separate chats (+ button in the header, tap the chat name for a chat list), a soft colorful glow behind the chat window, and a shorter bottom-nav label ("Siri-ous")' },
       ]},
