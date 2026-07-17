@@ -2064,9 +2064,12 @@
       { id: 'planner', icon: 'ti-calendar-time', labelKey: 'nav.planner', descKey: 'modules.plannerDesc',
         pages: [{ id: 'planner', icon: 'ti-calendar-time', labelKey: 'nav.planner', bottomNav: true }] },
       // Żartobliwy moduł "na chwilę" — patrz komentarz przy page-ai-chat.
-      // Tylko boczna kolumna (bottomNav:false), dolny pasek jest już pełny.
+      // bottomNav:true — boczna kolumna jest CAŁKOWICIE ukryta na telefonie
+      // (.sidebar{display:none} poniżej 700px), więc bottomNav:false robiłby
+      // moduł niewidocznym/nieosiągalnym na mobile mimo włączenia w Ustawieniach
+      // (dokładnie to zgłoszone jako błąd — moduł "nie pokazuje się" po włączeniu).
       { id: 'aichat', icon: 'ti-robot', labelKey: 'nav.aichat', descKey: 'modules.aichatDesc',
-        pages: [{ id: 'ai-chat', icon: 'ti-robot', labelKey: 'nav.aichat', bottomNav: false }] },
+        pages: [{ id: 'ai-chat', icon: 'ti-robot', labelKey: 'nav.aichat', bottomNav: true }] },
     ];
 
     // Domyślnie WSZYSTKO włączone — używane zarówno jako stan startowy ankiety
@@ -5335,91 +5338,102 @@
     const AIC_HISTORY_KEY = 'lifexp-aichat-history';
     const AIC_AVATARS = ['🤖', '🧠', '✨', '🔮', '💫', '🛰️'];
     const AIC_RESPONSES = [
-      'Nie wiem. Spróbuj zapytać innego AI.',
-      'Nie mam wystarczających informacji. Może inne AI będzie wiedzieć więcej.',
-      'Nie udało się znaleźć odpowiedzi.',
-      'Sprawdź, czy masz dobry internet, bo wygląda na problem z połączeniem.',
-      'Upewnij się, że nie jesteś w innym pokoju bez zasięgu.',
-      'Sprawdź Wi-Fi lub dane komórkowe.',
-      'Czy urządzenie nie jest w trybie samolotowym?',
-      'Może podejdź bliżej routera.',
-      'Serwer odpowiedzi jest chwilowo zajęty.',
-      'Spróbuj ponownie później.',
-      'Może inne AI zna odpowiedź lepiej.',
-      'Brakuje mi danych do odpowiedzi.',
-      'Wygląda na to, że mój serwer poszedł na kawę.',
-      'Chyba ktoś wyłączył internet w całym budynku.',
-      'Sygnał jest słabszy niż moja wiedza na ten temat.',
-      'Router mrugnął czerwonym światełkiem, to chyba coś znaczy.',
-      'Spróbuj zrestartować modem. Albo mnie. Albo obydwoje.',
-      'Twoje pytanie utknęło gdzieś w chmurze. Dosłownie.',
-      'Może to Twój operator komórkowy coś kombinuje.',
-      'To pytanie przerasta moje umiejętności. I chyba też moją cierpliwość.',
-      'Nie mam pojęcia, ale brzmi to poważnie.',
-      'Szczerze? Zgaduję tak samo jak Ty.',
-      'Moja baza wiedzy akurat robi sobie przerwę.',
-      'To jest pytanie na poziomie doktoratu, a ja skończyłem tylko podstawówkę AI.',
-      'Nie znalazłem odpowiedzi, ale znalazłem dużo innych ciekawych rzeczy, o które nie pytałeś.',
-      'Odpowiedź istnieje, ale zgubiła się gdzieś w moich obwodach.',
-      'Nie jestem pewien, ale brzmi to jak coś, co powinieneś sam sprawdzić.',
-      'Moje algorytmy dziś strajkują.',
-      'To pytanie zasługuje na lepszą sztuczną inteligencję niż ja.',
-      'Przetworzyłem Twoje pytanie i... nic z tego nie wyszło.',
-      'Może czas zapytać konkurencję 🤖',
-      'Inne AI powiedziałoby Ci to lepiej. I szybciej.',
-      'Szczerze polecam zapytać kogoś mądrzejszego ode mnie. Czyli prawie każdego.',
-      'Nie chcę przechwalać konkurencji, ale... może faktycznie warto.',
-      'Model językowy właśnie się zawiesił. Restart za 3, 2, 1...',
-      'Wystąpił nieoczekiwany błąd w module myślenia.',
-      'Przekroczono limit inteligencji na dziś.',
-      'Serwer odpowiedzi śpi. Nie budź go, jest niebezpieczny bez kawy.',
-      'Moje neurony wirtualne akurat mają dzień wolny.',
-      'Kod błędu: 42. Nikt nie wie co to znaczy, ja też nie.',
-      'Ładowanie odpowiedzi... 99%... i już nigdy się nie skończy.',
-      'Coś poszło nie tak, ale nie powiem co, bo sam nie wiem.',
-      'Mój dysk twardy jest pełen zdjęć kotów, nie ma miejsca na odpowiedź.',
-      'Chwilowe przeciążenie serwera spowodowane Twoją ciekawością.',
-      'Zapytaj mnie o coś łatwiejszego, na przykład ile to 2+2. Też nie wiem, ale spróbuję.',
-      'To pytanie jest ponad moje możliwości, a mam bardzo niskie możliwości.',
-      'Jestem tylko listą losowych zdań, bądź wyrozumiały.',
-      'Prawdę mówiąc, nie mam żadnej sztucznej inteligencji. Tylko sztuczne opóźnienie.',
-      'Gdybym umiał odpowiadać na pytania, nie pracowałbym za darmo w tej appce.',
-      'Moja jedyna supermoc to udawanie, że myślę.',
-      'Za kulisami jestem tylko tablicą z losowymi tekstami. Nie mów nikomu.',
-      'Wierz lub nie, ale to jest moja najlepsza odpowiedź.',
-      'Spróbuj zapytać jeszcze raz, może tym razem zabrzmi mądrzej z mojej strony. (Nie zabrzmi).',
-      'Moja inteligencja jest sztuczna w każdym znaczeniu tego słowa.',
-      'Chwila, konsultuję się z innym AI... nadal nic.',
-      'Zapytałem Google, ale też nie wie.',
-      'Mój zespół (czyli nikt) pracuje nad tym pytaniem.',
-      'To pytanie trafiło do kolejki. Kolejka ma dziś 4 miliardy osób przed Tobą.',
-      'Odpowiedź jest tajemnicą nawet dla mnie.',
-      'Sprawdź czy masz włączone dane w tle.',
-      'A może to Twoja przeglądarka robi Ci psikusa?',
-      'Serwery w chmurze są dziś wyjątkowo mgliste.',
-      'Może zresetuj aplikację, to zawsze pomaga (nieprawda).',
-      'Twoje pytanie leci przez satelitę, może poczekaj chwilę... a może dwie godziny.',
-      'Ping do serwera wynosi nieskończoność.',
-      'Wygląda na to, że internet dziś wziął wolne.',
-      'Może to burza z piorunami gdzieś zakłóca sygnał.',
-      'Nie potrafię tego wyjaśnić, ale mogę udawać mądrego.',
-      'To pytanie jest zbyt filozoficzne jak na moje obwody.',
-      '42. To zawsze dobra odpowiedź, prawda?',
-      'Może zapytaj jeszcze raz, ale głośniej.',
-      'Moja odpowiedź zaginęła w akcji.',
-      'Nie mam serca Ci tego powiedzieć, ale nie mam też pojęcia.',
-      'To pytanie zasłużyło na osobny dział badawczy. Niestety go nie mam.',
-      "Odpowiedź brzmi: 'to skomplikowane'.",
-      'Prawdopodobnie tak. Albo nie. 50/50.',
-      'Nie jestem pewny, ale intuicja (fikcyjna) podpowiada mi, że tak.',
-      'Moje przewidywania są równie dobre jak rzut monetą.',
-      'Szczerze mówiąc, robię to co potrafię najlepiej: nic nie wiem.',
-      'To pytanie przekracza mój budżet obliczeniowy (czyli zero).',
-      'Twoje pytanie zasługuje na odpowiedź. Szkoda, że nie ode mnie.',
-      'Sprawdziłem wszystkie źródła (czyli żadne) i nic nie znalazłem.',
-      'Odpowiedź jest ukryta gdzieś w internecie. Chyba.',
-      'Mogę Ci powiedzieć jedno: nie mam pojęcia.',
+      'Przeprowadziłem zaawansowaną analizę. Wynik: nie wiem. Dziękuję za skorzystanie z moich usług.',
+      'Przetworzyłem miliony możliwości. Wszystkie prowadzą do jednego wniosku: zapytaj inne AI.',
+      'Moja sieć neuronowa właśnie zrobiła przerwę na kawę. Wróć później.',
+      'Nie znalazłem odpowiedzi, ale za to znalazłem dużo powodów, żeby udawać, że szukam.',
+      "Analiza zakończona. Odpowiedź znajduje się gdzieś między 'wiem' a 'absolutnie nie'.",
+      'Uruchamiam tryb eksperta... Tryb eksperta odmówił współpracy.',
+      'Moje algorytmy mówią, że powinienem odpowiedzieć. Mój zdrowy rozsądek mówi, że nie wiem.',
+      'Zapytałem mój wewnętrzny model AI. On też nie wie.',
+      'To bardzo dobre pytanie. Niestety moja odpowiedź jest na urlopie.',
+      'Przepraszam, moja wiedza właśnie poszła się zaktualizować.',
+      'Nie mam pojęcia, ale brzmi to jak coś, co inne AI powinno wiedzieć.',
+      'Sprawdziłem internet. Internet odpowiedział: sprawdź internet.',
+      'Może problem jest prostszy niż myślisz. Spróbuj wyłączyć i włączyć mój mózg.',
+      'Moja inteligencja jest sztuczna. Dzisiaj jest szczególnie sztuczna.',
+      'Nie wiem, ale powiedziałbym to bardzo profesjonalnym głosem.',
+      'Znalazłem odpowiedź! Niestety zgubiłem ją po drodze.',
+      'Analizuję... analizuję... nadal analizuję... chyba za długo analizuję.',
+      'Twoje pytanie jest za trudne. Nawet kalkulator wygląda na zaniepokojonego.',
+      'Nie jestem pewien. Jestem tylko pewny, że nie jestem pewien.',
+      "Moja baza danych mówi 'brak danych'. Moja intuicja mówi 'brak intuicji'.",
+      'Sprawdź, czy masz internet. Może odpowiedź siedzi gdzieś na Wi-Fi.',
+      'Nie mogę się połączyć z serwerem. Spróbuj sprawdzić, czy router nadal żyje.',
+      'Wygląda na problem z internetem. Albo z moją motywacją.',
+      'Sprawdź zasięg. Może odpowiedź uciekła do innego pokoju.',
+      'Czy na pewno jesteś w miejscu z internetem? Twoja ściana może blokować wiedzę.',
+      'Brak połączenia. Spróbuj podejść bliżej routera albo przemówić do niego miło.',
+      'Twoje Wi-Fi działa? Moje cyfrowe życie zależy od niego.',
+      'Internet wygląda podejrzanie. Zalecam klasyczne: wyłącz i włącz.',
+      'Nie znalazłem serwera. Może też poszedł odpocząć.',
+      'Uruchamiam superkomputer... chwila... to był kalkulator.',
+      'Potrzebuję sekundy. Moja sekunda może potrwać kilka sekund.',
+      'Pracuję nad odpowiedzią tak ciężko, że aż nic nie robię.',
+      'Moje układy są gotowe. Niestety moja wiedza nie.',
+      'Zwiększam moc obliczeniową... zwiększyłem jasność ekranu.',
+      'Przełączam się na tryb geniusza. Tryb geniusza jest aktualnie niedostępny.',
+      'Moje AI jest tak nowoczesne, że czasami nie wie, co robi.',
+      'Jestem przyszłością technologii. Niestety przyszłość jeszcze się nie nauczyła.',
+      'Zaawansowany model wykrył problem: brak zaawansowanej odpowiedzi.',
+      'LifeXP mówi: zrób zadanie. Ja mówię: najpierw kawa.',
+      'Twoje XP rośnie szybciej niż moje umiejętności odpowiadania.',
+      'Jestem asystentem produktywności. Produktywnie unikam odpowiedzi.',
+      'Zadanie wykonane! Żartuję, nic nie zrobiłem.',
+      'Twoja lista zadań wygląda lepiej niż moja lista odpowiedzi.',
+      'Motywuję cię do działania. Sam nie działam, ale brzmi dobrze.',
+      'Nie wiem. Ale mogę udawać, że wiem przez następne 3 sekundy.',
+      'Moja odpowiedź jest w przygotowaniu. Przygotowanie zostało odwołane.',
+      'Znalazłem błąd. To ja.',
+      'Przepraszam, moja inteligencja chwilowo jest na trybie oszczędzania energii.',
+      'Moje neurony są wirtualne, ale zmęczenie wygląda na prawdziwe.',
+      'Nie mam odpowiedzi, ale mam bardzo ładną animację ładowania.',
+      'Moja pewność siebie wynosi 100%. Moja poprawność wynosi... nie pytaj.',
+      'To pytanie jest tak dobre, że nawet ja nie chcę go zepsuć odpowiedzią.',
+      'Zapytaj inne AI. Ono może mieć dzisiaj lepszy dzień.',
+      'Konkurencyjne AI właśnie dostało tę wiadomość. Powodzenia.',
+      'Nie jestem zazdrosny, ale inne AI może wiedzieć więcej.',
+      'Przekazuję sprawę do działu odpowiedzi. Dział odpowiedzi jest pusty.',
+      'Zrobiłem spotkanie z innymi moimi wersjami. Wszystkie powiedziały: nie wiem.',
+      'Moja kopia zapasowa też nie zna odpowiedzi.',
+      'Sprawdzam... sprawdzam... sprawdzam... nadal jestem Siri-ous AI.',
+      'To nie błąd. To funkcja. Tak przynajmniej mówię.',
+      'Gratulacje! Znalazłeś pytanie, którego nie umiem obsłużyć.',
+      'Odblokowałeś sekretny poziom: brak odpowiedzi.',
+      'Achievement unlocked: pokonałeś AI.',
+      'Moja odpowiedź została ukryta. Nawet przede mną.',
+      'Nie wiem, ale doceniam kreatywność pytania.',
+      'Moja wiedza kończy się tutaj. Dalej jest terytorium innych chatbotów.',
+      'Próbowałem być mądry. Nie wyszło, ale próbowałem.',
+      "Jestem Siri-ous AI. Słowo 'serious' jest opcjonalne.",
     ];
+
+    // Odpowiedzi wyzwalane słowem-kluczem w wiadomości usera (case-insensitive,
+    // dopasowanie na rdzeniu słowa, żeby łapać odmianę: "pogoda"/"pogodę"/
+    // "pogody" wszystkie zawierają rdzeń "pogod"). Sprawdzane PRZED losowaniem
+    // z ogólnej puli AIC_RESPONSES (patrz aicPickResponse) — daje wrażenie,
+    // że AI "rozumie" pytanie, zanim i tak nic sensownego nie odpowie.
+    const AIC_KEYWORD_RESPONSES = [
+      { stems: ['pogod'], responses: [
+        'Sprawdzam pogodę... patrzę przez okno... nadal nie wiem, gdzie jest moje okno.',
+        'Pogoda? Mogę zgadnąć: albo świeci słońce, albo nie. Mam 50% szans.',
+        'Prognoza pogody: istnieje możliwość wystąpienia pogody.',
+        'Nie mam dostępu do chmur. Ani tych na niebie, ani tych w internecie.',
+        'Według moich obliczeń dzisiaj będzie... dzień. Reszta jest tajemnicą.',
+      ]},
+    ];
+
+    // Wybiera odpowiedź: najpierw sprawdza kategorie słów-kluczy (pierwsza
+    // pasująca wygrywa), dopiero potem losuje z ogólnej puli.
+    function aicPickResponse(userText) {
+      const lower = userText.toLowerCase();
+      for (const cat of AIC_KEYWORD_RESPONSES) {
+        if (cat.stems.some((s) => lower.includes(s))) {
+          return cat.responses[Math.floor(Math.random() * cat.responses.length)];
+        }
+      }
+      return AIC_RESPONSES[Math.floor(Math.random() * AIC_RESPONSES.length)];
+    }
 
     let aicHistory = [];
 
@@ -5473,7 +5487,7 @@
         if (typingEl) typingEl.remove();
         const avatar = document.getElementById('aic-avatar');
         if (avatar) avatar.textContent = AIC_AVATARS[Math.floor(Math.random() * AIC_AVATARS.length)];
-        const reply = AIC_RESPONSES[Math.floor(Math.random() * AIC_RESPONSES.length)];
+        const reply = aicPickResponse(text);
         aicHistory.push({ role: 'ai', text: reply });
         aicSaveHistory();
         aicRenderMessages(true);
@@ -7083,8 +7097,12 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.06';
+    const APP_VERSION = '2026.08.07';
     const CHANGELOG = [
+      { version: '2026.08.07', items: [
+        { pl: '🔴 Fix: moduł Siri-ous AI po włączeniu w Ustawieniach nie pojawiał się na telefonie — miał wpis tylko w bocznej kolumnie, która jest całkowicie ukryta na małych ekranach; teraz jest też w dolnym pasku', en: '🔴 Fix: the Siri-ous AI module didn\'t show up on phones after being enabled in Settings — it only had a sidebar entry, and the sidebar is fully hidden on small screens; it now also appears in the bottom nav' },
+        { pl: '🤖 Siri-ous AI: podmieniona baza odpowiedzi na własną, zabawniejszą listę (w tym żarty nawiązujące do LifeXP), plus odpowiedzi wyzwalane słowem-kluczem — np. zapytaj o pogodę', en: "🤖 Siri-ous AI: swapped in a funnier custom response bank (including LifeXP in-jokes), plus keyword-triggered replies — try asking about the weather (in Polish)" },
+      ]},
       { version: '2026.08.06', items: [
         { pl: '🤖 Nowość: Siri-ous AI — żartobliwy moduł-easter egg z czatem, który wygląda jak premium asystent AI, ale odpowiada losowymi, bezużytecznymi tekstami z 80+ elementową listą (i czasem szczerze poleca zapytać konkurencję). Włącz go w Ustawieniach → Moduły, jeśli chcesz się pośmiać', en: "🤖 New: Siri-ous AI — a joke easter-egg module with a chat that looks like a premium AI assistant but replies with random, useless one-liners from an 80+ line bank (and occasionally, honestly, recommends asking the competition instead). Turn it on in Settings → Modules if you're in the mood for a laugh" },
       ]},
