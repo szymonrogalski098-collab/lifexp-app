@@ -848,7 +848,7 @@
     .aic-empty { text-align: center; color: #b0b0b6; font-size: 13px; margin-top: 30px; }
     .aic-chips {
       display: flex; gap: 8px; padding: 0 14px 12px; overflow-x: auto;
-      flex-shrink: 0; scrollbar-width: none;
+      flex-shrink: 0; min-width: 0; scrollbar-width: none;
     }
     .aic-chips::-webkit-scrollbar { display: none; }
     .aic-chip {
@@ -920,7 +920,7 @@
       background: #f2f2f7; color: #8e8e93; display: flex; align-items: center;
       justify-content: center; cursor: pointer;
     }
-    .aic-chatlist-items { overflow-y: auto; flex: 1; }
+    .aic-chatlist-items { overflow-y: auto; flex: 1; min-height: 0; }
     .aic-chatlist-item {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       padding: 12px 10px; border-radius: 14px; cursor: pointer; margin-bottom: 4px;
@@ -7395,8 +7395,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.09';
+    const APP_VERSION = '2026.08.10';
     const CHANGELOG = [
+      { version: '2026.08.10', items: [
+        { pl: '🔴 Fix: karta czatu Siri-ous AI wystawała poza prawą krawędź ekranu na telefonie, chowając część rozmowy — wiersz chipsów z podpowiedziami rozciągał całą kartę do szerokości wszystkich chipsów naraz zamiast przewijać się we własnym zakresie', en: "🔴 Fix: the Siri-ous AI chat card overflowed past the right edge of the screen on phones, hiding part of the conversation — the suggestion-chip row was stretching the whole card to fit every chip at once instead of scrolling within its own row" },
+      ]},
       { version: '2026.08.09', items: [
         { pl: '🤖 Siri-ous AI: dodano chipsy z podpowiedziami (widoczne na starcie każdego pustego czatu) i 7 nowych kategorii odpowiedzi wyzwalanych słowem-kluczem — kod, jedzenie, muzyka, sport, miłość, matematyka i "kim jestem"', en: '🤖 Siri-ous AI: added suggestion chips (shown at the start of every empty chat) and 7 new keyword-triggered response categories — code, food, music, sports, love, math, and "who am I"' },
       ]},

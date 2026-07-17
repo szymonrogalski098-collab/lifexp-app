@@ -33,7 +33,7 @@ self.addEventListener('notificationclick', (e) => {
 });
 
 // ── PWA app-shell cache ──
-const CACHE = 'lifexp-shell-v41';
+const CACHE = 'lifexp-shell-v42';
 const STATIC = ['style.css', 'manifest.json', 'icon.svg', 'games.js'];
 const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html'];
 
