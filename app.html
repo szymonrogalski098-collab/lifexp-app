@@ -538,6 +538,20 @@
     }
     .planner-empty { text-align: center; padding: 36px 20px; }
 
+    /* Ankieta modułów + lista przełączników w Ustawieniach — ten sam wiersz
+       "ikona + nazwa + opis + kontrolka" w obu miejscach. */
+    .onboarding-row, .module-toggle-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px; border-radius: 12px;
+      background: var(--bg3); border: 1px solid var(--border);
+      margin-bottom: 8px; cursor: pointer;
+    }
+    .onboarding-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent2); }
+    .onboarding-row .icon, .module-toggle-row .icon { font-size: 18px; color: var(--accent2); flex-shrink: 0; }
+    .onb-text, .module-toggle-text { flex: 1; min-width: 0; }
+    .onb-name, .module-toggle-name { font-size: 14px; font-weight: 600; display: block; }
+    .onb-desc, .module-toggle-desc { font-size: 12px; }
+
     @media (max-width: 700px) {
       .sidebar { display: none; }
       .main { margin-left: 0; padding: 16px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
@@ -779,24 +793,8 @@
       <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
         <span class="icon"><i class="ti ti-home"></i></span> <span data-i18n="nav.dashboard">Dashboard</span>
       </div>
-      <div class="nav-item" data-page="money" onclick="showPage('money')">
-        <span class="icon"><i class="ti ti-wallet"></i></span> <span data-i18n="nav.money">Money</span>
-      </div>
-      <div class="nav-item" data-page="chores" onclick="showPage('chores')">
-        <span class="icon"><i class="ti ti-checklist"></i></span> <span data-i18n="nav.chores">Obowiązki</span>
-      </div>
-      <div class="nav-item" data-page="planner" onclick="showPage('planner')">
-        <span class="icon"><i class="ti ti-calendar-time"></i></span> <span data-i18n="nav.planner">Planer dnia</span>
-      </div>
-      <div class="nav-item" data-page="history" onclick="showPage('history')">
-        <span class="icon"><i class="ti ti-history"></i></span> <span data-i18n="nav.history">Historia</span>
-      </div>
-      <div class="nav-item" data-page="stats" onclick="showPage('stats')">
-        <span class="icon"><i class="ti ti-chart-bar"></i></span> <span data-i18n="nav.stats">Statystyki</span>
-      </div>
-      <div class="nav-item" data-page="games" onclick="showPage('games')">
-        <span class="icon"><i class="ti ti-device-gamepad"></i></span> <span data-i18n="nav.games">Gry</span>
-      </div>
+      <!-- Wypełniane przez renderModuleNav() — tylko włączone moduły (patrz MODULE_REGISTRY) -->
+      <div id="sidebar-nav-modules"></div>
       <div class="nav-item" data-page="settings" onclick="showPage('settings')">
         <span class="icon"><i class="ti ti-settings"></i></span> <span data-i18n="nav.settings">Ustawienia</span>
       </div>
@@ -820,21 +818,8 @@
       <div class="bn-item active" data-page="dashboard" onclick="showPage('dashboard')">
         <span class="bn-icon"><i class="ti ti-home"></i></span><span data-i18n="nav.home">Home</span>
       </div>
-      <div class="bn-item" data-page="chores" onclick="showPage('chores')">
-        <span class="bn-icon"><i class="ti ti-checklist"></i></span><span data-i18n="nav.chores">Obowiązki</span>
-      </div>
-      <div class="bn-item" data-page="planner" onclick="showPage('planner')">
-        <span class="bn-icon"><i class="ti ti-calendar-time"></i></span><span data-i18n="nav.planner">Planer</span>
-      </div>
-      <div class="bn-item" data-page="money" onclick="showPage('money')">
-        <span class="bn-icon"><i class="ti ti-wallet"></i></span><span data-i18n="nav.money">Money</span>
-      </div>
-      <div class="bn-item" data-page="history" onclick="showPage('history')">
-        <span class="bn-icon"><i class="ti ti-history"></i></span><span data-i18n="nav.history">Historia</span>
-      </div>
-      <div class="bn-item" data-page="games" onclick="showPage('games')">
-        <span class="bn-icon"><i class="ti ti-device-gamepad"></i></span><span data-i18n="nav.games">Gry</span>
-      </div>
+      <!-- Wypełniane przez renderModuleNav() — tylko włączone moduły z pages[].bottomNav===true -->
+      <div id="bn-nav-modules" style="display:contents"></div>
       <div class="bn-item" data-page="settings" onclick="showPage('settings')">
         <span class="bn-icon"><i class="ti ti-settings"></i></span><span data-i18n="nav.settings">Ustawienia</span>
       </div>
@@ -1346,6 +1331,22 @@
         <div class="settings-grid">
           <div class="settings-col">
 
+          <div class="settings-category collapsed" id="settings-cat-modules">
+            <div class="settings-cat-label" onclick="toggleSettingsCat('modules')">
+              <span data-i18n="settings.catModules">Moduły</span>
+              <i class="ti ti-chevron-down settings-cat-chevron"></i>
+            </div>
+            <div class="settings-cat-body">
+
+            <div class="card settings-section">
+              <h3 style="margin-bottom:6px" data-i18n="settings.modulesTitle">Twoje moduły</h3>
+              <p class="text2" style="margin-bottom:16px" data-i18n="settings.modulesHint">Włącz lub wyłącz sekcje LifeXP — wyłączenie niczego nie kasuje, dane wracają po ponownym włączeniu.</p>
+              <div id="settings-modules-list"></div>
+            </div>
+
+            </div>
+          </div>
+
           <div class="settings-category collapsed" id="settings-cat-appearance">
             <div class="settings-cat-label" onclick="toggleSettingsCat('appearance')">
               <span data-i18n="settings.catAppearance">Wygląd</span>
@@ -1764,6 +1765,17 @@
     </div>
   </div>
 
+  <!-- Ankieta personalizacji (tylko raz, gdy users/{uid}.enabledModules jeszcze nie istnieje) -->
+  <div class="modal-overlay" id="onboarding-modal">
+    <div class="modal" style="max-width:460px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;padding-bottom:20px">
+      <div style="text-align:center;font-size:40px;margin-bottom:6px;flex-shrink:0">🧩</div>
+      <h3 style="text-align:center;margin-bottom:4px;flex-shrink:0" data-i18n="onboarding.title">Z czego chcesz korzystać w LifeXP?</h3>
+      <p class="text2" style="text-align:center;margin-bottom:18px;flex-shrink:0" data-i18n="onboarding.subtitle">Wybierz moduły, które Cię interesują — możesz to zmienić w każdej chwili w Ustawieniach.</p>
+      <div id="onboarding-list" style="margin-bottom:16px;overflow-y:auto;flex:1;min-height:0"></div>
+      <button class="btn-primary" style="width:100%;flex-shrink:0" onclick="saveOnboarding()" data-i18n="onboarding.save">Zapisz i zacznij</button>
+    </div>
+  </div>
+
   <!-- Level-up celebration -->
   <div class="modal-overlay" id="levelup-modal">
     <div class="modal" style="text-align:center">
@@ -1881,6 +1893,61 @@
     });
     const messaging = getMessaging(app);
 
+    // ── System modułów (personalizacja interfejsu) ─────────
+    // Jedyne źródło prawdy "co jest modułem" — ankieta pierwszego uruchomienia,
+    // nawigacja (boczna kolumna + dolny pasek) i lista przełączników w
+    // Ustawieniach wszystkie czytają TĘ samą listę zamiast mieć własne,
+    // osobno utrzymywane kopie. Dashboard i Ustawienia są rdzeniem (zawsze
+    // widoczne, nigdy nie w tej liście) — reszta stron jest widoczna TYLKO
+    // gdy odpowiadający jej moduł jest włączony w users/{uid}.enabledModules.
+    // Wyłączenie modułu NIGDY nie kasuje żadnych danych — to czysto
+    // kosmetyczna zmiana widoczności (żaden kod w tym systemie nie wywołuje
+    // deleteDoc/deleteField), więc ponowne włączenie od razu przywraca
+    // wszystko dokładnie tak, jak było.
+    const MODULE_REGISTRY = [
+      { id: 'chores', icon: 'ti-checklist', labelKey: 'nav.chores', descKey: 'modules.choresDesc',
+        pages: [{ id: 'chores', icon: 'ti-checklist', labelKey: 'nav.chores', bottomNav: true }] },
+      { id: 'money', icon: 'ti-wallet', labelKey: 'nav.money', descKey: 'modules.moneyDesc',
+        pages: [{ id: 'money', icon: 'ti-wallet', labelKey: 'nav.money', bottomNav: true }] },
+      { id: 'games', icon: 'ti-device-gamepad', labelKey: 'nav.games', descKey: 'modules.gamesDesc',
+        pages: [{ id: 'games', icon: 'ti-device-gamepad', labelKey: 'nav.games', bottomNav: true }] },
+      // "Statystyki XP" łączy DWIE strony nawigacji (Statystyki + Historia)
+      // oraz powiązane z nimi widgety/przyciski Dashboardu (patrz
+      // applyModuleVisibility) pod JEDNYM przełącznikiem — to wszystko razem
+      // to "używanie systemu śledzenia XP", więc dzieli się na sekcje osobno
+      // nie miałoby sensu dla użytkownika.
+      { id: 'stats', icon: 'ti-chart-bar', labelKey: 'nav.stats', descKey: 'modules.statsDesc',
+        pages: [
+          { id: 'stats', icon: 'ti-chart-bar', labelKey: 'nav.stats', bottomNav: false },
+          { id: 'history', icon: 'ti-history', labelKey: 'nav.history', bottomNav: true },
+          { id: 'log-activity', bottomNav: false },
+          { id: 'log-gaming', bottomNav: false },
+          { id: 'generator', bottomNav: false },
+        ],
+        dashboardActionButtons: ['log-activity', 'log-gaming', 'generator'],
+        dashboardWidgets: ['week-chart-wrap', 'recent-list', 'top-activities-list', 'achievements-grid'] },
+      { id: 'planner', icon: 'ti-calendar-time', labelKey: 'nav.planner', descKey: 'modules.plannerDesc',
+        pages: [{ id: 'planner', icon: 'ti-calendar-time', labelKey: 'nav.planner', bottomNav: true }] },
+    ];
+
+    // Domyślnie WSZYSTKO włączone — używane zarówno jako stan startowy ankiety
+    // (odznacz to, czego nie chcesz), jak i jako fallback dla `userProfile`
+    // sprzed tej funkcji (istniejący user bez pola enabledModules widzi
+    // wszystko dokładnie tak jak dotychczas, dopóki nie wypełni ankiety/nie
+    // zmieni czegoś w Ustawieniach).
+    function isModuleEnabled(id) {
+      if (!userProfile || userProfile.enabledModules === undefined) return true;
+      return (userProfile.enabledModules || []).includes(id);
+    }
+
+    // Który moduł "posiada" daną stronę — null = strona rdzenia (Dashboard,
+    // Ustawienia, hub zgłoszeń błędów...), zawsze dostępna niezależnie od
+    // wyboru modułów.
+    function pageModuleId(pageId) {
+      for (const m of MODULE_REGISTRY) if (m.pages.some(p => p.id === pageId)) return m.id;
+      return null;
+    }
+
     // ── i18n (Faza 5: Dashboard + Ustawienia) ──────────────
     const I18N_RESOURCES = {
       en: { translation: {
@@ -1997,6 +2064,8 @@
         },
         settings: {
           title: 'Settings',
+          catModules: 'Modules',
+          modulesTitle: 'Your modules', modulesHint: "Turn LifeXP sections on or off — disabling one never deletes its data, it just comes right back when you re-enable it.",
           catAppearance: 'Appearance', catAccount: 'Account', catNotifications: 'Notifications',
           catDashboard: 'Dashboard', catExpenses: 'Expenses', catMoney: 'Money', catChores: 'Chores', catGaming: 'Gaming', catActivities: 'Activities',
           theme: 'Theme', font: 'Font', language: 'Language', english: 'English', polish: 'Polski',
@@ -2126,6 +2195,19 @@
           save: 'Save task',
           enterTitle: 'Enter a title.', enterTimeErr: 'Pick a start time.',
           saved: 'Task saved.', deleted: 'Task deleted.',
+        },
+        onboarding: {
+          title: 'What do you want to use in LifeXP?',
+          subtitle: "Pick the modules you care about — you can change this any time in Settings.",
+          save: 'Save and start',
+        },
+        modules: {
+          choresDesc: 'Log household chores and one-time tasks for points.',
+          moneyDesc: 'Track income, expenses, categories and loans.',
+          gamesDesc: 'Offline mini-games (Redstone Circuits and others) — no points, pure fun.',
+          statsDesc: 'History, stats, achievements and logging activities/gaming for XP.',
+          plannerDesc: 'A timeline for scheduling and completing tasks by time of day.',
+          toggled: 'Module updated.',
         },
         loan: {
           title: 'Loans', new: 'New loan',
@@ -2348,6 +2430,8 @@
         },
         settings: {
           title: 'Ustawienia',
+          catModules: 'Moduły',
+          modulesTitle: 'Twoje moduły', modulesHint: 'Włącz lub wyłącz sekcje LifeXP — wyłączenie niczego nie kasuje, dane wracają po ponownym włączeniu.',
           catAppearance: 'Wygląd', catAccount: 'Konto', catNotifications: 'Powiadomienia',
           catDashboard: 'Dashboard', catExpenses: 'Wydatki', catMoney: 'Money', catChores: 'Obowiązki', catGaming: 'Granie', catActivities: 'Aktywności',
           theme: 'Motyw', font: 'Czcionka', language: 'Język', english: 'English', polish: 'Polski',
@@ -2477,6 +2561,19 @@
           save: 'Zapisz zadanie',
           enterTitle: 'Wpisz tytuł zadania.', enterTimeErr: 'Wybierz godzinę startu.',
           saved: 'Zadanie zapisane.', deleted: 'Zadanie usunięte.',
+        },
+        onboarding: {
+          title: 'Z czego chcesz korzystać w LifeXP?',
+          subtitle: 'Wybierz moduły, które Cię interesują — możesz to zmienić w każdej chwili w Ustawieniach.',
+          save: 'Zapisz i zacznij',
+        },
+        modules: {
+          choresDesc: 'Zapisuj obowiązki domowe i zadania jednorazowe za punkty.',
+          moneyDesc: 'Śledź przychody, wydatki, kategorie i pożyczki.',
+          gamesDesc: 'Mini-gry offline (Obwody Redstone i inne) — bez punktów, czysta zabawa.',
+          statsDesc: 'Historia, statystyki, osiągnięcia i logowanie aktywności/grania na punkty XP.',
+          plannerDesc: 'Oś czasu do planowania i odznaczania zadań o konkretnej porze dnia.',
+          toggled: 'Moduł zaktualizowany.',
         },
         loan: {
           title: 'Pożyczki', new: 'Nowa pożyczka',
@@ -2762,6 +2859,14 @@
         }
       }
 
+      // Ankieta personalizacji — tylko raz, przed pierwszym renderem Dashboardu
+      // z prawdziwym zestawem modułów (patrz komentarz przy openOnboarding).
+      if (userProfile.enabledModules === undefined) {
+        await openOnboarding();
+      }
+      renderModuleNav();
+      applyModuleVisibility();
+
       try {
         await loadActivityDefs();
       } catch (e) {
@@ -2832,7 +2937,107 @@
     }
 
     // ── Navigation ────────────────────────────────────────
+    // Buduje kolumnę boczną + dolny pasek WYŁĄCZNIE z MODULE_REGISTRY —
+    // wyłączony moduł nigdy nie trafia do DOM-u (nie jest ukrywany po fakcie
+    // przez CSS). `pages[].icon`/`labelKey` obecne = strona ma wpis w
+    // nawigacji bocznej; dodatkowo `bottomNav: true` = ma też wpis w dolnym
+    // pasku (część stron, np. log-activity/log-gaming/generator, celowo nie
+    // ma ani jednego — są osiągalne tylko z przycisków na Dashboardzie,
+    // dokładnie jak przed tym systemem). Wywoływana raz po wczytaniu profilu
+    // i ponownie po każdym przełączeniu modułu w Ustawieniach.
+    function renderModuleNav() {
+      const sideEl = document.getElementById('sidebar-nav-modules');
+      const bnEl = document.getElementById('bn-nav-modules');
+      if (!sideEl || !bnEl) return;
+      let sideHtml = '', bnHtml = '';
+      for (const m of MODULE_REGISTRY) {
+        if (!isModuleEnabled(m.id)) continue;
+        for (const p of m.pages) {
+          if (!p.icon || !p.labelKey) continue;
+          sideHtml += `<div class="nav-item" data-page="${p.id}" onclick="showPage('${p.id}')">` +
+            `<span class="icon"><i class="ti ${p.icon}"></i></span> <span data-i18n="${p.labelKey}"></span></div>`;
+          if (p.bottomNav) {
+            bnHtml += `<div class="bn-item" data-page="${p.id}" onclick="showPage('${p.id}')">` +
+              `<span class="bn-icon"><i class="ti ${p.icon}"></i></span><span data-i18n="${p.labelKey}"></span></div>`;
+          }
+        }
+      }
+      sideEl.innerHTML = sideHtml;
+      bnEl.innerHTML = bnHtml;
+      translateStaticPage();
+    }
+
+    // Chowa/pokazuje część Dashboardu powiązaną z modułem "stats" (wykres
+    // tygodnia/ostatnie aktywności/TOP aktywności/osiągnięcia + cały wiersz
+    // przycisków Zaloguj aktywność/granie/"Co teraz?", bo WSZYSTKIE trzy
+    // należą do tego modułu — stąd chowanie całego .action-row zamiast
+    // przycisku po przycisku, żeby nie zostawić pustego wiersza z marginesem).
+    // Ten sam mechanizm co #goal-card/#facts-card (display:none), tylko
+    // sterowany wyborem modułów zamiast własnego stanu widgetu. Widget Celów
+    // (#goal-card) celowo NIE jest tu dotykany — zostaje jak dziś, poza
+    // systemem modułów.
+    function applyModuleVisibility() {
+      const statsOn = isModuleEnabled('stats');
+      const statsMod = MODULE_REGISTRY.find(m => m.id === 'stats');
+      (statsMod.dashboardWidgets || []).forEach((id) => {
+        const el = document.getElementById(id);
+        const card = el && el.closest('.card');
+        if (card) card.style.display = statsOn ? '' : 'none';
+      });
+      const actionRow = document.querySelector('#page-dashboard .action-row');
+      if (actionRow) actionRow.style.display = statsOn ? '' : 'none';
+    }
+
+    // ── Ankieta personalizacji (pierwsze uruchomienie) ─────
+    // Pokazuje się TYLKO gdy userProfile.enabledModules jeszcze nie istnieje
+    // (nowe konto ALBO istniejące konto sprzed wprowadzenia tego systemu —
+    // nierozróżnialne, stąd wszystko domyślnie zaznaczone: kliknięcie "Zapisz"
+    // bez żadnych zmian nie chowa nic, co user już widział). Blokująca —
+    // reszta sekwencji startowej (loadActivityDefs/loadDashboard) czeka na
+    // `await openOnboarding()`, żeby Dashboard od razu renderował się z
+    // właściwym zestawem widgetów zamiast migotać.
+    let onboardingResolve = null;
+    function openOnboarding() {
+      return new Promise((resolve) => {
+        onboardingResolve = resolve;
+        const list = document.getElementById('onboarding-list');
+        list.innerHTML = MODULE_REGISTRY.map(m => `
+          <label class="onboarding-row">
+            <input type="checkbox" id="onb-${m.id}" checked>
+            <span class="icon"><i class="ti ${m.icon}"></i></span>
+            <span class="onb-text">
+              <span class="onb-name" data-i18n="${m.labelKey}"></span><br>
+              <span class="text2 onb-desc" data-i18n="${m.descKey}"></span>
+            </span>
+          </label>`).join('');
+        translateStaticPage();
+        document.getElementById('onboarding-modal').classList.add('open');
+      });
+    }
+
+    window.saveOnboarding = async () => {
+      const enabledModules = MODULE_REGISTRY.filter(m => document.getElementById('onb-' + m.id)?.checked).map(m => m.id);
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), { enabledModules, onboardingDone: true });
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('errors.saveRetry'), 'error');
+        return; // zostaw modal otwarty — spróbuj ponownie zamiast utknąć w niespójnym stanie
+      }
+      userProfile.enabledModules = enabledModules;
+      userProfile.onboardingDone = true;
+      document.getElementById('onboarding-modal').classList.remove('open');
+      renderModuleNav();
+      applyModuleVisibility();
+      if (onboardingResolve) { onboardingResolve(); onboardingResolve = null; }
+    };
+
     window.showPage = (id) => {
+      // Bramka: strona należąca do wyłączonego modułu nigdy się nie otwiera —
+      // chroni przed martwym uchwytem zdarzenia, cofnięciem w przeglądarce
+      // albo jakimkolwiek innym odwołaniem sprzed wyłączenia modułu.
+      const modId = pageModuleId(id);
+      if (modId && !isModuleEnabled(modId)) id = 'dashboard';
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById('page-' + id).classList.add('active');
@@ -2856,6 +3061,7 @@
       if (id === 'planner') loadPlanner();
       if (id === 'games' && window.LifeXPGames) LifeXPGames.showMenu();
       if (id === 'settings') {
+        renderModuleSettings();
         loadChoreDefs().then(renderChoreDefsSettings);
         loadActivityDefs().then(renderActivityDefsSettings);
         loadMoneySettingsUI();
@@ -2886,6 +3092,48 @@
       state[catId] = collapsed;
       localStorage.setItem(SETTINGS_COLLAPSE_KEY, JSON.stringify(state));
     };
+    // Lista przełączników modułów w Ustawieniach — ten sam MODULE_REGISTRY co
+    // ankieta i nawigacja, więc dodanie nowego modułu do rejestru automatycznie
+    // pojawia się i tu, bez osobnej listy do utrzymania.
+    function renderModuleSettings() {
+      const el = document.getElementById('settings-modules-list');
+      if (!el) return;
+      el.innerHTML = MODULE_REGISTRY.map(m => `
+        <div class="module-toggle-row">
+          <span class="icon"><i class="ti ${m.icon}"></i></span>
+          <span class="module-toggle-text">
+            <span class="module-toggle-name" data-i18n="${m.labelKey}"></span><br>
+            <span class="text2 module-toggle-desc" data-i18n="${m.descKey}"></span>
+          </span>
+          <label class="toggle">
+            <input type="checkbox" ${isModuleEnabled(m.id) ? 'checked' : ''} onchange="toggleModule('${m.id}', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>`).join('');
+      translateStaticPage();
+    }
+
+    // Przełączenie modułu w dowolnej chwili — natychmiastowe, bez modala
+    // potwierdzenia (odwracalne, żadne dane nigdy nie są kasowane). Aktualizuje
+    // nawigację i widoczność widgetów Dashboardu od razu, bez przeładowania.
+    window.toggleModule = async (id, checked) => {
+      const enabled = new Set(userProfile.enabledModules || []);
+      if (checked) enabled.add(id); else enabled.delete(id);
+      const enabledModules = [...enabled];
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), { enabledModules });
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('errors.saveRetry'), 'error');
+        renderModuleSettings(); // przywróć checkbox do stanu sprzed nieudanej próby
+        return;
+      }
+      userProfile.enabledModules = enabledModules;
+      renderModuleNav();
+      applyModuleVisibility();
+      toast(i18next.t('modules.toggled'));
+    };
+
     function initSettingsAccordion() {
       const state = getSettingsCollapseState();
       const firstVisit = Object.keys(state).length === 0;
@@ -6412,8 +6660,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.03';
+    const APP_VERSION = '2026.08.04';
     const CHANGELOG = [
+      { version: '2026.08.04', items: [
+        { pl: '🧩 Nowość: system personalizacji — przy pierwszym uruchomieniu wybierasz, z których modułów LifeXP chcesz korzystać (Obowiązki, Money, Gry, Statystyki XP, Planer dnia). Nawigacja pokazuje tylko wybrane moduły, a wybór można zmienić w każdej chwili w Ustawieniach → Moduły — wyłączenie modułu niczego nie kasuje, dane wracają po ponownym włączeniu', en: '🧩 New: personalization system — on first launch you choose which LifeXP modules you want (Chores, Money, Games, XP Stats, Day Planner). Navigation shows only the modules you picked, and you can change it any time in Settings → Modules — disabling a module never deletes anything, data comes right back when you re-enable it' },
+      ]},
       { version: '2026.08.03', items: [
         { pl: '🗓️ Nowość: Planer dnia — oś czasu na dzisiaj, dodajesz zadania o konkretnej godzinie i długości, punkty liczą się z tej samej stawki co Log Activity (możesz je nadpisać ręcznie), a ukończone zadanie trafia też do Historii i Statystyk jak zwykła aktywność', en: '🗓️ New: Day Planner — a timeline for today, add tasks with a specific time and duration, points use the same rate as Log Activity (you can override them by hand), and a completed task also shows up in History/Stats like any other logged activity' },
       ]},
