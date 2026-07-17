@@ -841,7 +841,7 @@
     }
     .aic-newchat-btn:active { transform: scale(.9); }
     .aic-messages {
-      flex: 1; overflow-y: auto; scroll-behavior: smooth;
+      flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth;
       padding: 18px 16px; display: flex; flex-direction: column; gap: 10px;
       background: #fafafc;
     }
@@ -861,8 +861,8 @@
     .aic-row.user { justify-content: flex-end; }
     .aic-row.ai { justify-content: flex-start; }
     .aic-bubble {
-      max-width: 78%; padding: 10px 15px; border-radius: 20px;
-      font-size: 14.5px; line-height: 1.4; word-wrap: break-word;
+      max-width: 78%; min-width: 0; padding: 10px 15px; border-radius: 20px;
+      font-size: 14.5px; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word;
       box-shadow: 0 1px 2px rgba(0,0,0,.05);
     }
     .aic-bubble.pop { animation: aicPop .22s cubic-bezier(.2,.8,.3,1) both; }
@@ -883,7 +883,7 @@
       background: #fff; flex-shrink: 0;
     }
     .aic-inputbar input {
-      flex: 1; border: none; background: #f2f2f7; border-radius: 20px;
+      flex: 1; min-width: 0; border: none; background: #f2f2f7; border-radius: 20px;
       padding: 11px 16px; font-size: 14.5px; color: #1c1c1e; outline: none;
     }
     .aic-inputbar input::placeholder { color: #a0a0a6; }
@@ -926,7 +926,10 @@
       padding: 12px 10px; border-radius: 14px; cursor: pointer; margin-bottom: 4px;
     }
     .aic-chatlist-item.active { background: #f0f0fc; }
-    .aic-chatlist-item-title { font-size: 14px; color: #1c1c1e; }
+    .aic-chatlist-item-title {
+      flex: 1; min-width: 0; font-size: 14px; color: #1c1c1e;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .aic-chatlist-item-del {
       width: 30px; height: 30px; border-radius: 50%; border: none; background: transparent;
       color: #ff3b30; display: flex; align-items: center; justify-content: center;
@@ -7395,8 +7398,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.10';
+    const APP_VERSION = '2026.08.11';
     const CHANGELOG = [
+      { version: '2026.08.11', items: [
+        { pl: '🔴 Fix: Siri-ous AI dalej ucinał kawałek karty czatu w niektórych sytuacjach — brakowało tego samego zabezpieczenia (min-width/min-height) w dymkach wiadomości, tytule czatu na liście i polu tekstowym; teraz wszystkie cztery miejsca poprawnie się przewijają zamiast rozpychać kartę', en: '🔴 Fix: Siri-ous AI still cut off part of the chat card in some situations — the same safeguard (min-width/min-height) was missing from message bubbles, the chat-list title, and the text input; all four spots now scroll correctly instead of stretching the card' },
+      ]},
       { version: '2026.08.10', items: [
         { pl: '🔴 Fix: karta czatu Siri-ous AI wystawała poza prawą krawędź ekranu na telefonie, chowając część rozmowy — wiersz chipsów z podpowiedziami rozciągał całą kartę do szerokości wszystkich chipsów naraz zamiast przewijać się we własnym zakresie', en: "🔴 Fix: the Siri-ous AI chat card overflowed past the right edge of the screen on phones, hiding part of the conversation — the suggestion-chip row was stretching the whole card to fit every chip at once instead of scrolling within its own row" },
       ]},
