@@ -552,6 +552,17 @@
     .onb-name, .module-toggle-name { font-size: 14px; font-weight: 600; display: block; }
     .onb-desc, .module-toggle-desc { font-size: 12px; }
 
+    /* Karty wyboru trybu konta (solo/nadzorowane) — ten sam "klikalna karta z
+       podświetloną ramką po wyborze" pattern co karty motywu w Ustawieniach
+       (#theme-opt-*), tylko bez podglądu graficznego. */
+    .account-mode-card {
+      border-radius: 14px; border: 2px solid var(--border); padding: 14px;
+      cursor: pointer; transition: border-color .15s ease, transform .15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .account-mode-card.selected { border-color: var(--accent2); transform: scale(1.02); }
+    .account-mode-card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+
     @media (max-width: 700px) {
       .sidebar { display: none; }
       .main { margin-left: 0; padding: 16px; padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
@@ -1442,12 +1453,21 @@
             <div class="settings-cat-body">
 
             <div class="card settings-section">
+              <h3 style="margin-bottom:6px" data-i18n="accountMode.settingsTitle">Tryb konta</h3>
+              <p class="text2" style="margin-bottom:12px" data-i18n="accountMode.settingsHint">Zmień w każdej chwili — przełączenie na solo zrywa połączenie z rodzicem.</p>
+              <div class="segmented" id="account-mode-tabs">
+                <button class="seg-btn" data-mode="solo" onclick="setAccountMode('solo')" data-i18n="accountMode.soloTitle">Solo</button>
+                <button class="seg-btn" data-mode="supervised" onclick="setAccountMode('supervised')" data-i18n="accountMode.supervisedTitle">Nadzorowane</button>
+              </div>
+            </div>
+
+            <div class="card settings-section">
               <h3 data-i18n="settings.profile">Profil</h3>
               <div class="form-group">
                 <label data-i18n="settings.name">Imię</label>
                 <input type="text" id="set-name" maxlength="30" placeholder="Twoje imię" data-i18n-placeholder="settings.namePh">
               </div>
-              <div class="form-group">
+              <div class="form-group" id="parent-email-block">
                 <label data-i18n="settings.parentEmail">Email rodzica (raporty tygodniowe)</label>
                 <div id="parent-email-verified-row" style="display:none;align-items:center;gap:10px;margin-bottom:10px;">
                   <span style="font-size:13px;color:var(--accent2);">✓ <span data-i18n="settings.verified">Zweryfikowany:</span></span>
@@ -1473,7 +1493,7 @@
               <button class="btn-primary" onclick="saveSettings()" data-i18n="settings.save">Zapisz</button>
             </div>
 
-            <div class="card settings-section">
+            <div class="card settings-section" id="weekly-report-card">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
                 <div>
                   <h3 data-i18n="settings.weeklyReport">Raport tygodniowy</h3>
@@ -1762,6 +1782,27 @@
       <div id="whatsnew-list" style="margin-bottom:16px;overflow-y:auto;flex:1;min-height:0"></div>
       <button class="btn-primary" style="width:100%;flex-shrink:0" onclick="closeWhatsNew()" data-i18n="whatsnew.cta">Super!</button>
       <button class="btn-ghost btn-sm" style="width:100%;margin-top:8px;flex-shrink:0" onclick="closeWhatsNew(); showPage('update-history')" data-i18n="whatsnew.historyBtn">Historia aktualizacji</button>
+    </div>
+  </div>
+
+  <!-- Wybór trybu konta (tylko raz, gdy users/{uid}.accountMode jeszcze nie istnieje — patrz
+       openAccountModeStep, wywoływane W BOOT SEQUENCE PRZED ankietą modułów poniżej) -->
+  <div class="modal-overlay" id="account-mode-modal">
+    <div class="modal" style="max-width:460px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;padding-bottom:20px">
+      <div style="text-align:center;font-size:40px;margin-bottom:6px;flex-shrink:0">🧭</div>
+      <h3 style="text-align:center;margin-bottom:4px;flex-shrink:0" data-i18n="accountMode.title">Jak chcesz korzystać z LifeXP?</h3>
+      <p class="text2" style="text-align:center;margin-bottom:18px;flex-shrink:0" data-i18n="accountMode.subtitle">Możesz to zmienić w każdej chwili w Ustawieniach.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;flex-shrink:0">
+        <div id="account-mode-opt-solo" class="account-mode-card" onclick="pickAccountMode('solo')">
+          <div class="account-mode-card-title" data-i18n="accountMode.soloTitle">Solo</div>
+          <div class="text2 account-mode-card-desc" data-i18n="accountMode.soloDesc">Zarządzasz kontem sam, bez nadzoru.</div>
+        </div>
+        <div id="account-mode-opt-supervised" class="account-mode-card" onclick="pickAccountMode('supervised')">
+          <div class="account-mode-card-title" data-i18n="accountMode.supervisedTitle">Nadzorowane</div>
+          <div class="text2 account-mode-card-desc" data-i18n="accountMode.supervisedDesc">Rodzic/opiekun może zobaczyć Twoje postępy i dostawać cotygodniowe raporty.</div>
+        </div>
+      </div>
+      <button class="btn-primary" id="account-mode-continue" style="width:100%;flex-shrink:0" disabled onclick="saveAccountModeStep()" data-i18n="accountMode.continue">Kontynuuj</button>
     </div>
   </div>
 
@@ -2209,6 +2250,16 @@
           plannerDesc: 'A timeline for scheduling and completing tasks by time of day.',
           toggled: 'Module updated.',
         },
+        accountMode: {
+          title: 'How do you want to use LifeXP?',
+          subtitle: 'You can change this any time in Settings.',
+          soloTitle: 'Solo', soloDesc: "You manage your account on your own, no supervisor.",
+          supervisedTitle: 'Supervised', supervisedDesc: "A parent/guardian can see your progress and gets a weekly report.",
+          continue: 'Continue',
+          settingsTitle: 'Account mode', settingsHint: 'Change any time — switching to solo disconnects your parent.',
+          confirmSoloSwitch: "Switch to solo? Your parent will lose access to your data, and the weekly report will stop.",
+          updated: 'Account mode updated.',
+        },
         loan: {
           title: 'Loans', new: 'New loan',
           iLent: 'I lend', iBorrowed: 'I borrow',
@@ -2575,6 +2626,16 @@
           plannerDesc: 'Oś czasu do planowania i odznaczania zadań o konkretnej porze dnia.',
           toggled: 'Moduł zaktualizowany.',
         },
+        accountMode: {
+          title: 'Jak chcesz korzystać z LifeXP?',
+          subtitle: 'Możesz to zmienić w każdej chwili w Ustawieniach.',
+          soloTitle: 'Solo', soloDesc: 'Zarządzasz kontem sam, bez nadzoru.',
+          supervisedTitle: 'Nadzorowane', supervisedDesc: 'Rodzic/opiekun może zobaczyć Twoje postępy i dostawać cotygodniowe raporty.',
+          continue: 'Kontynuuj',
+          settingsTitle: 'Tryb konta', settingsHint: 'Zmień w każdej chwili — przełączenie na solo zrywa połączenie z rodzicem.',
+          confirmSoloSwitch: 'Przełączyć na solo? Twój rodzic straci dostęp do Twoich danych, a raport tygodniowy przestanie być wysyłany.',
+          updated: 'Tryb konta zaktualizowany.',
+        },
         loan: {
           title: 'Pożyczki', new: 'Nowa pożyczka',
           iLent: 'Pożyczam komuś', iBorrowed: 'Pożyczam od kogoś',
@@ -2859,6 +2920,14 @@
         }
       }
 
+      // Wybór trybu konta (solo/nadzorowane) — osobna brama od ankiety modułów
+      // poniżej, więc odpala się raz dla KAŻDEGO konta (też istniejącego sprzed
+      // tej funkcji), niezależnie od stanu enabledModules.
+      if (userProfile.accountMode === undefined) {
+        await openAccountModeStep();
+      }
+      applyAccountModeVisibility();
+
       // Ankieta personalizacji — tylko raz, przed pierwszym renderem Dashboardu
       // z prawdziwym zestawem modułów (patrz komentarz przy openOnboarding).
       if (userProfile.enabledModules === undefined) {
@@ -2988,6 +3057,104 @@
       if (actionRow) actionRow.style.display = statsOn ? '' : 'none';
     }
 
+    // ── Wybór trybu konta (solo/nadzorowane, pierwsze uruchomienie) ──
+    // Osobna, niezależna brama od ankiety modułów niżej (patrz boot sequence
+    // w onAuthStateChanged) — dzięki temu istniejące konta sprzed tej funkcji
+    // (które mają już enabledModules ustawione z poprzedniego wdrożenia)
+    // i tak dostają to pytanie raz, bez specjalnego rozróżniania "nowy vs
+    // istniejący" user. Ten sam wzorzec Promise + resolve co openOnboarding.
+    let accountModePicked = null;
+    let accountModeResolve = null;
+
+    window.pickAccountMode = (mode) => {
+      accountModePicked = mode;
+      ['solo', 'supervised'].forEach((m) => {
+        const el = document.getElementById('account-mode-opt-' + m);
+        if (el) el.classList.toggle('selected', m === mode);
+      });
+      document.getElementById('account-mode-continue').disabled = false;
+    };
+
+    function openAccountModeStep() {
+      return new Promise((resolve) => {
+        accountModeResolve = resolve;
+        accountModePicked = null;
+        ['solo', 'supervised'].forEach((m) => document.getElementById('account-mode-opt-' + m)?.classList.remove('selected'));
+        document.getElementById('account-mode-continue').disabled = true;
+        document.getElementById('account-mode-modal').classList.add('open');
+      });
+    }
+
+    window.saveAccountModeStep = async () => {
+      if (!accountModePicked) return;
+      try {
+        await updateDoc(doc(db, 'users', currentUser.uid), { accountMode: accountModePicked });
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('errors.saveRetry'), 'error');
+        return; // zostaw modal otwarty — spróbuj ponownie
+      }
+      userProfile.accountMode = accountModePicked;
+      document.getElementById('account-mode-modal').classList.remove('open');
+      applyAccountModeVisibility();
+      if (accountModeResolve) { accountModeResolve(); accountModeResolve = null; }
+    };
+
+    // Chowa sekcje związane z rodzicem w Ustawieniach gdy tryb to solo — ten
+    // sam mechanizm co applyModuleVisibility, tylko sterowany accountMode
+    // zamiast enabledModules. Limit dzienny (settings-cat-dashboard) celowo
+    // NIE jest tu dotykany — to uniwersalne narzędzie samokontroli, nie
+    // funkcja nadzoru rodzica (patrz plan/decyzja usera).
+    function applyAccountModeVisibility() {
+      const solo = userProfile?.accountMode === 'solo';
+      const parentBlock = document.getElementById('parent-email-block');
+      if (parentBlock) parentBlock.style.display = solo ? 'none' : '';
+      const reportCard = document.getElementById('weekly-report-card');
+      if (reportCard) reportCard.style.display = solo ? 'none' : '';
+      renderAccountModeSegmented();
+    }
+
+    function renderAccountModeSegmented() {
+      document.querySelectorAll('#account-mode-tabs .seg-btn').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-mode') === userProfile?.accountMode);
+      });
+    }
+
+    // Zmiana trybu w dowolnej chwili z Ustawień. Solo → Nadzorowane nie
+    // wymaga potwierdzenia (rozszerzenie dostępu, nic nie znika). Nadzorowane
+    // → Solo NAPRAWDĘ zrywa połączenie z rodzicem (czyści parentEmail i pola
+    // weryfikacji, nie tylko chowa UI) — solo ma znaczyć solo, żaden ukryty
+    // rodzic nie widzi już danych przez parent.html (patrz firestore.rules:
+    // dostęp rodzica jest w 100% zależny od pola parentEmail).
+    window.setAccountMode = async (mode) => {
+      if (mode === userProfile.accountMode) return;
+      try {
+        if (mode === 'solo' && userProfile.parentEmail) {
+          if (!await confirmDialog(i18next.t('accountMode.confirmSoloSwitch'))) return;
+          await updateDoc(doc(db, 'users', currentUser.uid), {
+            accountMode: 'solo', autoReport: false,
+            parentEmail: '', parentEmailVerifiedAt: deleteField(),
+            pendingParentEmail: deleteField(), parentEmailCode: deleteField(), parentEmailCodeExpiry: deleteField(),
+          });
+          userProfile.parentEmail = '';
+          userProfile.parentEmailVerifiedAt = undefined;
+          userProfile.autoReport = false;
+          updateParentEmailUI();
+          const reportToggle = document.getElementById('auto-report-toggle');
+          if (reportToggle) reportToggle.checked = false;
+        } else {
+          await updateDoc(doc(db, 'users', currentUser.uid), { accountMode: mode });
+        }
+      } catch (e) {
+        console.error(e);
+        toast(i18next.t('errors.saveRetry'), 'error');
+        return;
+      }
+      userProfile.accountMode = mode;
+      applyAccountModeVisibility();
+      toast(i18next.t('accountMode.updated'));
+    };
+
     // ── Ankieta personalizacji (pierwsze uruchomienie) ─────
     // Pokazuje się TYLKO gdy userProfile.enabledModules jeszcze nie istnieje
     // (nowe konto ALBO istniejące konto sprzed wprowadzenia tego systemu —
@@ -3062,6 +3229,7 @@
       if (id === 'games' && window.LifeXPGames) LifeXPGames.showMenu();
       if (id === 'settings') {
         renderModuleSettings();
+        applyAccountModeVisibility();
         loadChoreDefs().then(renderChoreDefsSettings);
         loadActivityDefs().then(renderActivityDefsSettings);
         loadMoneySettingsUI();
@@ -3142,7 +3310,7 @@
         const id = cat.id.replace('settings-cat-', '');
         let collapsed;
         if (id in state) collapsed = state[id];
-        else if (firstVisit && id === 'account' && parentEmailNeedsAttention) collapsed = false;
+        else if (firstVisit && id === 'account' && userProfile?.accountMode === 'supervised' && parentEmailNeedsAttention) collapsed = false;
         else collapsed = true;
         cat.classList.toggle('collapsed', collapsed);
       });
@@ -6660,8 +6828,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.04';
+    const APP_VERSION = '2026.08.05';
     const CHANGELOG = [
+      { version: '2026.08.05', items: [
+        { pl: '🧭 Nowość: tryb konta Solo/Nadzorowane — przy pierwszym uruchomieniu wybierasz, czy korzystasz z LifeXP samodzielnie, czy z rodzicem/opiekunem w tle. W trybie solo znika email rodzica i raport tygodniowy z Ustawień; przełączenie na solo w każdej chwili zrywa istniejące połączenie z rodzicem (za potwierdzeniem)', en: "🧭 New: Solo/Supervised account mode — on first launch you choose whether you're using LifeXP on your own or with a parent/guardian in the loop. Solo mode hides the parent email and weekly report from Settings; switching to solo at any time disconnects an existing parent link (with a confirmation)" },
+      ]},
       { version: '2026.08.04', items: [
         { pl: '🧩 Nowość: system personalizacji — przy pierwszym uruchomieniu wybierasz, z których modułów LifeXP chcesz korzystać (Obowiązki, Money, Gry, Statystyki XP, Planer dnia). Nawigacja pokazuje tylko wybrane moduły, a wybór można zmienić w każdej chwili w Ustawieniach → Moduły — wyłączenie modułu niczego nie kasuje, dane wracają po ponownym włączeniu', en: '🧩 New: personalization system — on first launch you choose which LifeXP modules you want (Chores, Money, Games, XP Stats, Day Planner). Navigation shows only the modules you picked, and you can change it any time in Settings → Modules — disabling a module never deletes anything, data comes right back when you re-enable it' },
       ]},
