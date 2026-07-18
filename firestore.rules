@@ -101,11 +101,25 @@ match /users/{uid} {
       allow write: if isBugAdmin();
     }
 
-    // Globalne wiadomości (ogłoszenia admina → baner u wszystkich). Każdy zalogowany
+// Globalne wiadomości (ogłoszenia admina → baner u wszystkich). Każdy zalogowany
     // czyta, pisze/kasuje tylko admin.
     match /broadcasts/{id} {
       allow read:   if isSignedIn();
       allow create, update, delete: if isBugAdmin();
+    }
+
+    // Allowlist kont testowych AI Assistant. Klient może sprawdzić tylko,
+    // czy JEGO WŁASNY uid tam jest (żeby pokazać/ukryć przycisk AI w UI).
+    // Dodawanie/usuwanie wpisów robi wyłącznie Cloud Function (Admin SDK).
+    match /aiTestAccess/{uid} {
+      allow read:  if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Globalny dzienny licznik zużycia AI — czysto wewnętrzny,
+    // klient nigdy go nie czyta ani nie zapisuje bezpośrednio.
+    match /aiUsageGlobal/{date} {
+      allow read, write: if false;
     }
   }
 }
