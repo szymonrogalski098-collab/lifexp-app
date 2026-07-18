@@ -34,11 +34,17 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email == 'szymonrogalski098@gmail.com';
     }
 
-    match /users/{uid} {
-      allow read:   if isOwner(uid) || isParentOfDoc();
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid);
-      allow delete: if isOwner(uid);
+match /users/{uid} {
+  allow read:   if isOwner(uid) || isParentOfDoc();
+  // Przy tworzeniu konta owner nie może od razu wpisać sobie pola aiSettings
+  // (np. advancedEnabled: true) — to pole pojawia się dopiero przez Cloud Function.
+  allow create: if isOwner(uid) && !('aiSettings' in request.resource.data);
+  // Zwykła edycja profilu (goals, xp, itd.) — owner może wszystko OPRÓCZ
+  // ruszania aiSettings. To pole zmienia wyłącznie Cloud Function (Admin SDK),
+  // który i tak pomija te reguły całkowicie.
+  allow update: if isOwner(uid)
+    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['aiSettings']);
+  allow delete: if isOwner(uid);
 
       // Wszystkie podkolekcje (activities, dailyLog, gamingSessions, purchases,
       // chores, chorePayouts, choreDefs, activityDefs, money, moneyLoans, ...).
