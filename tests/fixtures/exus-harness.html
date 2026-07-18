@@ -141,6 +141,31 @@
       background: var(--bg3); border: 1px solid var(--warn); color: var(--warn);
       font-size: 13px; text-align: center; max-width: 90%;
     }
+    /* Karta propozycji zadania (aiProposeTask) — dymek AI, ale z własnym
+       układem zamiast zwykłego tekstu: nagłówek, tytuł, meta (godzina/czas/typ)
+       i dwa przyciski Zatwierdź/Odrzuć. Po decyzji karta zamienia się w zwykły
+       tekstowy dymek (patrz exusConfirmProposal/exusRejectProposal w JS). */
+    .exus-proposal { max-width: 88%; padding: 12px 14px; }
+    .exus-proposal-head {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+      color: var(--accent); margin-bottom: 6px;
+    }
+    .exus-proposal-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .exus-proposal-meta {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      font-size: 12px; color: var(--text2); margin-bottom: 12px;
+    }
+    .exus-proposal-meta span { display: flex; align-items: center; gap: 4px; }
+    .exus-proposal-actions { display: flex; gap: 8px; }
+    .exus-proposal-btn {
+      flex: 1; border: none; border-radius: 10px; padding: 9px 0;
+      font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s ease, transform .12s ease;
+    }
+    .exus-proposal-btn:active { transform: scale(.96); }
+    .exus-proposal-btn:disabled { opacity: .5; cursor: default; transform: none; }
+    .exus-proposal-btn.confirm { background: var(--accent); color: #fff; }
+    .exus-proposal-btn.reject { background: var(--bg2); color: var(--text2); border: 1px solid var(--border); }
     .exus-typing { display: flex; gap: 4px; padding: 12px 15px; }
     .exus-typing span {
       width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
@@ -258,18 +283,28 @@
 
   </div>
 
+  <!-- Fake Planer dnia page, just enough for the .classList.contains('active')
+       guard in exusConfirmProposal() to find and for loadPlanner() (stubbed
+       below) to be callable by name. Toggle class="page active" on it from a
+       test to exercise the "planner is open -> refresh it" branch. -->
+  <div class="page" id="page-planner"></div>
+
   <script>
     // ── Stubs standing in for the real Firebase module + Siri-ous helpers ──
-    // Two independent mock configs, keyed by callable name, since sendExusMessage
-    // now calls BOTH aiAssistantChat and aiAssistantPing per message.
+    // Independent mock configs, keyed by callable name, since sendExusMessage
+    // now calls aiProposeTask (always), then either aiAssistantChat or (via
+    // the proposal card) aiConfirmTask, then aiAssistantPing.
     window.__exusMock = {
+      aiProposeTask: { mode: 'success', data: { status: 'ok', isTaskRequest: false } },
       aiAssistantChat: { mode: 'success', data: {} },
+      aiConfirmTask: { mode: 'success', data: { status: 'ok', taskId: 'task-1' } },
       aiAssistantPing: { mode: 'success', data: {} },
     };
     window.httpsCallable = function (_functions, name) {
       return function (arg) {
         const cfg = window.__exusMock[name] || { mode: 'success', data: {} };
         cfg.lastArg = arg;
+        cfg.calls = (cfg.calls || 0) + 1;
         if (cfg.mode === 'error') {
           const err = new Error(cfg.errorMessage || 'internal error');
           err.code = cfg.errorCode || 'functions/internal';
@@ -289,6 +324,19 @@
       if (name === 'apple') document.body.classList.add('theme-apple');
       if (name === 'gold') document.body.classList.add('theme-gold');
     };
+    // Minimal stand-in for activityDefs/activityDefById in app.html — same
+    // fallback shape (name defaults to the raw id when not found), used by
+    // exusRenderProposalCard() to show a readable activity type name.
+    window.activityDefs = [];
+    var activityDefs = window.activityDefs;
+    function activityDefById(id) {
+      return activityDefs.find(a => a.id === id) || { name: id, points: 0, color: '#6c63ff', icon: 'ti-star' };
+    }
+    // Stand-in for loadPlanner() — counts calls so tests can assert the
+    // "planner is open -> refresh it" branch in exusConfirmProposal() fired.
+    window.loadPlannerCallCount = 0;
+    window.loadPlanner = async function () { window.loadPlannerCallCount++; };
+    var loadPlanner = window.loadPlanner;
   </script>
   <script>
     // ── "Ex-us" — prawdziwy asystent AI (Gemini, przez Cloud Functions
@@ -338,9 +386,34 @@
       el.innerHTML = exusMessages.map((m, i) => {
         const isLast = i === exusMessages.length - 1;
         const popClass = (animateLast && isLast) ? ' pop' : '';
+        if (m.role === 'proposal') return exusRenderProposalCard(m, popClass);
         return `<div class="exus-row ${m.role}"><div class="exus-bubble${popClass}">${escapeHtml(m.text)}</div></div>`;
       }).join('');
       el.scrollTop = el.scrollHeight;
+    }
+
+    // Karta propozycji zadania (aiProposeTask → proposal: { title, time,
+    // durationMin, type }). Nazwę typu bierzemy z activityDefById — ta sama
+    // lista co w Planerze/Log Activity, już wczytywana gdzie indziej w apce;
+    // activityDefById i tak sam pada z powrotem na surowe id, jeśli defs
+    // nie są (jeszcze) załadowane, więc nie trzeba tu nic dodatkowo doładowywać.
+    function exusRenderProposalCard(m, popClass) {
+      const p = m.proposal;
+      const typeName = escapeHtml(activityDefById(p.type).name);
+      const busy = m.status === 'confirming';
+      return `<div class="exus-row ai"><div class="exus-bubble exus-proposal${popClass}">
+        <div class="exus-proposal-head"><i class="ti ti-calendar-plus"></i> Propozycja zadania</div>
+        <div class="exus-proposal-title">${escapeHtml(p.title)}</div>
+        <div class="exus-proposal-meta">
+          <span><i class="ti ti-clock"></i> ${escapeHtml(p.time)}</span>
+          <span><i class="ti ti-hourglass"></i> ${p.durationMin} min</span>
+          <span><i class="ti ti-tag"></i> ${typeName}</span>
+        </div>
+        <div class="exus-proposal-actions">
+          <button class="exus-proposal-btn reject" ${busy ? 'disabled' : ''} onclick="exusRejectProposal('${m.id}')">Odrzuć</button>
+          <button class="exus-proposal-btn confirm" ${busy ? 'disabled' : ''} onclick="exusConfirmProposal('${m.id}')">${busy ? 'Dodaję…' : 'Zatwierdź'}</button>
+        </div>
+      </div></div>`;
     }
 
     // Zasila pasek limitu prawdziwymi danymi z odpowiedzi aiAssistantPing
@@ -409,18 +482,31 @@
 
       let newMessage;
       try {
-        const chat = httpsCallable(functions, 'aiAssistantChat');
-        const payload = { message: text };
-        // conversationId pomijamy przy pierwszej wiadomości nowej rozmowy —
-        // backend sam ją wtedy zakłada i zwraca świeże id w odpowiedzi.
-        if (exusConversationId) payload.conversationId = exusConversationId;
-        const res = await chat(payload);
-        const d = res.data || {};
-        if (d.conversationId) {
-          exusConversationId = d.conversationId;
-          exusSaveConversationId();
+        // Każda wiadomość usera idzie NAJPIERW do aiProposeTask, żeby sprawdzić
+        // czy to prośba o dodanie zadania do Planera dnia. isTaskRequest:true
+        // → karta propozycji, aiAssistantChat wcale nie jest wołane (patrz
+        // exusRenderProposalCard/exusConfirmProposal). isTaskRequest:false →
+        // zwykła rozmowa, ścieżka identyczna jak wcześniej.
+        const propose = httpsCallable(functions, 'aiProposeTask');
+        const proposeRes = await propose({ message: text });
+        const pd = proposeRes.data || {};
+
+        if (pd.isTaskRequest && pd.proposal) {
+          newMessage = { role: 'proposal', id: 'prop-' + Date.now(), proposal: pd.proposal, status: 'pending' };
+        } else {
+          const chat = httpsCallable(functions, 'aiAssistantChat');
+          const payload = { message: text };
+          // conversationId pomijamy przy pierwszej wiadomości nowej rozmowy —
+          // backend sam ją wtedy zakłada i zwraca świeże id w odpowiedzi.
+          if (exusConversationId) payload.conversationId = exusConversationId;
+          const res = await chat(payload);
+          const d = res.data || {};
+          if (d.conversationId) {
+            exusConversationId = d.conversationId;
+            exusSaveConversationId();
+          }
+          newMessage = { role: 'ai', text: d.reply || '(brak odpowiedzi)' };
         }
-        newMessage = { role: 'ai', text: d.reply || '(brak odpowiedzi)' };
       } catch (err) {
         newMessage = { role: 'system', text: err.message || err.code || 'Nieznany błąd połączenia z Ex-us.' };
       }
@@ -431,17 +517,66 @@
       exusSaveHistory();
       exusRenderMessages(true);
 
-      // aiAssistantChat nie zwraca danych licznika, więc pasek limitu
-      // odświeżamy osobnym wywołaniem aiAssistantPing — dwa wywołania
-      // backendu na wiadomość, akceptowalne, bo priorytetem jest zawsze
-      // aktualny wskaźnik. Błąd tego drugiego wywołania nie może zepsuć już
-      // wyświetlonej odpowiedzi czatu, więc łapiemy go osobno i po cichu
+      // Żadne z powyższych wywołań nie zwraca danych licznika, więc pasek
+      // limitu odświeżamy osobnym wywołaniem aiAssistantPing — kolejne
+      // wywołanie backendu na wiadomość, akceptowalne, bo priorytetem jest
+      // zawsze aktualny wskaźnik. Błąd tego wywołania nie może zepsuć już
+      // wyświetlonej odpowiedzi/karty, więc łapiemy go osobno i po cichu
       // pomijamy (pasek po prostu zostaje przy starej wartości).
       try {
         const ping = httpsCallable(functions, 'aiAssistantPing');
         const res = await ping();
         exusUpdateLimitBar(res.data || {});
       } catch (_) {}
+    };
+
+    // Zatwierdzenie karty propozycji zadania — woła aiConfirmTask z DOKŁADNIE
+    // polami z proposal (title/time/durationMin/type), po sukcesie zamienia
+    // kartę w zwykły tekstowy dymek potwierdzenia i odświeża Planer dnia,
+    // jeśli akurat jest otwarty na tej samej stronie.
+    window.exusConfirmProposal = async (id) => {
+      const msg = exusMessages.find(m => m.id === id && m.role === 'proposal');
+      if (!msg || msg.status !== 'pending') return;
+      msg.status = 'confirming';
+      exusRenderMessages(false);
+      try {
+        const confirmTask = httpsCallable(functions, 'aiConfirmTask');
+        const { title, time, durationMin, type } = msg.proposal;
+        await confirmTask({ title, time, durationMin, type });
+
+        msg.role = 'ai';
+        msg.text = `Dodano zadanie: ${title} o ${time}`;
+        delete msg.proposal;
+        delete msg.status;
+        exusSaveHistory();
+        exusRenderMessages(true);
+
+        // Jeśli Planer dnia jest akurat otwarty (ta sama zakładka/strona co
+        // czat nie istnieje — to osobna strona apki), odśwież jego listę
+        // zadań, żeby nowo dodane od razu było widoczne bez ręcznego wejścia.
+        if (document.getElementById('page-planner')?.classList.contains('active')) {
+          await loadPlanner();
+        }
+      } catch (err) {
+        msg.status = 'pending';
+        exusRenderMessages(false);
+        exusMessages.push({ role: 'system', text: err.message || err.code || 'Nie udało się dodać zadania.' });
+        exusSaveHistory();
+        exusRenderMessages(true);
+      }
+    };
+
+    // Odrzucenie karty propozycji — nic do backendu, karta zamienia się w
+    // zwykły tekstowy dymek, rozmowa toczy się dalej normalnie.
+    window.exusRejectProposal = (id) => {
+      const msg = exusMessages.find(m => m.id === id && m.role === 'proposal');
+      if (!msg) return;
+      msg.role = 'ai';
+      msg.text = 'Dobrze, nie dodaję tego zadania.';
+      delete msg.proposal;
+      delete msg.status;
+      exusSaveHistory();
+      exusRenderMessages(false);
     };
 
   </script>
