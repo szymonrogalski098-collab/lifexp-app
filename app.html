@@ -1020,6 +1020,14 @@
       padding: 2px 6px; border-radius: 999px; background: var(--accent); color: #fff;
     }
     .exus-subtitle { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .exus-newchat-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: none;
+      background: var(--bg3); color: var(--accent); font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; transition: transform .12s ease, background .2s ease;
+    }
+    .exus-newchat-btn:active { transform: scale(.9); }
+    .exus-newchat-btn:hover { background: var(--border); }
     .exus-limitbar-wrap { padding: 0 18px 12px; flex-shrink: 0; }
     .exus-limitbar-label {
       display: flex; justify-content: space-between; align-items: baseline;
@@ -1055,6 +1063,13 @@
     .exus-row.ai .exus-bubble {
       background: var(--bg3); color: var(--text); border: 1px solid var(--border);
       border-bottom-left-radius: 5px;
+    }
+    /* Komunikaty systemowe (błędy z backendu — np. wyczerpany limit tokenów) —
+       wyśrodkowane, odróżnione kolorem ostrzegawczym od zwykłych dymków AI. */
+    .exus-row.system { justify-content: center; }
+    .exus-row.system .exus-bubble {
+      background: var(--bg3); border: 1px solid var(--warn); color: var(--warn);
+      font-size: 13px; text-align: center; max-width: 90%;
     }
     .exus-typing { display: flex; gap: 4px; padding: 12px 15px; }
     .exus-typing span {
@@ -1673,6 +1688,7 @@
               <div class="exus-title">Ex-us <span class="exus-title-badge">AI</span></div>
               <div class="exus-subtitle">Prawdziwy asystent LifeXP</div>
             </div>
+            <button class="exus-newchat-btn" onclick="exusNewConversation()" aria-label="Nowa rozmowa"><i class="ti ti-plus"></i></button>
           </div>
           <div class="exus-limitbar-wrap">
             <div class="exus-limitbar-label"><span>Dzienny limit tokenów</span><span id="exus-limit-pct">—</span></div>
@@ -6014,15 +6030,23 @@
       }, delay);
     };
 
-    // ── "Ex-us" — prawdziwy asystent AI (Gemini, przez Cloud Function
-    // aiAssistantPing) współdzielący zakładkę z Siri-ous wyżej. Na razie
-    // wywołuje istniejący ping (status/limit), nie generuje jeszcze
-    // prawdziwych odpowiedzi tekstowych — patrz komentarz w sendExusMessage.
-    // httpsCallable/functions pochodzą z importu przy TYMCZASOWY TEST AI
-    // na górze pliku.
+    // ── "Ex-us" — prawdziwy asystent AI (Gemini, przez Cloud Functions
+    // aiAssistantChat/aiAssistantPing) współdzielący zakładkę z Siri-ous
+    // wyżej. Wiadomości idą do aiAssistantChat (conversationId spina je w
+    // jedną rozmowę po stronie backendu); pasek limitu tokenów odświeżamy
+    // osobnym wywołaniem aiAssistantPing po każdej wymianie, bo aiAssistantChat
+    // go nie zwraca — patrz komentarz w sendExusMessage. httpsCallable/functions
+    // pochodzą z importu przy TYMCZASOWY TEST AI na górze pliku.
     const EXUS_HISTORY_KEY = 'lifexp-exus-history';
+    const EXUS_CONV_KEY = 'lifexp-exus-conversation-id';
     const AICHAT_ACTIVE_KEY = 'lifexp-aichat-active';
     let exusMessages = [];
+    // conversationId aktualnej rozmowy — null = następna wiadomość zakłada
+    // nową sesję po stronie backendu. Trzymany też w localStorage (nie tylko
+    // w tej zmiennej), żeby przetrwał odświeżenie strony w zgodzie z historią
+    // wiadomości (która i tak jest tam zapisywana) — inaczej wiadomość po
+    // odświeżeniu wyglądałaby na kontynuację, a backend zacząłby nową sesję.
+    let exusConversationId = null;
 
     function exusSaveHistory() {
       try { localStorage.setItem(EXUS_HISTORY_KEY, JSON.stringify(exusMessages)); } catch (_) {}
@@ -6030,6 +6054,17 @@
 
     function exusLoadHistory() {
       try { exusMessages = JSON.parse(localStorage.getItem(EXUS_HISTORY_KEY)) || []; } catch (_) { exusMessages = []; }
+    }
+
+    function exusSaveConversationId() {
+      try {
+        if (exusConversationId) localStorage.setItem(EXUS_CONV_KEY, exusConversationId);
+        else localStorage.removeItem(EXUS_CONV_KEY);
+      } catch (_) {}
+    }
+
+    function exusLoadConversationId() {
+      try { exusConversationId = localStorage.getItem(EXUS_CONV_KEY) || null; } catch (_) { exusConversationId = null; }
     }
 
     function exusRenderMessages(animateLast) {
@@ -6067,8 +6102,20 @@
 
     function loadExusChat() {
       exusLoadHistory();
+      exusLoadConversationId();
       exusRenderMessages(false);
     }
+
+    // "Nowa rozmowa" — czyści widoczną historię w UI i zeruje conversationId,
+    // żeby kolejna wiadomość założyła nową sesję w Firestore zamiast
+    // kontynuować starą.
+    window.exusNewConversation = () => {
+      exusMessages = [];
+      exusConversationId = null;
+      exusSaveHistory();
+      exusSaveConversationId();
+      exusRenderMessages(false);
+    };
 
     // Przełącznik Siri-ous / Ex-us — pill-toggle "kropki jak zakładki
     // przeglądarki": aktywna rozwinięta, nieaktywna skurczona do litery.
@@ -6099,27 +6146,41 @@
         `<div class="exus-row ai" id="${typingId}"><div class="exus-bubble exus-typing"><span></span><span></span><span></span></div></div>`);
       el.scrollTop = el.scrollHeight;
 
-      // Na razie woła aiAssistantPing (sprawdza dostęp/limit) zamiast
-      // prawdziwego modelu Gemini — podłączenie faktycznej odpowiedzi AI to
-      // osobne zadanie. Ping i tak zwraca realne dane licznika, którymi od
-      // razu zasilamy pasek limitu powyżej.
-      let replyText;
+      let newMessage;
       try {
-        const ping = httpsCallable(functions, 'aiAssistantPing');
-        const res = await ping();
+        const chat = httpsCallable(functions, 'aiAssistantChat');
+        const payload = { message: text };
+        // conversationId pomijamy przy pierwszej wiadomości nowej rozmowy —
+        // backend sam ją wtedy zakłada i zwraca świeże id w odpowiedzi.
+        if (exusConversationId) payload.conversationId = exusConversationId;
+        const res = await chat(payload);
         const d = res.data || {};
-        exusUpdateLimitBar(d);
-        replyText = 'Cześć, tu Ex-us' + (d.modelWouldBe ? ' (' + d.modelWouldBe + ')' : '') +
-          '. To na razie test połączenia z limitem tokenów — prawdziwe odpowiedzi AI podłączymy w kolejnym kroku. Status: ' + d.status + '.';
+        if (d.conversationId) {
+          exusConversationId = d.conversationId;
+          exusSaveConversationId();
+        }
+        newMessage = { role: 'ai', text: d.reply || '(brak odpowiedzi)' };
       } catch (err) {
-        replyText = 'Nie udało się połączyć z Ex-us. Kod błędu: ' + (err.code || '?') + ' — ' + (err.message || 'nieznany błąd.');
+        newMessage = { role: 'system', text: err.message || err.code || 'Nieznany błąd połączenia z Ex-us.' };
       }
 
       const typingEl = document.getElementById(typingId);
       if (typingEl) typingEl.remove();
-      exusMessages.push({ role: 'ai', text: replyText });
+      exusMessages.push(newMessage);
       exusSaveHistory();
       exusRenderMessages(true);
+
+      // aiAssistantChat nie zwraca danych licznika, więc pasek limitu
+      // odświeżamy osobnym wywołaniem aiAssistantPing — dwa wywołania
+      // backendu na wiadomość, akceptowalne, bo priorytetem jest zawsze
+      // aktualny wskaźnik. Błąd tego drugiego wywołania nie może zepsuć już
+      // wyświetlonej odpowiedzi czatu, więc łapiemy go osobno i po cichu
+      // pomijamy (pasek po prostu zostaje przy starej wartości).
+      try {
+        const ping = httpsCallable(functions, 'aiAssistantPing');
+        const res = await ping();
+        exusUpdateLimitBar(res.data || {});
+      } catch (_) {}
     };
 
     // ── Settings ──────────────────────────────────────────
@@ -7725,8 +7786,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.13';
+    const APP_VERSION = '2026.08.14';
     const CHANGELOG = [
+      { version: '2026.08.14', items: [
+        { pl: '🤖 Ex-us: podłączony prawdziwy czat (Cloud Function aiAssistantChat) — Gemini teraz naprawdę odpowiada i pamięta poprzednie wiadomości w tej samej rozmowie. Pasek limitu tokenów odświeża się po każdej odpowiedzi, doszedł przycisk "Nowa rozmowa", a błędy z backendu (np. wyczerpany dzienny limit) pokazują się czytelnie w czacie zamiast cichego niepowodzenia', en: '🤖 Ex-us: wired up the real chat (aiAssistantChat Cloud Function) — Gemini now actually replies and remembers earlier messages in the same conversation. The token-limit bar refreshes after every reply, a "New conversation" button was added, and backend errors (e.g. daily limit exhausted) now show up clearly in the chat instead of failing silently' },
+      ]},
       { version: '2026.08.13', items: [
         { pl: '🤖 Ex-us: poprawiony przełącznik Siri-ous/Ex-us — obie "kropki" są teraz zrośnięte w jedną pigułkę (stykają się bez odstępu) i siedzą bezpośrednio na górnej krawędzi okna czatu jako jego nagłówek. Zakładka nawigacyjna nazywa się teraz "Asystenci AI" zamiast "Siri-ous AI", żeby odzwierciedlać oba asystenty', en: '🤖 Ex-us: fixed the Siri-ous/Ex-us toggle — the two "dots" are now fused into one capsule (touching, no gap) and sit directly on the chat window\'s top edge as its header. The nav tab is now called "AI Assistants" instead of "Siri-ous AI" to reflect both assistants' },
       ]},

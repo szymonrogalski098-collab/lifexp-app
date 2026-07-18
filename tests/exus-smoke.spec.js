@@ -98,10 +98,16 @@ test('Ex-us chat UI: structure, toggle, theme reactivity, send flow', async ({ p
     getComputedStyle(document.getElementById('exus-shell')).backgroundColor);
   expect(backToDefault).toBe(defaultBg);
 
-  // Send flow — success path: mock aiAssistantPing response, verify the
-  // limit bar picks up real tokensUsedToday/tokensLimitDaily/remainingPercent.
+  // Send flow — success path: aiAssistantChat returns a reply + a fresh
+  // conversationId (first message of a new conversation, so no id was sent);
+  // aiAssistantPing (called right after, to refresh the limit bar) returns
+  // real usage numbers. Both calls are asserted for their actual arguments.
   await page.evaluate(() => {
-    window.__exusMock = {
+    window.__exusMock.aiAssistantChat = {
+      mode: 'success',
+      data: (arg) => ({ status: 'ok', reply: 'Cześć! W czym mogę pomóc?', model: 'gemini-1.5-flash', tokensUsed: 42, conversationId: 'conv-abc123' }),
+    };
+    window.__exusMock.aiAssistantPing = {
       mode: 'success',
       data: { status: 'ok', tokensUsedToday: 850, tokensLimitDaily: 1000, remainingPercent: 15, modelWouldBe: 'gemini-1.5-flash' },
     };
@@ -115,49 +121,108 @@ test('Ex-us chat UI: structure, toggle, theme reactivity, send flow', async ({ p
     return {
       rowCount: rows.length,
       userText: rows[0]?.querySelector('.exus-bubble')?.textContent,
+      aiRole: rows[1]?.className,
       aiText: rows[1]?.querySelector('.exus-bubble')?.textContent,
       typingGone: !document.querySelector('.exus-typing'),
       fillWidth: document.getElementById('exus-limit-fill').style.width,
       pctText: document.getElementById('exus-limit-pct').textContent,
       subText: document.getElementById('exus-limit-sub').textContent,
       fillBg: document.getElementById('exus-limit-fill').style.background,
+      // First call of a fresh conversation must NOT send a conversationId.
+      chatArgSentNoConvId: !('conversationId' in (window.__exusMock.aiAssistantChat.lastArg || {})),
+      exusConversationId: exusConversationId,
     };
   });
   expect(afterSuccess.rowCount).toBe(2);
   expect(afterSuccess.userText).toBe('Cześć Ex-us');
-  expect(afterSuccess.aiText).toContain('gemini-1.5-flash');
-  expect(afterSuccess.aiText).toContain('ok');
+  expect(afterSuccess.aiRole).toBe('exus-row ai');
+  expect(afterSuccess.aiText).toBe('Cześć! W czym mogę pomóc?');
   expect(afterSuccess.typingGone).toBe(true);
+  expect(afterSuccess.chatArgSentNoConvId).toBe(true);
+  expect(afterSuccess.exusConversationId).toBe('conv-abc123');
   expect(afterSuccess.fillWidth).toBe('15%');
   expect(afterSuccess.pctText).toBe('15% pozostało');
   expect(afterSuccess.subText).toBe('850 / 1000 tokenów dziennie');
   // remainingPercent 15 < 20 -> warning color, not the accent gradient.
   expect(afterSuccess.fillBg).toContain('var(--warn)');
 
-  // Send flow — error path: verify it doesn't throw and renders a bubble.
+  // Second message of the SAME conversation must send the stored conversationId.
   await page.evaluate(() => {
-    window.__exusMock = { mode: 'error', errorCode: 'functions/permission-denied', errorMessage: 'brak dostepu testowego' };
+    window.__exusMock.aiAssistantChat.data = () => ({ status: 'ok', reply: 'Jasne, kontynuujmy.', model: 'gemini-1.5-flash', tokensUsed: 10, conversationId: 'conv-abc123' });
   });
-  await page.fill('#exus-input', 'Druga wiadomosc');
+  await page.fill('#exus-input', 'Kontynuacja');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  const secondArg = await page.evaluate(() => window.__exusMock.aiAssistantChat.lastArg);
+  expect(secondArg).toEqual({ message: 'Kontynuacja', conversationId: 'conv-abc123' });
+
+  // Send flow — error path: verify it doesn't throw, renders a distinct
+  // "system" bubble (not a fake AI reply) with the backend's own message,
+  // and the limit-bar ping still runs (independent try/catch).
+  await page.evaluate(() => {
+    window.__exusMock.aiAssistantChat = { mode: 'error', errorCode: 'functions/resource-exhausted', errorMessage: 'Dzienny limit tokenów wyczerpany.' };
+  });
+  await page.fill('#exus-input', 'Trzecia wiadomosc');
   await page.click('.exus-send');
   await page.waitForTimeout(150);
   const afterError = await page.evaluate(() => {
     const rows = Array.from(document.querySelectorAll('#exus-messages .exus-row'));
+    const last = rows[rows.length - 1];
     return {
       rowCount: rows.length,
-      lastText: rows[rows.length - 1]?.querySelector('.exus-bubble')?.textContent,
+      lastRole: last?.className,
+      lastText: last?.querySelector('.exus-bubble')?.textContent,
+      // conversationId from the LAST successful chat call must survive a failed one.
+      exusConversationId: exusConversationId,
     };
   });
-  expect(afterError.rowCount).toBe(4);
-  expect(afterError.lastText).toContain('functions/permission-denied');
-  expect(afterError.lastText).toContain('brak dostepu testowego');
+  expect(afterError.rowCount).toBe(6);
+  expect(afterError.lastRole).toBe('exus-row system');
+  expect(afterError.lastText).toBe('Dzienny limit tokenów wyczerpany.');
+  expect(afterError.exusConversationId).toBe('conv-abc123');
 
-  // History persists across a render (localStorage-backed).
+  // "Nowa rozmowa" — clears visible history AND the stored conversationId.
+  await page.click('.exus-newchat-btn');
+  await page.waitForTimeout(100);
+  const afterNewConvo = await page.evaluate(() => ({
+    rowCount: document.querySelectorAll('#exus-messages .exus-row').length,
+    hasEmptyState: !!document.querySelector('#exus-messages .exus-empty'),
+    exusConversationId: exusConversationId,
+  }));
+  expect(afterNewConvo.rowCount).toBe(0);
+  expect(afterNewConvo.hasEmptyState).toBe(true);
+  expect(afterNewConvo.exusConversationId).toBe(null);
+
+  // A message sent right after "Nowa rozmowa" must NOT send a conversationId
+  // (fresh session), proving the reset actually took effect end-to-end.
+  await page.evaluate(() => {
+    window.__exusMock.aiAssistantChat = {
+      mode: 'success',
+      data: () => ({ status: 'ok', reply: 'Nowa rozmowa, nowe id.', model: 'gemini-1.5-flash', tokensUsed: 5, conversationId: 'conv-xyz789' }),
+    };
+  });
+  await page.fill('#exus-input', 'Pierwsza wiadomosc nowej rozmowy');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  const freshConvo = await page.evaluate(() => ({
+    sentNoConvId: !('conversationId' in (window.__exusMock.aiAssistantChat.lastArg || {})),
+    exusConversationId: exusConversationId,
+  }));
+  expect(freshConvo.sentNoConvId).toBe(true);
+  expect(freshConvo.exusConversationId).toBe('conv-xyz789');
+
+  // History persists across a render (localStorage-backed) — 2 rows: the
+  // fresh-conversation user message + its AI reply.
   await page.reload();
   await page.waitForTimeout(200);
-  const persisted = await page.evaluate(() =>
-    document.querySelectorAll('#exus-messages .exus-row').length);
-  expect(persisted).toBe(4);
+  const persisted = await page.evaluate(() => ({
+    rowCount: document.querySelectorAll('#exus-messages .exus-row').length,
+    exusConversationId: exusConversationId,
+  }));
+  expect(persisted.rowCount).toBe(2);
+  // conversationId also survives reload (localStorage-backed), so the next
+  // message continues the same backend session instead of forking a new one.
+  expect(persisted.exusConversationId).toBe('conv-xyz789');
 
   // Ignore incidental resource noise (e.g. a missing favicon on the static
   // test server) unrelated to the harness's own script.
