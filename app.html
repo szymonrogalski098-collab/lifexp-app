@@ -941,28 +941,38 @@
       display: flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0;
     }
 
-    /* ── Przełącznik Siri-ous / Ex-us — "kropki jak zakładki przeglądarki".
-       Aktywna kropka rozwinięta (pełna nazwa), nieaktywna skurczona do
-       pierwszej litery; kliknięcie skurczonej rozwija ją z animacją.
-       Neutralny wobec obu modułów, więc żyje poza namespace'ami .aic-*/.exus-*. */
+    /* ── Karta czatu (Siri-ous / Ex-us) — wspólny wrapper tylko po to, żeby
+       przełącznik "kropek" siadał BEZPOŚREDNIO nad oknem czatu jako jego
+       nagłówek (zero odstępu), zamiast być osobnym elementem gdzieś nad nim. */
+    .aichat-card {
+      position: relative; z-index: 1;
+      max-width: 460px; margin: 0 auto;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    /* ── Przełącznik Siri-ous / Ex-us — "kropki jak zakładki przeglądarki",
+       stopione w JEDNĄ pigułkę (stykają się bokami, zero odstępu — kontener
+       ma zaokrąglenie i overflow:hidden, przyciski w środku są bez własnego
+       border-radius). Aktywna kropka rozwinięta (pełna nazwa), nieaktywna
+       skurczona do pierwszej litery; kliknięcie skurczonej rozwija ją z
+       animacją. Siada bezpośrednio na górnej krawędzi karty czatu (margin-bottom
+       ujemny), więc wygląda jak zakładka wystająca z nagłówka okna poniżej. */
     .aichat-switch {
       position: relative; z-index: 2;
-      display: flex; justify-content: center; gap: 8px;
-      padding: 4px 4px 12px;
+      display: inline-flex;
+      border-radius: 999px; overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: -1px;
+      flex-shrink: 0;
     }
     .aichat-switch-pill {
       display: flex; align-items: center; gap: 6px;
-      height: 34px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--border);
+      height: 34px; padding: 0 16px; border: none;
       background: var(--bg3); color: var(--text2); cursor: pointer;
       font-size: 13px; font-weight: 700; letter-spacing: .2px;
-      transition: background .3s ease, color .3s ease, padding .35s cubic-bezier(.4,0,.2,1),
-        box-shadow .3s ease, border-color .3s ease;
+      transition: background .3s ease, color .3s ease, padding .35s cubic-bezier(.4,0,.2,1);
       overflow: hidden; white-space: nowrap;
     }
-    .aichat-switch-pill.active {
-      background: var(--accent); border-color: var(--accent); color: #fff;
-      box-shadow: 0 4px 14px rgba(0,0,0,.22);
-    }
+    .aichat-switch-pill.active { background: var(--accent); color: #fff; }
     .aichat-switch-pill:not(.active) { padding: 0; width: 34px; justify-content: center; }
     .aichat-switch-letter { font-size: 14px; flex-shrink: 0; }
     .aichat-switch-label {
@@ -1611,16 +1621,15 @@
            .aic-shell w <style> i przy MODULE_REGISTRY). Treść odpowiedzi
            jest celowo TYLKO po polsku — patrz AIC_RESPONSES w JS niżej. -->
       <div class="page" id="page-ai-chat">
-        <!-- Przełącznik Siri-ous / Ex-us — "kropki" jak zakładki przeglądarki:
-             aktywna jest rozwinięta (pełna nazwa), nieaktywna skurczona do
-             pierwszej litery. Patrz switchAiAssistant() w JS niżej. -->
+      <div class="aichat-card">
+        <!-- Przełącznik Siri-ous / Ex-us — jedna zrośnięta pigułka (kropki
+             stykają się bokami, zero odstępu) siedząca bezpośrednio na górnej
+             krawędzi karty czatu poniżej, jako jej nagłówek — jak zakładka
+             przeglądarki wystająca z okna. Aktywna kropka jest rozwinięta
+             (pełna nazwa), nieaktywna skurczona do pierwszej litery. Patrz
+             switchAiAssistant() w JS niżej. -->
         <div class="aichat-switch">
-          <button class="aichat-switch-pill active" id="aichat-pill-siri" onclick="switchAiAssistant('siri')">
-            <span class="aichat-switch-letter">S</span><span class="aichat-switch-label">Siri-ous</span>
-          </button>
-          <button class="aichat-switch-pill" id="aichat-pill-exus" onclick="switchAiAssistant('exus')">
-            <span class="aichat-switch-letter">E</span><span class="aichat-switch-label">Ex-us</span>
-          </button>
+          <button class="aichat-switch-pill active" id="aichat-pill-siri" onclick="switchAiAssistant('siri')"><span class="aichat-switch-letter">S</span><span class="aichat-switch-label">Siri-ous</span></button><button class="aichat-switch-pill" id="aichat-pill-exus" onclick="switchAiAssistant('exus')"><span class="aichat-switch-letter">E</span><span class="aichat-switch-label">Ex-us</span></button>
         </div>
 
         <div class="aic-shell" id="aic-shell">
@@ -1676,6 +1685,7 @@
             <button class="exus-send" onclick="sendExusMessage()" aria-label="Wyślij"><i class="ti ti-arrow-up"></i></button>
           </div>
         </div>
+      </div>
 
         <!-- Lista czatów (tworzenie/usuwanie) — otwierana tapnięciem tytułu czatu w nagłówku. -->
         <div class="aic-chatlist-overlay" id="aic-chatlist-overlay" onclick="if(event.target===this)aicCloseChatList()">
@@ -2417,7 +2427,7 @@
     // ── i18n (Faza 5: Dashboard + Ustawienia) ──────────────
     const I18N_RESOURCES = {
       en: { translation: {
-        nav: { dashboard: 'Dashboard', shop: 'Expenses', money: 'Money', chores: 'Chores', planner: 'Planner', history: 'History', stats: 'Stats', settings: 'Settings', logout: 'Log out', home: 'Home', games: 'Games', aichat: 'Siri-ous AI', aichatShort: 'Siri-ous' },
+        nav: { dashboard: 'Dashboard', shop: 'Expenses', money: 'Money', chores: 'Chores', planner: 'Planner', history: 'History', stats: 'Stats', settings: 'Settings', logout: 'Log out', home: 'Home', games: 'Games', aichat: 'AI Assistants', aichatShort: 'Assistants' },
         dashboard: {
           streakSuffix: 'day streak', available: 'Available funds', points: 'points',
           level: 'Level {{n}}', xp: '{{cur}} / {{max}} XP',
@@ -2673,7 +2683,7 @@
           gamesDesc: 'Offline mini-games (Redstone Circuits and others) — no points, pure fun.',
           statsDesc: 'History, stats, achievements and logging activities/gaming for XP.',
           plannerDesc: 'A timeline for scheduling and completing tasks by time of day.',
-          aichatDesc: 'A joke AI chat that never actually answers anything. Just for laughs.',
+          aichatDesc: 'Chat with Siri-ous (a joke, offline) or Ex-us (a real AI assistant) — switch between them with the toggle at the top.',
           toggled: 'Module updated.',
         },
         accountMode: {
@@ -2794,7 +2804,7 @@
         },
       }},
       pl: { translation: {
-        nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', planner: 'Planer', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home', games: 'Gry', aichat: 'Siri-ous AI', aichatShort: 'Siri-ous' },
+        nav: { dashboard: 'Dashboard', shop: 'Wydatki', money: 'Money', chores: 'Obowiązki', planner: 'Planer', history: 'Historia', stats: 'Statystyki', settings: 'Ustawienia', logout: 'Wyloguj', home: 'Home', games: 'Gry', aichat: 'Asystenci AI', aichatShort: 'Asystenci' },
         dashboard: {
           streakSuffix: 'dni z rzędu', available: 'Dostępne środki', points: 'punktów',
           level: 'Poziom {{n}}', xp: '{{cur}} / {{max}} XP',
@@ -3050,7 +3060,7 @@
           gamesDesc: 'Mini-gry offline (Obwody Redstone i inne) — bez punktów, czysta zabawa.',
           statsDesc: 'Historia, statystyki, osiągnięcia i logowanie aktywności/grania na punkty XP.',
           plannerDesc: 'Oś czasu do planowania i odznaczania zadań o konkretnej porze dnia.',
-          aichatDesc: 'Żartobliwy czat z AI, które tak naprawdę nigdy nic nie odpowiada. Tylko dla śmiechu.',
+          aichatDesc: 'Czat z Siri-ous (żartobliwy, offline) albo Ex-us (prawdziwy asystent AI) — przełączysz się między nimi suwakiem u góry.',
           toggled: 'Moduł zaktualizowany.',
         },
         accountMode: {
@@ -7715,8 +7725,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.12';
+    const APP_VERSION = '2026.08.13';
     const CHANGELOG = [
+      { version: '2026.08.13', items: [
+        { pl: '🤖 Ex-us: poprawiony przełącznik Siri-ous/Ex-us — obie "kropki" są teraz zrośnięte w jedną pigułkę (stykają się bez odstępu) i siedzą bezpośrednio na górnej krawędzi okna czatu jako jego nagłówek. Zakładka nawigacyjna nazywa się teraz "Asystenci AI" zamiast "Siri-ous AI", żeby odzwierciedlać oba asystenty', en: '🤖 Ex-us: fixed the Siri-ous/Ex-us toggle — the two "dots" are now fused into one capsule (touching, no gap) and sit directly on the chat window\'s top edge as its header. The nav tab is now called "AI Assistants" instead of "Siri-ous AI" to reflect both assistants' },
+      ]},
       { version: '2026.08.12', items: [
         { pl: '🤖 Nowość: Ex-us — prawdziwy asystent AI dołączył do zakładki Siri-ous AI. Przełącznik "kropek" u góry pozwala skakać między nimi; Ex-us ma pasek dziennego limitu tokenów i kolorystykę dopasowaną do wybranego motywu apki (złoty/Apple/LifeXP). Na razie łączy się z backendem tylko po dane limitu — prawdziwe odpowiedzi AI dochodzą w kolejnym kroku', en: '🤖 New: Ex-us — a real AI assistant joined the Siri-ous AI tab. A pill toggle at the top switches between them; Ex-us has a daily token-limit bar and colors that follow your chosen app theme (gold/Apple/LifeXP). For now it only talks to the backend for limit data — real AI replies land in a follow-up step' },
       ]},

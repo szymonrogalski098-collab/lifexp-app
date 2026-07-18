@@ -28,6 +28,21 @@ test('Ex-us chat UI: structure, toggle, theme reactivity, send flow', async ({ p
     hasSwitchFn: 'function', hasSendFn: 'function',
   });
 
+  // Fix-round requirements: the two pills touch (zero gap, one fused capsule)
+  // and the switch sits flush directly on top of the chat card (its header).
+  const layout = await page.evaluate(() => {
+    const siri = document.getElementById('aichat-pill-siri').getBoundingClientRect();
+    const exus = document.getElementById('aichat-pill-exus').getBoundingClientRect();
+    const switchEl = document.querySelector('.aichat-switch').getBoundingClientRect();
+    const shell = document.getElementById('aic-shell').getBoundingClientRect();
+    return {
+      pillGap: exus.left - siri.right,
+      switchToShellGap: shell.top - switchEl.bottom,
+    };
+  });
+  expect(layout.pillGap).toBe(0);
+  expect(layout.switchToShellGap).toBeLessThanOrEqual(0); // flush or slightly overlapping, never a visible gap
+
   // Initial state: Siri-ous visible, Ex-us hidden, Siri pill active.
   const initial = await page.evaluate(() => ({
     aicDisplay: getComputedStyle(document.getElementById('aic-shell')).display,
