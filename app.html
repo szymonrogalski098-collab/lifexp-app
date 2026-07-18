@@ -2132,6 +2132,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js"; // TYMCZASOWY TEST AI — DO USUNIĘCIA
     import {
       initializeFirestore, persistentLocalCache, persistentSingleTabManager,
       doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
@@ -2146,6 +2147,36 @@
       localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
     });
     const messaging = getMessaging(app);
+    const functions = getFunctions(app); // TYMCZASOWY TEST AI — DO USUNIĘCIA
+
+    // TYMCZASOWY TEST AI — DO USUNIĘCIA
+    // Prowizoryczny test wywołania Cloud Function `aiAssistantPing` (onCall) —
+    // do usunięcia razem z przyciskiem i importem powyżej po zakończeniu testów.
+    window.testAiPing = async function () {
+      const resultBox = document.getElementById('ai-ping-test-result');
+      if (resultBox) { resultBox.style.display = 'block'; resultBox.textContent = 'Wywołuję aiAssistantPing…'; }
+      try {
+        const ping = httpsCallable(functions, 'aiAssistantPing');
+        const res = await ping();
+        console.log('[testAiPing] sukces:', res.data);
+        const d = res.data || {};
+        if (resultBox) {
+          resultBox.textContent =
+            'OK\n' +
+            'status: ' + d.status + '\n' +
+            'tokensUsedToday: ' + d.tokensUsedToday + '\n' +
+            'tokensLimitDaily: ' + d.tokensLimitDaily + '\n' +
+            'remainingPercent: ' + d.remainingPercent + '\n' +
+            'modelWouldBe: ' + d.modelWouldBe;
+        }
+      } catch (err) {
+        console.log('[testAiPing] błąd:', err.code, err.message);
+        if (resultBox) {
+          resultBox.textContent = 'BŁĄD\n' + 'code: ' + err.code + '\n' + 'message: ' + err.message;
+        }
+      }
+    };
+    // /TYMCZASOWY TEST AI — DO USUNIĘCIA
 
     // ── System modułów (personalizacja interfejsu) ─────────
     // Jedyne źródło prawdy "co jest modułem" — ankieta pierwszego uruchomienia,
@@ -7948,5 +7979,10 @@
     }
 
   </script>
+
+  <!-- TYMCZASOWY TEST AI — DO USUNIĘCIA -->
+  <button id="ai-ping-test-btn" onclick="window.testAiPing()" style="position:fixed;bottom:16px;right:16px;z-index:99999;padding:10px 16px;background:#ff5252;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">Test AI Ping</button>
+  <pre id="ai-ping-test-result" style="display:none;position:fixed;bottom:60px;right:16px;z-index:99999;max-width:360px;max-height:300px;overflow:auto;background:#1a1a1a;color:#0f0;padding:12px;border-radius:8px;font-size:12px;white-space:pre-wrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></pre>
+  <!-- /TYMCZASOWY TEST AI — DO USUNIĘCIA -->
 </body>
 </html>
