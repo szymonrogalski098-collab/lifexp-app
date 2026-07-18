@@ -230,7 +230,7 @@ test('Ex-us chat UI: structure, toggle, theme reactivity, send flow', async ({ p
   expect(unexpected).toEqual([]);
 });
 
-test('Ex-us task proposals: aiProposeTask branch, confirm/reject, planner refresh', async ({ page }) => {
+test('Ex-us task proposals via aiClassifyIntent: task/chat branches, confirm/reject, planner refresh', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
   page.on('console', msg => { if (msg.type() === 'error') errors.push('CONSOLE: ' + msg.text()); });
@@ -239,29 +239,34 @@ test('Ex-us task proposals: aiProposeTask branch, confirm/reject, planner refres
   await page.click('#aichat-pill-exus');
   await page.waitForTimeout(100);
 
-  // isTaskRequest:false -> the existing aiAssistantChat path must fire exactly
-  // as before (this branch is required to stay unchanged).
+  // intent:"chat" -> the existing aiAssistantChat path must fire exactly as
+  // before (this branch is required to stay unchanged); aiProposeTask no
+  // longer exists at all, only aiClassifyIntent is called first.
   await page.evaluate(() => {
-    window.__exusMock.aiProposeTask = { mode: 'success', data: { status: 'ok', isTaskRequest: false } };
+    window.__exusMock.aiClassifyIntent = { mode: 'success', data: { status: 'ok', intent: 'chat' } };
     window.__exusMock.aiAssistantChat = { mode: 'success', data: () => ({ status: 'ok', reply: 'Zwykła odpowiedź.', model: 'gemini-1.5-flash', tokensUsed: 8, conversationId: 'conv-1' }) };
   });
   await page.fill('#exus-input', 'Jaka jest pogoda?');
   await page.click('.exus-send');
   await page.waitForTimeout(150);
   const normalPath = await page.evaluate(() => ({
+    classifyCalls: window.__exusMock.aiClassifyIntent.calls,
+    classifyArg: window.__exusMock.aiClassifyIntent.lastArg,
     chatCalls: window.__exusMock.aiAssistantChat.calls,
     lastBubble: document.querySelector('#exus-messages .exus-row:last-of-type .exus-bubble')?.textContent,
   }));
+  expect(normalPath.classifyCalls).toBe(1);
+  expect(normalPath.classifyArg).toEqual({ message: 'Jaka jest pogoda?' });
   expect(normalPath.chatCalls).toBe(1);
   expect(normalPath.lastBubble).toBe('Zwykła odpowiedź.');
 
-  // isTaskRequest:true -> a proposal CARD renders instead of a plain bubble,
-  // and aiAssistantChat must NOT be called at all for this message.
+  // intent:"task" -> a proposal CARD renders instead of a plain bubble, and
+  // aiAssistantChat must NOT be called at all for this message.
   await page.evaluate(() => {
-    window.__exusMock.aiProposeTask = {
+    window.__exusMock.aiClassifyIntent = {
       mode: 'success',
       data: {
-        status: 'ok', isTaskRequest: true,
+        status: 'ok', intent: 'task',
         proposal: { title: 'Nauka JS', time: '18:00', durationMin: 45, type: 'learning' },
       },
     };
@@ -314,10 +319,10 @@ test('Ex-us task proposals: aiProposeTask branch, confirm/reject, planner refres
 
   // Confirm flow, with the Planer dnia page CLOSED -> loadPlanner() must NOT fire.
   await page.evaluate(() => {
-    window.__exusMock.aiProposeTask = {
+    window.__exusMock.aiClassifyIntent = {
       mode: 'success',
       data: {
-        status: 'ok', isTaskRequest: true,
+        status: 'ok', intent: 'task',
         proposal: { title: 'Trening', time: '07:30', durationMin: 30, type: 'exercise' },
       },
     };
@@ -350,10 +355,10 @@ test('Ex-us task proposals: aiProposeTask branch, confirm/reject, planner refres
   // Confirm flow, with the Planer dnia page OPEN -> loadPlanner() must fire.
   await page.evaluate(() => document.getElementById('page-planner').classList.add('active'));
   await page.evaluate(() => {
-    window.__exusMock.aiProposeTask = {
+    window.__exusMock.aiClassifyIntent = {
       mode: 'success',
       data: {
-        status: 'ok', isTaskRequest: true,
+        status: 'ok', intent: 'task',
         proposal: { title: 'Czytanie', time: '20:00', durationMin: 20, type: 'reading' },
       },
     };
@@ -371,10 +376,10 @@ test('Ex-us task proposals: aiProposeTask branch, confirm/reject, planner refres
   // retry) AND a separate "system" error bubble is appended below it,
   // same treatment as the existing aiAssistantChat error handling.
   await page.evaluate(() => {
-    window.__exusMock.aiProposeTask = {
+    window.__exusMock.aiClassifyIntent = {
       mode: 'success',
       data: {
-        status: 'ok', isTaskRequest: true,
+        status: 'ok', intent: 'task',
         proposal: { title: 'Projekt', time: '10:00', durationMin: 60, type: 'project' },
       },
     };
@@ -400,6 +405,221 @@ test('Ex-us task proposals: aiProposeTask branch, confirm/reject, planner refres
   expect(afterConfirmError.lastText).toBe('Nie udało się zapisać zadania.');
   expect(afterConfirmError.cardStillThere).toBe(true);
   expect(afterConfirmError.confirmBtnEnabled).toBe(true);
+
+  const unexpected = errors.filter(e => !/Failed to load resource/.test(e));
+  expect(unexpected).toEqual([]);
+});
+
+test('Ex-us goal proposals via aiClassifyIntent: goal/chat+note branches, confirm/reject, dashboard refresh', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  page.on('console', msg => { if (msg.type() === 'error') errors.push('CONSOLE: ' + msg.text()); });
+  await page.goto('/tests/fixtures/exus-harness.html');
+  await page.waitForTimeout(200);
+  await page.click('#aichat-pill-exus');
+  await page.waitForTimeout(100);
+
+  // intent:"goal" -> a GOAL proposal card renders (money type, formatted zł),
+  // and aiAssistantChat must NOT be called for this message.
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = {
+      mode: 'success',
+      data: {
+        status: 'ok', intent: 'goal',
+        proposal: { name: '2TB SSD', type: 'money', amount: 2500 },
+      },
+    };
+  });
+  const chatCallsBefore = await page.evaluate(() => window.__exusMock.aiAssistantChat.calls || 0);
+  await page.fill('#exus-input', 'Chcę odłożyć 2500 zł na dysk 2TB SSD');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+
+  const goalCardState = await page.evaluate(() => {
+    const card = document.querySelector('#exus-messages .exus-proposal');
+    return {
+      chatCallsAfter: window.__exusMock.aiAssistantChat.calls || 0,
+      hasCard: !!card,
+      title: card?.querySelector('.exus-proposal-title')?.textContent,
+      metaText: card?.querySelector('.exus-proposal-meta')?.textContent,
+      hasConfirmBtn: !!card?.querySelector('.exus-proposal-btn.confirm'),
+      hasRejectBtn: !!card?.querySelector('.exus-proposal-btn.reject'),
+    };
+  });
+  expect(goalCardState.chatCallsAfter).toBe(chatCallsBefore); // NOT called
+  expect(goalCardState.hasCard).toBe(true);
+  expect(goalCardState.title).toContain('2TB SSD');
+  expect(goalCardState.metaText).toContain('Cel pieniężny');
+  expect(goalCardState.metaText).toContain('2500,00 zł');
+  expect(goalCardState.hasConfirmBtn).toBe(true);
+  expect(goalCardState.hasRejectBtn).toBe(true);
+
+  // A "points" type goal formats the amount as points, not złoty.
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = {
+      mode: 'success',
+      data: {
+        status: 'ok', intent: 'goal',
+        proposal: { name: 'Level 20', type: 'points', amount: 5000 },
+      },
+    };
+  });
+  await page.fill('#exus-input', 'Ustaw mi cel na 5000 punktów');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  const pointsGoalMeta = await page.evaluate(() => {
+    const cards = document.querySelectorAll('#exus-messages .exus-proposal');
+    return cards[cards.length - 1]?.querySelector('.exus-proposal-meta')?.textContent;
+  });
+  expect(pointsGoalMeta).toContain('Cel punktowy');
+  expect(pointsGoalMeta).toContain('5000 pkt');
+  // Reject BOTH still-pending cards (the earlier money one + this points one)
+  // to keep the DOM clean for the next assertions (only one card expected below).
+  await page.evaluate(() => {
+    document.querySelectorAll('#exus-messages .exus-proposal .exus-proposal-btn.reject')
+      .forEach(btn => btn.click());
+  });
+  await page.waitForTimeout(100);
+
+  // Reject: no backend call, card turns into a plain acknowledgement bubble.
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = {
+      mode: 'success',
+      data: { status: 'ok', intent: 'goal', proposal: { name: 'Rower', type: 'money', amount: 1500 } },
+    };
+  });
+  await page.fill('#exus-input', 'Cel: rower za 1500 zł');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  await page.click('#exus-messages .exus-proposal .exus-proposal-btn.reject');
+  await page.waitForTimeout(100);
+  const afterReject = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('#exus-messages .exus-row'));
+    const last = rows[rows.length - 1];
+    return {
+      hasCardLeft: !!document.querySelector('#exus-messages .exus-proposal'),
+      lastRole: last?.className,
+      lastText: last?.querySelector('.exus-bubble')?.textContent,
+      confirmCalls: window.__exusMock.aiConfirmGoal.calls || 0,
+    };
+  });
+  expect(afterReject.hasCardLeft).toBe(false);
+  expect(afterReject.lastRole).toBe('exus-row ai');
+  expect(afterReject.lastText).toBe('Dobrze, nie dodaję tego celu.');
+  expect(afterReject.confirmCalls).toBe(0);
+
+  // Confirm flow, with the Dashboard page CLOSED -> loadProfile()/renderGoal() must NOT fire.
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = {
+      mode: 'success',
+      data: { status: 'ok', intent: 'goal', proposal: { name: 'Wakacje', type: 'money', amount: 3000 } },
+    };
+    window.__exusMock.aiConfirmGoal = { mode: 'success', data: { status: 'ok', goalId: 'goal-99' } };
+  });
+  await page.fill('#exus-input', 'Chcę zebrać 3000 zł na wakacje');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  await page.click('#exus-messages .exus-proposal .exus-proposal-btn.confirm');
+  await page.waitForTimeout(150);
+
+  const afterConfirmClosed = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('#exus-messages .exus-row'));
+    const last = rows[rows.length - 1];
+    return {
+      confirmArg: window.__exusMock.aiConfirmGoal.lastArg,
+      hasCardLeft: !!document.querySelector('#exus-messages .exus-proposal'),
+      lastRole: last?.className,
+      lastText: last?.querySelector('.exus-bubble')?.textContent,
+      loadProfileCallCount: window.loadProfileCallCount,
+      renderGoalCallCount: window.renderGoalCallCount,
+    };
+  });
+  // aiConfirmGoal must receive EXACTLY the proposal fields, nothing more.
+  expect(afterConfirmClosed.confirmArg).toEqual({ name: 'Wakacje', type: 'money', amount: 3000 });
+  expect(afterConfirmClosed.hasCardLeft).toBe(false);
+  expect(afterConfirmClosed.lastRole).toBe('exus-row ai');
+  expect(afterConfirmClosed.lastText).toBe('Dodano cel: Wakacje');
+  expect(afterConfirmClosed.loadProfileCallCount).toBe(0); // dashboard wasn't open
+  expect(afterConfirmClosed.renderGoalCallCount).toBe(0);
+
+  // Confirm flow, with the Dashboard page OPEN -> loadProfile()+renderGoal() must fire.
+  await page.evaluate(() => document.getElementById('page-dashboard').classList.add('active'));
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = {
+      mode: 'success',
+      data: { status: 'ok', intent: 'goal', proposal: { name: 'Nowy laptop', type: 'money', amount: 6000 } },
+    };
+  });
+  await page.fill('#exus-input', 'Cel: nowy laptop za 6000 zł');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  await page.click('#exus-messages .exus-proposal .exus-proposal-btn.confirm');
+  await page.waitForTimeout(150);
+  const dashboardRefreshed = await page.evaluate(() => ({
+    loadProfileCallCount: window.loadProfileCallCount,
+    renderGoalCallCount: window.renderGoalCallCount,
+  }));
+  expect(dashboardRefreshed.loadProfileCallCount).toBe(1);
+  expect(dashboardRefreshed.renderGoalCallCount).toBe(1);
+  await page.evaluate(() => document.getElementById('page-dashboard').classList.remove('active'));
+
+  // aiConfirmGoal failure -> card stays pending (buttons re-enabled, can
+  // retry) AND a separate "system" error bubble is appended below it.
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = {
+      mode: 'success',
+      data: { status: 'ok', intent: 'goal', proposal: { name: 'Konsola', type: 'money', amount: 2000 } },
+    };
+    window.__exusMock.aiConfirmGoal = { mode: 'error', errorCode: 'functions/internal', errorMessage: 'Nie udało się zapisać celu.' };
+  });
+  await page.fill('#exus-input', 'Cel: konsola za 2000 zł');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  await page.click('#exus-messages .exus-proposal .exus-proposal-btn.confirm');
+  await page.waitForTimeout(150);
+  const afterConfirmError = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('#exus-messages .exus-row'));
+    const last = rows[rows.length - 1];
+    const card = document.querySelector('#exus-messages .exus-proposal');
+    return {
+      lastRole: last?.className,
+      lastText: last?.querySelector('.exus-bubble')?.textContent,
+      cardStillThere: !!card,
+      confirmBtnEnabled: card ? !card.querySelector('.exus-proposal-btn.confirm').disabled : false,
+    };
+  });
+  expect(afterConfirmError.lastRole).toBe('exus-row system');
+  expect(afterConfirmError.lastText).toBe('Nie udało się zapisać celu.');
+  expect(afterConfirmError.cardStillThere).toBe(true);
+  expect(afterConfirmError.confirmBtnEnabled).toBe(true);
+  // Clean up: reject the still-pending card so it doesn't interfere below.
+  await page.click('#exus-messages .exus-proposal .exus-proposal-btn.reject');
+  await page.waitForTimeout(100);
+
+  // intent:"chat" + note (e.g. goal limit reached) -> the note is shown as a
+  // "system" bubble, and aiAssistantChat must NOT be called at all.
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = {
+      mode: 'success',
+      data: { status: 'ok', intent: 'chat', note: 'Masz już maksymalną liczbę celów (3). Usuń jeden, żeby dodać nowy.' },
+    };
+  });
+  const chatCallsBeforeNote = await page.evaluate(() => window.__exusMock.aiAssistantChat.calls || 0);
+  await page.fill('#exus-input', 'Dodaj mi jeszcze jeden cel');
+  await page.click('.exus-send');
+  await page.waitForTimeout(150);
+  const noteState = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('#exus-messages .exus-row'));
+    const last = rows[rows.length - 1];
+    return {
+      chatCallsAfter: window.__exusMock.aiAssistantChat.calls || 0,
+      lastRole: last?.className,
+      lastText: last?.querySelector('.exus-bubble')?.textContent,
+    };
+  });
+  expect(noteState.chatCallsAfter).toBe(chatCallsBeforeNote); // NOT called
+  expect(noteState.lastRole).toBe('exus-row system');
+  expect(noteState.lastText).toBe('Masz już maksymalną liczbę celów (3). Usuń jeden, żeby dodać nowy.');
 
   const unexpected = errors.filter(e => !/Failed to load resource/.test(e));
   expect(unexpected).toEqual([]);

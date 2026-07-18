@@ -1071,10 +1071,12 @@
       background: var(--bg3); border: 1px solid var(--warn); color: var(--warn);
       font-size: 13px; text-align: center; max-width: 90%;
     }
-    /* Karta propozycji zadania (aiProposeTask) — dymek AI, ale z własnym
-       układem zamiast zwykłego tekstu: nagłówek, tytuł, meta (godzina/czas/typ)
-       i dwa przyciski Zatwierdź/Odrzuć. Po decyzji karta zamienia się w zwykły
-       tekstowy dymek (patrz exusConfirmProposal/exusRejectProposal w JS). */
+    /* Karta propozycji zadania (aiClassifyIntent → intent:"task") — dymek AI,
+       ale z własnym układem zamiast zwykłego tekstu: nagłówek, tytuł, meta
+       (godzina/czas/typ) i dwa przyciski Zatwierdź/Odrzuć. Po decyzji karta
+       zamienia się w zwykły tekstowy dymek (patrz exusConfirmProposal/
+       exusRejectProposal w JS). Karta celu poniżej (.exus-proposal-*
+       reużyte) jest analogiczna, dla intent:"goal". */
     .exus-proposal { max-width: 88%; padding: 12px 14px; }
     .exus-proposal-head {
       display: flex; align-items: center; gap: 6px;
@@ -6027,12 +6029,15 @@
     };
 
     // ── "Ex-us" — prawdziwy asystent AI (Gemini, przez Cloud Functions
-    // aiAssistantChat/aiAssistantPing) współdzielący zakładkę z Siri-ous
-    // wyżej. Wiadomości idą do aiAssistantChat (conversationId spina je w
-    // jedną rozmowę po stronie backendu); pasek limitu tokenów odświeżamy
-    // osobnym wywołaniem aiAssistantPing po każdej wymianie, bo aiAssistantChat
-    // go nie zwraca — patrz komentarz w sendExusMessage. httpsCallable/functions
-    // pochodzą z importu firebase-functions.js na górze pliku.
+    // aiClassifyIntent/aiAssistantChat/aiConfirmTask/aiConfirmGoal/aiAssistantPing)
+    // współdzielący zakładkę z Siri-ous wyżej. Każda wiadomość usera idzie
+    // najpierw do aiClassifyIntent, które decyduje czy to zwykła rozmowa,
+    // prośba o zadanie do Planera, czy prośba o cel na dashboardzie — patrz
+    // komentarz w sendExusMessage. Wiadomości "chat" idą do aiAssistantChat
+    // (conversationId spina je w jedną rozmowę po stronie backendu); pasek
+    // limitu tokenów odświeżamy osobnym wywołaniem aiAssistantPing po każdej
+    // wymianie, bo żadna z powyższych funkcji go nie zwraca. httpsCallable/
+    // functions pochodzą z importu firebase-functions.js na górze pliku.
     const EXUS_HISTORY_KEY = 'lifexp-exus-history';
     const EXUS_CONV_KEY = 'lifexp-exus-conversation-id';
     const AICHAT_ACTIVE_KEY = 'lifexp-aichat-active';
@@ -6074,16 +6079,18 @@
         const isLast = i === exusMessages.length - 1;
         const popClass = (animateLast && isLast) ? ' pop' : '';
         if (m.role === 'proposal') return exusRenderProposalCard(m, popClass);
+        if (m.role === 'goal-proposal') return exusRenderGoalProposalCard(m, popClass);
         return `<div class="exus-row ${m.role}"><div class="exus-bubble${popClass}">${escapeHtml(m.text)}</div></div>`;
       }).join('');
       el.scrollTop = el.scrollHeight;
     }
 
-    // Karta propozycji zadania (aiProposeTask → proposal: { title, time,
-    // durationMin, type }). Nazwę typu bierzemy z activityDefById — ta sama
-    // lista co w Planerze/Log Activity, już wczytywana gdzie indziej w apce;
-    // activityDefById i tak sam pada z powrotem na surowe id, jeśli defs
-    // nie są (jeszcze) załadowane, więc nie trzeba tu nic dodatkowo doładowywać.
+    // Karta propozycji zadania (aiClassifyIntent → intent:"task", proposal:
+    // { title, time, durationMin, type }). Nazwę typu bierzemy z
+    // activityDefById — ta sama lista co w Planerze/Log Activity, już
+    // wczytywana gdzie indziej w apce; activityDefById i tak sam pada z
+    // powrotem na surowe id, jeśli defs nie są (jeszcze) załadowane, więc nie
+    // trzeba tu nic dodatkowo doładowywać.
     function exusRenderProposalCard(m, popClass) {
       const p = m.proposal;
       const typeName = escapeHtml(activityDefById(p.type).name);
@@ -6099,6 +6106,33 @@
         <div class="exus-proposal-actions">
           <button class="exus-proposal-btn reject" ${busy ? 'disabled' : ''} onclick="exusRejectProposal('${m.id}')">Odrzuć</button>
           <button class="exus-proposal-btn confirm" ${busy ? 'disabled' : ''} onclick="exusConfirmProposal('${m.id}')">${busy ? 'Dodaję…' : 'Zatwierdź'}</button>
+        </div>
+      </div></div>`;
+    }
+
+    // Karta propozycji celu (aiClassifyIntent → intent:"goal", proposal:
+    // { name, type, amount }), symetryczna do karty zadania powyżej — sama
+    // struktura .exus-proposal*, tylko inna zawartość i inne wywołanie
+    // backendu (aiConfirmGoal zamiast aiConfirmTask). type: "points"|"money"
+    // — patrz komentarz przy exusConfirmGoalProposal co się dzieje z każdym.
+    function exusRenderGoalProposalCard(m, popClass) {
+      const p = m.proposal;
+      const isMoney = p.type === 'money';
+      const typeLabel = isMoney ? 'Cel pieniężny' : 'Cel punktowy';
+      const amountText = isMoney
+        ? Number(p.amount).toFixed(2).replace('.', ',') + ' zł'
+        : Math.round(p.amount) + ' pkt';
+      const busy = m.status === 'confirming';
+      return `<div class="exus-row ai"><div class="exus-bubble exus-proposal${popClass}">
+        <div class="exus-proposal-head"><i class="ti ti-target-arrow"></i> Propozycja celu</div>
+        <div class="exus-proposal-title">🎯 ${escapeHtml(p.name)}</div>
+        <div class="exus-proposal-meta">
+          <span><i class="ti ti-tag"></i> ${typeLabel}</span>
+          <span><i class="ti ti-flag"></i> ${amountText}</span>
+        </div>
+        <div class="exus-proposal-actions">
+          <button class="exus-proposal-btn reject" ${busy ? 'disabled' : ''} onclick="exusRejectGoalProposal('${m.id}')">Odrzuć</button>
+          <button class="exus-proposal-btn confirm" ${busy ? 'disabled' : ''} onclick="exusConfirmGoalProposal('${m.id}')">${busy ? 'Dodaję…' : 'Zatwierdź'}</button>
         </div>
       </div></div>`;
     }
@@ -6169,17 +6203,25 @@
 
       let newMessage;
       try {
-        // Każda wiadomość usera idzie NAJPIERW do aiProposeTask, żeby sprawdzić
-        // czy to prośba o dodanie zadania do Planera dnia. isTaskRequest:true
-        // → karta propozycji, aiAssistantChat wcale nie jest wołane (patrz
-        // exusRenderProposalCard/exusConfirmProposal). isTaskRequest:false →
-        // zwykła rozmowa, ścieżka identyczna jak wcześniej.
-        const propose = httpsCallable(functions, 'aiProposeTask');
-        const proposeRes = await propose({ message: text });
-        const pd = proposeRes.data || {};
+        // Każda wiadomość usera idzie NAJPIERW do aiClassifyIntent, które samo
+        // decyduje co to jest: prośba o zadanie do Planera (intent:"task"),
+        // prośba o cel na dashboardzie (intent:"goal"), czy zwykła rozmowa
+        // (intent:"chat"). Dla "task"/"goal" pokazujemy odpowiednią kartę
+        // propozycji i aiAssistantChat wcale nie jest wołane (patrz
+        // exusRenderProposalCard/exusRenderGoalProposalCard niżej). Dla "chat"
+        // z dodatkowym polem `note` (np. limit 3 celów już osiągnięty) — samo
+        // `note` jako wiadomość systemowa, bez wołania aiAssistantChat. Zwykłe
+        // "chat" bez `note` to dokładnie ta sama ścieżka co wcześniej.
+        const classify = httpsCallable(functions, 'aiClassifyIntent');
+        const classifyRes = await classify({ message: text });
+        const cd = classifyRes.data || {};
 
-        if (pd.isTaskRequest && pd.proposal) {
-          newMessage = { role: 'proposal', id: 'prop-' + Date.now(), proposal: pd.proposal, status: 'pending' };
+        if (cd.intent === 'task' && cd.proposal) {
+          newMessage = { role: 'proposal', id: 'prop-' + Date.now(), proposal: cd.proposal, status: 'pending' };
+        } else if (cd.intent === 'goal' && cd.proposal) {
+          newMessage = { role: 'goal-proposal', id: 'goalprop-' + Date.now(), proposal: cd.proposal, status: 'pending' };
+        } else if (cd.note) {
+          newMessage = { role: 'system', text: cd.note };
         } else {
           const chat = httpsCallable(functions, 'aiAssistantChat');
           const payload = { message: text };
@@ -6260,6 +6302,55 @@
       if (!msg) return;
       msg.role = 'ai';
       msg.text = 'Dobrze, nie dodaję tego zadania.';
+      delete msg.proposal;
+      delete msg.status;
+      exusSaveHistory();
+      exusRenderMessages(false);
+    };
+
+    // Zatwierdzenie karty propozycji celu — woła aiConfirmGoal z DOKŁADNIE
+    // polami z proposal (name/type/amount), symetrycznie do exusConfirmProposal
+    // powyżej. Po sukcesie zamienia kartę w zwykły tekstowy dymek i odświeża
+    // karty celów na Dashboardzie (loadProfile, bo Cloud Function pisze przez
+    // Admin SDK — lokalny userProfile o nowym celu jeszcze nie wie — a potem
+    // renderGoal), jeśli Dashboard jest akurat otwarty.
+    window.exusConfirmGoalProposal = async (id) => {
+      const msg = exusMessages.find(m => m.id === id && m.role === 'goal-proposal');
+      if (!msg || msg.status !== 'pending') return;
+      msg.status = 'confirming';
+      exusRenderMessages(false);
+      try {
+        const confirmGoal = httpsCallable(functions, 'aiConfirmGoal');
+        const { name, type, amount } = msg.proposal;
+        await confirmGoal({ name, type, amount });
+
+        msg.role = 'ai';
+        msg.text = `Dodano cel: ${name}`;
+        delete msg.proposal;
+        delete msg.status;
+        exusSaveHistory();
+        exusRenderMessages(true);
+
+        if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+          await loadProfile();
+          await renderGoal();
+        }
+      } catch (err) {
+        msg.status = 'pending';
+        exusRenderMessages(false);
+        exusMessages.push({ role: 'system', text: err.message || err.code || 'Nie udało się dodać celu.' });
+        exusSaveHistory();
+        exusRenderMessages(true);
+      }
+    };
+
+    // Odrzucenie karty propozycji celu — nic do backendu, karta zamienia się
+    // w zwykły tekstowy dymek, rozmowa toczy się dalej normalnie.
+    window.exusRejectGoalProposal = (id) => {
+      const msg = exusMessages.find(m => m.id === id && m.role === 'goal-proposal');
+      if (!msg) return;
+      msg.role = 'ai';
+      msg.text = 'Dobrze, nie dodaję tego celu.';
       delete msg.proposal;
       delete msg.status;
       exusSaveHistory();
@@ -7869,8 +7960,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.15';
+    const APP_VERSION = '2026.08.16';
     const CHANGELOG = [
+      { version: '2026.08.16', items: [
+        { pl: '🎯 Ex-us potrafi teraz proponować też cele oszczędnościowe/punktowe na dashboardzie, nie tylko zadania — jedna rozmowa rozpoznaje, o co chodzi, i pokazuje odpowiednią kartę do zatwierdzenia albo odrzucenia. Zatwierdzenie od razu dodaje cel i odświeża dashboard, jeśli jest akurat otwarty', en: '🎯 Ex-us can now propose savings/points goals for the dashboard too, not just tasks — one conversation figures out what you mean and shows the matching card to approve or dismiss. Approving adds the goal immediately and refreshes the dashboard if it happens to be open' },
+      ]},
       { version: '2026.08.15', items: [
         { pl: '🤖 Ex-us potrafi teraz proponować zadania do Planera dnia wprost z rozmowy — jeśli wiadomość brzmi jak prośba o zaplanowanie czegoś, zamiast zwykłej odpowiedzi dostajesz kartę z tytułem/godziną/czasem trwania/typem do zatwierdzenia albo odrzucenia jednym kliknięciem. Zatwierdzenie od razu dodaje zadanie i odświeża widok Planera, jeśli jest akurat otwarty', en: '🤖 Ex-us can now propose tasks for the Day Planner right from the conversation — if a message sounds like a scheduling request, instead of a normal reply you get a card with the title/time/duration/type to approve or dismiss with one tap. Approving adds the task immediately and refreshes the Planner view if it happens to be open' },
       ]},
