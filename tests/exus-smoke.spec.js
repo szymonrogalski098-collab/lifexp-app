@@ -226,7 +226,7 @@ test('Ex-us chat UI: structure, toggle, theme reactivity, send flow', async ({ p
 
   // Ignore incidental resource noise (e.g. a missing favicon on the static
   // test server) unrelated to the harness's own script.
-  const unexpected = errors.filter(e => !/Failed to load resource/.test(e));
+  const unexpected = errors.filter(e => !/Failed to load resource|Markdown niedostępny/.test(e));
   expect(unexpected).toEqual([]);
 });
 
@@ -406,7 +406,7 @@ test('Ex-us task proposals via aiClassifyIntent: task/chat branches, confirm/rej
   expect(afterConfirmError.cardStillThere).toBe(true);
   expect(afterConfirmError.confirmBtnEnabled).toBe(true);
 
-  const unexpected = errors.filter(e => !/Failed to load resource/.test(e));
+  const unexpected = errors.filter(e => !/Failed to load resource|Markdown niedostępny/.test(e));
   expect(unexpected).toEqual([]);
 });
 
@@ -621,6 +621,132 @@ test('Ex-us goal proposals via aiClassifyIntent: goal/chat+note branches, confir
   expect(noteState.lastRole).toBe('exus-row system');
   expect(noteState.lastText).toBe('Masz już maksymalną liczbę celów (3). Usuń jeden, żeby dodać nowy.');
 
-  const unexpected = errors.filter(e => !/Failed to load resource/.test(e));
+  const unexpected = errors.filter(e => !/Failed to load resource|Markdown niedostępny/.test(e));
+  expect(unexpected).toEqual([]);
+});
+
+test('Ex-us Markdown rendering: AI replies formatted + sanitized, user messages stay plain', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  page.on('console', msg => { if (msg.type() === 'error') errors.push('CONSOLE: ' + msg.text()); });
+
+  // Pre-define lightweight functional stand-ins for marked/DOMPurify BEFORE
+  // any page script runs, so exusEnsureMarkdownLibs() sees window.marked/
+  // window.DOMPurify already present and skips the real CDN fetch (blocked
+  // by this sandbox's network policy) — this exercises the actual
+  // exusRenderAiText() code path (marked.parse + DOMPurify.sanitize), not
+  // just the fallback tested separately below.
+  await page.addInitScript(() => {
+    window.marked = {
+      // Real marked.js passes raw HTML found in the Markdown source straight
+      // through by default (GFM allows inline HTML) — this stub mirrors that
+      // (no entity-escaping here) precisely so the test below can prove
+      // DOMPurify's sanitize step, not marked itself, is what neutralizes it.
+      parse: (text) => {
+        const html = String(text)
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>');
+        return '<p>' + html + '</p>';
+      },
+    };
+    // Deliberately naive "sanitizer" that only strips <script> tags — good
+    // enough to prove the sanitize step actually runs and its OUTPUT (not
+    // marked's raw HTML) is what ends up in the DOM.
+    window.DOMPurify = {
+      sanitize: (html) => String(html).replace(/<script[\s\S]*?<\/script>/gi, '[stripped]'),
+    };
+  });
+
+  await page.goto('/tests/fixtures/exus-harness.html');
+  await page.waitForTimeout(200);
+  await page.click('#aichat-pill-exus');
+  await page.waitForTimeout(100);
+
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = { mode: 'success', data: { status: 'ok', intent: 'chat' } };
+    window.__exusMock.aiAssistantChat = {
+      mode: 'success',
+      data: {
+        status: 'ok',
+        reply: 'To jest **ważne** i *podkreślone*, plus <script>alert(1)</script> na końcu.',
+        model: 'gemini-1.5-flash', tokensUsed: 5, conversationId: 'conv-md',
+      },
+    };
+  });
+  await page.fill('#exus-input', 'Powiedz mi coś ważnego');
+  await page.click('.exus-send');
+  await page.waitForTimeout(200);
+
+  const aiBubble = await page.evaluate(() => {
+    const el = document.querySelector('#exus-messages .exus-row.ai:last-of-type .exus-bubble');
+    return { html: el?.innerHTML, hasScriptTag: !!el?.querySelector('script') };
+  });
+  expect(aiBubble.html).toContain('<strong>ważne</strong>');
+  expect(aiBubble.html).toContain('<em>podkreślone</em>');
+  expect(aiBubble.html).not.toContain('<script>');
+  expect(aiBubble.html).toContain('[stripped]'); // proves DOMPurify's OUTPUT was used, not marked's raw HTML
+  expect(aiBubble.hasScriptTag).toBe(false);
+
+  // The user's OWN message must NEVER be markdown-rendered, even when it
+  // contains literal markdown syntax — always shown as escaped plain text,
+  // so writing "kupiłem *coś* fajnego" never surprises the user with italics.
+  await page.evaluate(() => {
+    window.__exusMock.aiAssistantChat.data = () => ({ status: 'ok', reply: 'Ok.', model: 'gemini-1.5-flash', tokensUsed: 1, conversationId: 'conv-md' });
+  });
+  await page.fill('#exus-input', 'kupiłem *coś* fajnego i **super** tanio');
+  await page.click('.exus-send');
+  await page.waitForTimeout(200);
+  const userBubble = await page.evaluate(() => {
+    const rows = document.querySelectorAll('#exus-messages .exus-row.user');
+    const el = rows[rows.length - 1]?.querySelector('.exus-bubble');
+    return { html: el?.innerHTML, text: el?.textContent };
+  });
+  expect(userBubble.html).not.toContain('<strong>');
+  expect(userBubble.html).not.toContain('<em>');
+  expect(userBubble.text).toBe('kupiłem *coś* fajnego i **super** tanio');
+
+  const unexpected = errors.filter(e => !/Failed to load resource|Markdown niedostępny/.test(e));
+  expect(unexpected).toEqual([]);
+});
+
+test('Ex-us Markdown fallback: libraries unavailable -> plain escaped text, message never blocked', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
+  page.on('console', msg => { if (msg.type() === 'error') errors.push('CONSOLE: ' + msg.text()); });
+  // No addInitScript here — window.marked/window.DOMPurify stay undefined,
+  // so exusEnsureMarkdownLibs() attempts a REAL CDN fetch, which this
+  // sandbox's network policy blocks. That failure IS the scenario under
+  // test: the message must still render (as plain escaped text), not hang
+  // or break, when the Markdown libraries can't be loaded for any reason.
+  await page.goto('/tests/fixtures/exus-harness.html');
+  await page.waitForTimeout(200);
+  await page.click('#aichat-pill-exus');
+  await page.waitForTimeout(100);
+
+  await page.evaluate(() => {
+    window.__exusMock.aiClassifyIntent = { mode: 'success', data: { status: 'ok', intent: 'chat' } };
+    window.__exusMock.aiAssistantChat = {
+      mode: 'success',
+      data: { status: 'ok', reply: 'Tekst z **gwiazdkami** bez biblioteki.', model: 'gemini-1.5-flash', tokensUsed: 3, conversationId: 'conv-fb' },
+    };
+  });
+  await page.fill('#exus-input', 'Test bez markdown');
+  await page.click('.exus-send');
+  // Give the blocked CDN fetch time to fail before asserting the fallback.
+  await page.waitForTimeout(2000);
+
+  const aiBubble = await page.evaluate(() => {
+    const el = document.querySelector('#exus-messages .exus-row.ai:last-of-type .exus-bubble');
+    return { text: el?.textContent, hasStrong: !!el?.querySelector('strong') };
+  });
+  expect(aiBubble.hasStrong).toBe(false);
+  expect(aiBubble.text).toBe('Tekst z **gwiazdkami** bez biblioteki.');
+
+  // The library-load failure logs a console.error via exusEnsureMarkdownLibs'
+  // own catch — expected, handled noise in a sandbox with no real network,
+  // not a bug (message still rendered correctly, as asserted above).
+  const unexpected = errors.filter(e =>
+    !/Failed to load resource/.test(e) &&
+    !/Markdown niedostępny/.test(e));
   expect(unexpected).toEqual([]);
 });

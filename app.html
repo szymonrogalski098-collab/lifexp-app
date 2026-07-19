@@ -1064,6 +1064,30 @@
       background: var(--bg3); color: var(--text); border: 1px solid var(--border);
       border-bottom-left-radius: 5px;
     }
+    /* Markdown wyrenderowany wewnątrz dymka AI (marked.js + DOMPurify, patrz
+       exusRenderAiText w JS) — tylko reset domyślnych marginesów przeglądarki
+       i minimalny styl list/kodu w kolorach motywu; wygląd samego dymka
+       (.exus-bubble wyżej) zostaje bez zmian. */
+    .exus-row.ai .exus-bubble p { margin: 0 0 8px; }
+    .exus-row.ai .exus-bubble p:last-child { margin-bottom: 0; }
+    .exus-row.ai .exus-bubble ul, .exus-row.ai .exus-bubble ol { margin: 4px 0 8px; padding-left: 20px; }
+    .exus-row.ai .exus-bubble li { margin-bottom: 2px; }
+    .exus-row.ai .exus-bubble li:last-child { margin-bottom: 0; }
+    .exus-row.ai .exus-bubble strong { font-weight: 700; }
+    .exus-row.ai .exus-bubble em { font-style: italic; }
+    .exus-row.ai .exus-bubble code {
+      background: rgba(127,127,127,.18); padding: 1px 5px; border-radius: 5px;
+      font-family: var(--mono); font-size: 12.5px;
+    }
+    .exus-row.ai .exus-bubble pre {
+      background: rgba(127,127,127,.14); padding: 8px 10px; border-radius: 8px;
+      overflow-x: auto; margin: 6px 0;
+    }
+    .exus-row.ai .exus-bubble pre code { background: none; padding: 0; }
+    .exus-row.ai .exus-bubble a { color: inherit; text-decoration: underline; }
+    .exus-row.ai .exus-bubble blockquote {
+      margin: 6px 0; padding-left: 10px; border-left: 2px solid currentColor; opacity: .85;
+    }
     /* Komunikaty systemowe (błędy z backendu — np. wyczerpany limit tokenów) —
        wyśrodkowane, odróżnione kolorem ostrzegawczym od zwykłych dymków AI. */
     .exus-row.system { justify-content: center; }
@@ -6068,6 +6092,55 @@
       try { exusConversationId = localStorage.getItem(EXUS_CONV_KEY) || null; } catch (_) { exusConversationId = null; }
     }
 
+    // Renderowanie Markdown TYLKO dla odpowiedzi AI (Gemini czasem generuje
+    // pogrubienia/listy/kod w `reply`) — wiadomości usera i systemowe zawsze
+    // zostają zwykłym escapowanym tekstem (patrz exusRenderMessages), żeby
+    // user piszący np. "kupiłem *coś* fajnego" nie zobaczył przypadkowego
+    // formatowania własnej wiadomości.
+    //
+    // marked.js (Markdown → HTML) + DOMPurify (sanityzacja WYNIKU przed
+    // innerHTML) ładowane leniwie z CDN dopiero gdy user faktycznie otworzy
+    // Ex-us (nie w <head> dla całej apki — patrz exusEnsureMarkdownLibs
+    // wołane z loadExusChat) — w projekcie nie było wcześniej żadnej
+    // biblioteki do Markdown. DOMPurify jest tu obowiązkowym krokiem, nie
+    // opcjonalnym — treść z Gemini nigdy nie trafia do innerHTML bez niego,
+    // nawet jeśli marked samo w sobie nie wykonuje <script>.
+    let exusMdLibsPromise = null;
+    function exusEnsureMarkdownLibs() {
+      if (exusMdLibsPromise) return exusMdLibsPromise;
+      const loadScript = (src) => new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('nie udało się załadować ' + src));
+        document.head.appendChild(s);
+      });
+      exusMdLibsPromise = Promise.all([
+        window.marked ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js'),
+        window.DOMPurify ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js'),
+      ]).then(() => true).catch((err) => {
+        console.error('[Ex-us] Markdown niedostępny, pokazuję zwykły tekst:', err);
+        return false;
+      });
+      return exusMdLibsPromise;
+    }
+
+    // Zwraca bezpieczny HTML do wstrzyknięcia w innerHTML dymka AI: jeśli
+    // marked+DOMPurify są załadowane, parsuje Markdown i sanityzuje wynik;
+    // w każdym innym wypadku (biblioteki jeszcze się ładują, nie załadowały
+    // się wcale, albo parsowanie samo rzuciło błąd) pada z powrotem na
+    // zwykły escapeHtml — nigdy pusty/zepsuty dymek.
+    function exusRenderAiText(text) {
+      if (window.marked && window.DOMPurify) {
+        try {
+          return DOMPurify.sanitize(marked.parse(text, { breaks: true }));
+        } catch (err) {
+          console.error('[Ex-us] błąd parsowania Markdown, pokazuję zwykły tekst:', err);
+        }
+      }
+      return escapeHtml(text);
+    }
+
     function exusRenderMessages(animateLast) {
       const el = document.getElementById('exus-messages');
       if (!el) return;
@@ -6080,7 +6153,8 @@
         const popClass = (animateLast && isLast) ? ' pop' : '';
         if (m.role === 'proposal') return exusRenderProposalCard(m, popClass);
         if (m.role === 'goal-proposal') return exusRenderGoalProposalCard(m, popClass);
-        return `<div class="exus-row ${m.role}"><div class="exus-bubble${popClass}">${escapeHtml(m.text)}</div></div>`;
+        const content = m.role === 'ai' ? exusRenderAiText(m.text) : escapeHtml(m.text);
+        return `<div class="exus-row ${m.role}"><div class="exus-bubble${popClass}">${content}</div></div>`;
       }).join('');
       el.scrollTop = el.scrollHeight;
     }
@@ -6159,6 +6233,12 @@
       exusLoadHistory();
       exusLoadConversationId();
       exusRenderMessages(false);
+      // Start ładowania bibliotek Markdown od razu, żeby zdążyły być gotowe
+      // zanim przyjdzie pierwsza odpowiedź AI (patrz await w sendExusMessage).
+      // Jeśli historia zawiera już wiadomości AI, sanity-re-render po
+      // załadowaniu je "podbija" do sformatowanego Markdown zamiast surowego
+      // tekstu (bez tego stara historia zostałaby nieformatowana do reloadu).
+      exusEnsureMarkdownLibs().then(() => exusRenderMessages(false));
     }
 
     // "Nowa rozmowa" — czyści widoczną historię w UI i zeruje conversationId,
@@ -6244,6 +6324,10 @@
       if (typingEl) typingEl.remove();
       exusMessages.push(newMessage);
       exusSaveHistory();
+      // Odpowiedzi AI mogą zawierać Markdown — daj bibliotekom (już ładowanym
+      // od otwarcia czatu, patrz loadExusChat) szansę dokończyć się zanim
+      // wyrenderujemy TĘ konkretną wiadomość; karty/system nie potrzebują tego.
+      if (newMessage.role === 'ai') await exusEnsureMarkdownLibs();
       exusRenderMessages(true);
 
       // Żadne z powyższych wywołań nie zwraca danych licznika, więc pasek
@@ -7960,8 +8044,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.16';
+    const APP_VERSION = '2026.08.17';
     const CHANGELOG = [
+      { version: '2026.08.17', items: [
+        { pl: '🤖 Odpowiedzi Ex-us renderują teraz prawdziwe formatowanie (pogrubienia, listy, kod) zamiast surowych gwiazdek Markdown — Twoje własne wiadomości zawsze zostają zwykłym tekstem', en: '🤖 Ex-us replies now render real formatting (bold, lists, code) instead of raw Markdown asterisks — your own messages always stay plain text' },
+      ]},
       { version: '2026.08.16', items: [
         { pl: '🎯 Ex-us potrafi teraz proponować też cele oszczędnościowe/punktowe na dashboardzie, nie tylko zadania — jedna rozmowa rozpoznaje, o co chodzi, i pokazuje odpowiednią kartę do zatwierdzenia albo odrzucenia. Zatwierdzenie od razu dodaje cel i odświeża dashboard, jeśli jest akurat otwarty', en: '🎯 Ex-us can now propose savings/points goals for the dashboard too, not just tasks — one conversation figures out what you mean and shows the matching card to approve or dismiss. Approving adds the goal immediately and refreshes the dashboard if it happens to be open' },
       ]},
