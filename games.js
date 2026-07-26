@@ -36,7 +36,16 @@
         <div class="gt-name">${t(g.nameKey)}</div>
         <div class="gt-best">${t('bestLabel', { n: getBest(id) })}</div>
       </div>`;
-    }).join('');
+    }).join('') + `
+      <div class="game-tile" onclick="LifeXPGames.openFps()">
+        <div class="gt-emoji">🔫</div>
+        <div class="gt-name">FPS Prototype</div>
+        <div class="gt-best">3D, eksperymentalne</div>
+      </div>`;
+    // FPS Prototype celowo NIE jest w GAMES/STARTERS — to osobna strona
+    // (fps.html), zbudowana na Three.js/WebGL, więc nie może dzielić
+    // #games-canvas (kontekst 2D) ani cyklu start/stop reszty gier. Otwiera
+    // się jako normalna nawigacja, nie w obrębie SPA — patrz LifeXPGames.openFps.
   }
 
   function showMenu() {
@@ -2520,6 +2529,11 @@
     showMenu,
     exit: showMenu,
     toggleFullscreen,
+    // FPS Prototype (Three.js/WebGL) żyje jako osobny, samodzielny plik
+    // (fps.html) zamiast wewnątrz #games-canvas — ten canvas ma już kontekst
+    // '2d' zajęty przez pozostałe gry, a raz ustawionego kontekstu przeglądarka
+    // nie pozwala zmienić na 'webgl'. Zwykła nawigacja zamiast STARTERS[id]().
+    openFps() { location.href = 'fps.html'; },
     open(id) {
       if (!GAMES[id]) return;
       stopEngine();

@@ -33,9 +33,9 @@ self.addEventListener('notificationclick', (e) => {
 });
 
 // ── PWA app-shell cache ──
-const CACHE = 'lifexp-shell-v49';
+const CACHE = 'lifexp-shell-v50';
 const STATIC = ['style.css', 'manifest.json', 'icon.svg', 'games.js'];
-const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html'];
+const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html', 'fps.html'];
 
 // Precache STATIC *i* HTML na starcie — bez tego HTML trafiał do cache TYLKO
 // jako efekt uboczny udanej nawigacji online (patrz fetch handler niżej), więc
