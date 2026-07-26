@@ -457,6 +457,10 @@
 
     /* Strefa bezpieczeństwa pod FAB — żeby nie zakrywał ostatnich wierszy */
     #page-chores { padding-bottom: 96px; }
+    /* Kafelek FPS Prototype jest teraz ostatni na liście gier — bez tego
+       zostawał tylko ~38px odstępu nad dolnym paskiem nawigacji (fixed),
+       co na części ekranów wyglądało jak brak przycisku w ogóle. */
+    #page-games { padding-bottom: 96px; }
 
     .fab {
       position: fixed; right: 24px; bottom: 24px;
@@ -8044,8 +8048,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.18';
+    const APP_VERSION = '2026.08.19';
     const CHANGELOG = [
+      { version: '2026.08.19', items: [
+        { pl: '🔴 Fix: kafelek "FPS Prototype" w Grach był praktycznie niewidoczny — jako ostatni na liście miał tylko ~38px odstępu nad dolnym paskiem nawigacji; teraz strona Gry ma taki sam bezpieczny odstęp na dole jak Obowiązki/Planer', en: '🔴 Fix: the "FPS Prototype" tile in Games was practically invisible — as the last item in the list it had only ~38px of clearance above the fixed bottom nav bar; the Games page now gets the same safety padding at the bottom as Chores/Planner' },
+      ]},
       { version: '2026.08.18', items: [
         { pl: '🔫 Nowość: kafelek "FPS Prototype" w zakładce Gry — eksperymentalna, samodzielna gra 3D (Three.js) otwierana jako osobna strona z linkiem powrotu do LifeXP', en: '🔫 New: an "FPS Prototype" tile in the Games tab — an experimental, standalone 3D game (Three.js) that opens as a separate page with a link back to LifeXP' },
       ]},
