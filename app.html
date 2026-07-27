@@ -2,7 +2,11 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- maximum-scale/user-scalable=no: bez tego telefon czasem wchodził w
+       przypadkowy zoom (np. dotknięcie pola tekstowego w Asystentach) i nie
+       dawało się go zresetować przez pinch/przesunięcie — apka jest z natury
+       "ekranami", nie treścią do powiększania, więc blokujemy to u źródła. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LifeXP</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
@@ -888,7 +892,7 @@
     }
     .aic-inputbar input {
       flex: 1; min-width: 0; border: none; background: #f2f2f7; border-radius: 20px;
-      padding: 11px 16px; font-size: 14.5px; color: #1c1c1e; outline: none;
+      padding: 11px 16px; font-size: 16px; color: #1c1c1e; outline: none;
     }
     .aic-inputbar input::placeholder { color: #a0a0a6; }
     .aic-send {
@@ -1143,7 +1147,7 @@
     }
     .exus-inputbar input {
       flex: 1; min-width: 0; border: 1px solid var(--border); background: var(--bg3);
-      border-radius: 20px; padding: 11px 16px; font-size: 14.5px; color: var(--text); outline: none;
+      border-radius: 20px; padding: 11px 16px; font-size: 16px; color: var(--text); outline: none;
       transition: border-color .2s ease;
     }
     .exus-inputbar input:focus { border-color: var(--accent); }
@@ -8048,8 +8052,11 @@
     // update'u: podbij APP_VERSION i dopisz NOWĄ grupę na GÓRZE CHANGELOG (dwujęzyczne pl/en).
     // Popup "Co nowego?" pokazuje TYLKO grupę o version === APP_VERSION (CHANGELOG[0]) —
     // pełny log wszystkich wersji jest dostępny na stronie "Historia aktualizacji".
-    const APP_VERSION = '2026.08.19';
+    const APP_VERSION = '2026.08.20';
     const CHANGELOG = [
+      { version: '2026.08.20', items: [
+        { pl: '🔴 Fix: telefon czasem wchodził w przypadkowy zoom w Asystentach (i nie dało się go zmniejszyć/przesunąć, żeby dobrać się do nowego czatu) — wyłączony zoom przeglądarki w całej apce i podniesiona wielkość czcionki pól tekstowych czatu, żeby telefon nigdy nie próbował sam powiększać ekranu', en: "🔴 Fix: the phone would sometimes zoom into the Assistants screen out of nowhere (with no way to zoom back out or pan to reach the new-chat button) — browser zoom is now disabled app-wide, and the chat text inputs' font size was bumped so the phone never tries to auto-zoom into them" },
+      ]},
       { version: '2026.08.19', items: [
         { pl: '🔴 Fix: kafelek "FPS Prototype" w Grach był praktycznie niewidoczny — jako ostatni na liście miał tylko ~38px odstępu nad dolnym paskiem nawigacji; teraz strona Gry ma taki sam bezpieczny odstęp na dole jak Obowiązki/Planer', en: '🔴 Fix: the "FPS Prototype" tile in Games was practically invisible — as the last item in the list it had only ~38px of clearance above the fixed bottom nav bar; the Games page now gets the same safety padding at the bottom as Chores/Planner' },
       ]},
