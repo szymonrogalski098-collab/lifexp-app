@@ -1,0 +1,231 @@
+<!--
+  Szablon EmailJS "template_jztwowz" — raport tygodniowy LifeXP + dołączona sekcja Money.
+
+  JAK UŻYĆ:
+  1. EmailJS dashboard → Email Templates → otwórz istniejący szablon raportu
+     tygodniowego (template_jztwowz).
+  2. Przełącz edytor w tryb "Code editor" (ikona </>).
+  3. Zastąp CAŁĄ treść zawartością tego pliku (NADPISUJE dotychczasowy kod —
+     zawiera oryginalną treść tygodniową bez zmian + nową sekcję Money).
+  4. Zapisz. Template ID i Subject zostają bez zmian.
+
+  Zmienne wysyłane przez scripts/send-weekly-report.js:
+    user_name, points_earned, balance_pln, gaming_time, purchases   (jak dotąd)
+    money_balance_pln, money_income_pln, money_expenses_pln,
+    money_limit_info, money_limit_color,
+    money_top_categories (wielolinijkowy tekst), money_goals_status (wielolinijkowy tekst)
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Tygodniowy Raport LifeXP</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0e0f13;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#0e0f13;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:560px;background-color:#16181f;border-radius:16px;border:1px solid #2a2d3a;overflow:hidden;">
+
+          <!-- Nagłówek -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#6c63ff,#4ecca3);padding:32px 32px 28px;text-align:center;">
+              <p style="margin:0;font-size:11px;font-weight:600;color:rgba(255,255,255,0.75);letter-spacing:2px;">TYGODNIOWY RAPORT</p>
+              <h1 style="margin:8px 0 0;font-size:26px;font-weight:700;color:#ffffff;">LifeXP</h1>
+            </td>
+          </tr>
+
+          <!-- Powitanie -->
+          <tr>
+            <td style="padding:28px 32px 16px;">
+              <p style="margin:0;font-size:16px;color:#e8eaf0;">Cześć, <strong style="color:#6c63ff;">{{user_name}}</strong>!</p>
+              <p style="margin:8px 0 0;font-size:13px;color:#8a8fa8;line-height:1.6;">Oto podsumowanie tygodnia Twojego dziecka w LifeXP — aktywności i finanse w jednym miejscu.</p>
+            </td>
+          </tr>
+
+          <!-- Statystyki 2x2 -->
+          <tr>
+            <td style="padding:8px 24px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">PUNKTY W TYM TYGODNIU</p>
+                          <p style="margin:8px 0 0;font-size:26px;font-weight:700;color:#6c63ff;">{{points_earned}}</p>
+                          <p style="margin:3px 0 0;font-size:11px;color:#8a8fa8;">XP zarobione</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">SALDO KONTA</p>
+                          <p style="margin:8px 0 0;font-size:26px;font-weight:700;color:#4ecca3;">{{balance_pln}}</p>
+                          <p style="margin:3px 0 0;font-size:11px;color:#8a8fa8;">do wypłaty</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">CZAS GRANIA</p>
+                          <p style="margin:8px 0 0;font-size:26px;font-weight:700;color:#e8eaf0;">{{gaming_time}}</p>
+                          <p style="margin:3px 0 0;font-size:11px;color:#8a8fa8;">w tym tygodniu</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">WYDANO</p>
+                          <p style="margin:8px 0 0;font-size:26px;font-weight:700;color:#ff6b6b;">{{purchases}} zł</p>
+                          <p style="margin:3px 0 0;font-size:11px;color:#8a8fa8;">w nagrodach</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Separator -->
+          <tr>
+            <td style="padding:0 32px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr><td style="border-top:1px solid #2a2d3a;font-size:0;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ═══ Sekcja Money ═══ -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <p style="margin:0;font-size:11px;font-weight:600;color:#4ecca3;letter-spacing:2px;">💰 MONEY — TWOJE FINANSE</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:12px 24px 8px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">SALDO MONEY</p>
+                          <p style="margin:8px 0 0;font-size:26px;font-weight:700;color:#4ecca3;">{{money_balance_pln}}</p>
+                          <p style="margin:3px 0 0;font-size:11px;color:#8a8fa8;">bieżące</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">LIMIT MIESIĘCZNY</p>
+                          <p style="margin:8px 0 0;font-size:15px;font-weight:700;color:{{money_limit_color}};line-height:1.4;">{{money_limit_info}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">PRZYCHODY (M-C)</p>
+                          <p style="margin:8px 0 0;font-size:26px;font-weight:700;color:#4ecca3;">{{money_income_pln}}</p>
+                          <p style="margin:3px 0 0;font-size:11px;color:#8a8fa8;">od początku miesiąca</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="padding:6px;" width="50%">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:18px;">
+                          <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">WYDATKI (M-C)</p>
+                          <p style="margin:8px 0 0;font-size:26px;font-weight:700;color:#ff6b6b;">{{money_expenses_pln}}</p>
+                          <p style="margin:3px 0 0;font-size:11px;color:#8a8fa8;">od początku miesiąca</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:8px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:16px 18px;">
+                    <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">TOP 3 KATEGORIE WYDATKÓW (M-C)</p>
+                    <p style="margin:8px 0 0;font-size:14px;color:#e8eaf0;line-height:1.8;white-space:pre-line;">{{money_top_categories}}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:8px 24px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="background:#1e2029;border:1px solid #2a2d3a;border-radius:12px;padding:16px 18px;">
+                    <p style="margin:0;font-size:10px;font-weight:600;color:#8a8fa8;letter-spacing:1px;">🎯 CELE OSZCZĘDNOŚCIOWE</p>
+                    <p style="margin:8px 0 0;font-size:14px;color:#e8eaf0;line-height:1.8;white-space:pre-line;">{{money_goals_status}}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- ═══ /Sekcja Money ═══ -->
+
+          <!-- Separator -->
+          <tr>
+            <td style="padding:0 32px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr><td style="border-top:1px solid #2a2d3a;font-size:0;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Motywacja -->
+          <tr>
+            <td style="padding:24px 32px;">
+              <p style="margin:0;font-size:14px;color:#e8eaf0;line-height:1.7;">Tak trzymaj! Każdy tydzień to nowa szansa, żeby pobić własny rekord. Wracaj do LifeXP i zarabiaj kolejne punkty!</p>
+            </td>
+          </tr>
+
+          <!-- Stopka -->
+          <tr>
+            <td style="background:#0e0f13;border-top:1px solid #2a2d3a;padding:20px 32px;text-align:center;border-radius:0 0 16px 16px;">
+              <p style="margin:0;font-size:11px;color:#8a8fa8;">Raport wygenerowany automatycznie przez <strong style="color:#6c63ff;">LifeXP</strong></p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
