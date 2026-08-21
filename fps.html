@@ -293,13 +293,13 @@ const CFG = {
 const WEAPONS = [
   { id:'pistol', name:'Pistolet', dmg:26, headMul:3.2, rpm:420,  auto:false,
     spread:0.006, bloom:0.006, magSize:12, reloadTime:1.3, range:120,
-    recoil:0.055, kick:0.09, color:0x4a5160, size:[0.10,0.16,0.34] },
+    recoil:0.030, kick:0.09, color:0x4a5160, size:[0.10,0.16,0.34] },
   { id:'rifle',  name:'AK-47',    dmg:36, headMul:4.0, rpm:600,  auto:true,
     spread:0.010, bloom:0.011, magSize:30, reloadTime:2.3, range:160,
-    recoil:0.09,  kick:0.14, color:0x6b4a2f, size:[0.11,0.18,0.66] },
+    recoil:0.05,  kick:0.14, color:0x6b4a2f, size:[0.11,0.18,0.66] },
   { id:'smg',    name:'SMG',      dmg:19, headMul:2.4, rpm:900,  auto:true,
     spread:0.013, bloom:0.009, magSize:25, reloadTime:1.7, range:90,
-    recoil:0.05,  kick:0.07, color:0x39404d, size:[0.10,0.15,0.46] },
+    recoil:0.028, kick:0.07, color:0x39404d, size:[0.10,0.15,0.46] },
 ];
 
 /* ==========================================================================
@@ -397,8 +397,12 @@ if (renderer.shadowMap.enabled) {
   sun.shadow.camera.left = -S; sun.shadow.camera.right = S;
   sun.shadow.camera.top = S;   sun.shadow.camera.bottom = -S;
   sun.shadow.camera.near = 20; sun.shadow.camera.far = 260;
-  sun.shadow.bias = -0.0009;
-  sun.shadow.normalBias = 0.035;
+  // normalBias tak duży jak wcześniej (0.035) wizualnie odrywał cień od
+  // rzucającego go obiektu ("peter-panning") — cienie zdawały się unosić
+  // tuż nad podłożem zamiast go dotykać. Mniejszy normalBias to naprawia,
+  // bias lekko dokręcony, żeby nie wróciło shadow acne.
+  sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0.01;
 }
 scene.add(sun);
 scene.add(sun.target);
@@ -753,6 +757,10 @@ function buildMap() {
   groundMat.map.needsUpdate = true;
   groundMat.map.repeat.set(760 / TEX_TILE, 760 / TEX_TILE);
   const ground = new THREE.Mesh(groundGeo, groundMat);
+  // Lekko poniżej właściwej podłogi areny (jej góra jest dokładnie w y=0) —
+  // inaczej dwie koplanarne powierzchnie z-fightują, co wygląda jak "bugująca
+  // się" tekstura migocząca przy każdym ruchu kamery, choć nic się nie rusza.
+  ground.position.y = -0.03;
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -991,7 +999,11 @@ function moveAxisStepping(ent, axis, delta, radius, height) {
   const startA = ent.pos[axis];
 
   const blocked = moveAxis(ent, axis, delta, radius, height);
-  if (!blocked || !ent.onGround) return blocked;
+  // Gracz wchodzi na stopnie/krawężniki wyłącznie ręcznym skokiem (Space) — bez
+  // tego auto-step próbował "wciskać" gracza w każdą napotkaną ścianę, co czuło
+  // się jak ciągłe podskakiwanie przy murach. Boty nie skaczą, więc zachowują
+  // auto-step, żeby dalej poruszały się po schodach na mapie.
+  if (!blocked || !ent.onGround || ent.isPlayer) return blocked;
 
   const slidPos = ent.pos.clone();       // wynik zwykłego ruchu (ślizg po ścianie)
 
@@ -1039,12 +1051,16 @@ function moveEntity(ent, dt, radius, height) {
  * alive/pos), co boty. Dzięki temu AI botów nie musi rozróżniać "gracz kontra
  * bot": celuje w dowolny obiekt z listy combatants() i strzela tak samo.
  */
+const RECOIL_MAX_PITCH = 0.16;   // sufit skumulowanego odrzutu (rad) przy szybkim ogniu
+const RECOIL_RECOVERY = 9;       // szybkość opadania celownika z powrotem (1/s, wykładniczo)
+
 const player = {
   isPlayer: true,
   name: 'TY',
   pos: new THREE.Vector3(0, 0, -36),
   vel: new THREE.Vector3(),
   yaw: Math.PI, pitch: 0,
+  recoilPitch: 0, recoilYaw: 0,   // odrzut — chwilowy offset nad "prawdziwym" celowaniem, opada do 0
   onGround: true,
   hp: CFG.player.maxHp,
   alive: true,
@@ -1455,9 +1471,74 @@ overlay.addEventListener('touchend', (e) => {
   if (e.target === overlay) startGame();
 });
 
+/**
+ * Wspomaganie celowania — gdy celownik jest już blisko przeciwnika, płynnie
+ * dociąga go dokładnie na cel (magnetyzm), ale NIGDY nie strzela samo z siebie.
+ * Stożek na telefonie jest większy niż na myszce (trudniej precyzyjnie celować
+ * palcem), siła dociągania też jest większa im bliżej środka celownika cel
+ * już jest — dzięki temu czuje się jak przyciąganie, a nie auto-aim/snap.
+ */
+const AIM_ASSIST = {
+  mouse: { coneDeg: 3.2, pull: 3.5 },
+  touch: { coneDeg: 7.5, pull: 5.5 },
+};
+
+const _aaEye = new THREE.Vector3(), _aaTarget = new THREE.Vector3();
+
+function angDiff(a, b) {
+  let d = a - b;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+function applyAimAssist(dt) {
+  if (!player.alive) return;
+  const cfg = isTouchDevice ? AIM_ASSIST.touch : AIM_ASSIST.mouse;
+  const coneRad = cfg.coneDeg * Math.PI / 180;
+  const range = currentWeapon().range;
+
+  _aaEye.set(player.pos.x, player.pos.y + player.eye, player.pos.z);
+
+  let bestAngle = coneRad, bestYaw = null, bestPitch = null;
+
+  for (const c of combatants()) {
+    if (c === player || !c.alive) continue;
+    _aaTarget.set(c.pos.x, c.pos.y + c.eye, c.pos.z);
+    const dist = _aaEye.distanceTo(_aaTarget);
+    if (dist > range || dist < 0.01) continue;
+    if (!hasLineOfSight(_aaEye, _aaTarget)) continue;
+
+    const dx = _aaTarget.x - _aaEye.x, dy = _aaTarget.y - _aaEye.y, dz = _aaTarget.z - _aaEye.z;
+    const wantYaw = Math.atan2(-dx, -dz);
+    const wantPitch = Math.atan2(dy, Math.hypot(dx, dz));
+    const dYaw = angDiff(wantYaw, player.yaw);
+    const dPitch = wantPitch - player.pitch;
+    const angle = Math.hypot(dYaw, dPitch);
+
+    if (angle < bestAngle) { bestAngle = angle; bestYaw = dYaw; bestPitch = dPitch; }
+  }
+
+  if (bestYaw === null) return;
+
+  const closeness = 1 - bestAngle / coneRad;   // 1 = już prawie na celu, 0 = na brzegu stożka
+  const t = Math.min(1, dt * cfg.pull * (0.4 + 0.6 * closeness));
+  player.yaw += bestYaw * t;
+  player.pitch += bestPitch * t;
+  player.pitch = Math.max(-Math.PI / 2 + 0.02, Math.min(Math.PI / 2 - 0.02, player.pitch));
+}
+
 function updatePlayer(dt) {
-  camera.rotation.y = player.yaw;
-  camera.rotation.x = player.pitch;
+  // Odrzut opada wykładniczo z powrotem do 0, więc celownik samoistnie wraca
+  // do miejsca, w które faktycznie mierzył gracz przed strzałem/serią.
+  const recoilDecay = Math.min(1, dt * RECOIL_RECOVERY);
+  player.recoilPitch += (0 - player.recoilPitch) * recoilDecay;
+  player.recoilYaw += (0 - player.recoilYaw) * recoilDecay;
+
+  applyAimAssist(dt);
+
+  camera.rotation.y = player.yaw + player.recoilYaw;
+  camera.rotation.x = Math.max(-Math.PI/2 + 0.02, Math.min(Math.PI/2 - 0.02, player.pitch + player.recoilPitch));
 
   if (!player.alive) {
     player.respawnTimer -= dt;
@@ -1539,6 +1620,8 @@ function respawnPlayer() {
   // Patrz w stronę środka mapy, żeby respawn nie stawiał twarzą w mur
   player.yaw = Math.atan2(-player.pos.x, -player.pos.z) + Math.PI;
   player.pitch = 0;
+  player.recoilPitch = 0;
+  player.recoilYaw = 0;
   clampToMap(player.pos, 2);
   resolveOverlap(player, CFG.player.radius, CFG.player.height);
   player.hp = CFG.player.maxHp;
@@ -1742,9 +1825,11 @@ function tryShoot() {
   st.nextShot = clock + 60 / def.rpm;
   st.bloom = Math.min(st.bloom + def.bloom, def.bloom * 6);
 
-  // Odrzut kamery + viewmodelu
-  player.pitch = Math.min(Math.PI/2 - 0.02, player.pitch + def.recoil * (0.7 + Math.random() * 0.6));
-  player.yaw += (Math.random() - 0.5) * def.recoil * 0.6;
+  // Odrzut kamery + viewmodelu — chwilowy offset (recoilPitch/recoilYaw),
+  // nie prawdziwy kierunek celowania, więc może potem samoistnie opaść
+  // z powrotem do miejsca, w które faktycznie mierzył gracz (patrz updatePlayer).
+  player.recoilPitch = Math.min(RECOIL_MAX_PITCH, player.recoilPitch + def.recoil * (0.7 + Math.random() * 0.6));
+  player.recoilYaw += (Math.random() - 0.5) * def.recoil * 0.6;
   vmRecoil = def.kick;
   vmKickSide = (Math.random() - 0.5) * def.kick * 1.6;   // lekkie szarpnięcie w bok
   flashTimer = 0.05;
