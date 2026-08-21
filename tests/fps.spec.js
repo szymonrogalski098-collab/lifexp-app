@@ -2,10 +2,12 @@
 //
 // The prototype itself (fps.html) is a standalone Three.js/WebGL page copied
 // in almost verbatim — its module script imports Three.js from a CDN
-// (unpkg.com), which this sandbox's network policy blocks, so the actual
-// 3D rendering/gameplay can never be exercised here (same limitation as the
-// Firebase-gated parts of app.html elsewhere in this suite). What IS fully
-// under our control and worth locking down: the menu tile exists and wires
+// (unpkg.com), which this sandbox's network policy blocks, so the game's own
+// JS does not execute in THIS file (same limitation as the Firebase-gated
+// parts of app.html elsewhere in this suite). The gameplay itself is covered
+// separately in fps-gameplay.spec.js, which serves Three.js from the local
+// `three` devDependency and drives the running game. What IS fully
+// under our control here and worth locking down: the menu tile exists and wires
 // to LifeXPGames.openFps(), the navigation actually lands on fps.html (real
 // browser navigation, not a mock), the static page content renders even
 // though its module script fails to execute, and the added "back to LifeXP"
