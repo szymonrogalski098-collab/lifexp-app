@@ -14,11 +14,23 @@
   #hud { position: fixed; inset: 0; pointer-events: none; }
 
   #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px;
-               transform: translate(-50%, -50%); }
+               transform: translate(-50%, -50%); transition: transform .1s ease; }
   #crosshair i { position: absolute; background: #46ff7a; box-shadow: 0 0 2px #000; }
   #crosshair .h { width: 7px; height: 2px; top: 10px; }
   #crosshair .v { width: 2px; height: 7px; left: 10px; }
   #ch-l { left: 0 } #ch-r { right: 0 } #ch-t { top: 0 } #ch-b { bottom: 0 }
+
+  /* Luneta SCAR-20: czarna maska z okrągłym wycięciem. Krąg robi ogromny
+     box-shadow zamiast maski SVG — jeden element, ostra krawędź, zero kosztu. */
+  #scope-overlay { position: absolute; inset: 0; display: none; overflow: hidden; }
+  #scope-overlay.on { display: block; }
+  #scope-ring { position: absolute; left: 50%; top: 50%; width: 78vmin; height: 78vmin;
+                transform: translate(-50%, -50%); border-radius: 50%;
+                box-shadow: 0 0 0 100vmax #000, inset 0 0 60px 10px rgba(0,0,0,.85);
+                border: 2px solid rgba(0,0,0,.9); }
+  #scope-overlay i { position: absolute; background: rgba(20,24,20,.85); }
+  #scope-overlay .sc-h { left: 0; right: 0; top: 50%; height: 1px; }
+  #scope-overlay .sc-v { top: 0; bottom: 0; left: 50%; width: 1px; }
 
   #hitmarker { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px;
                transform: translate(-50%, -50%) rotate(45deg); opacity: 0; }
@@ -38,6 +50,8 @@
   #ammo { font-size: 40px; font-weight: 700; letter-spacing: 1px; }
   #ammo small { font-size: 20px; opacity: .6; }
   #weapname { font-size: 15px; opacity: .75; letter-spacing: 2px; text-transform: uppercase; }
+  #grenades { font-size: 13px; opacity: .6; letter-spacing: 1.5px; margin-top: 4px; }
+  #grenades.empty { opacity: .28; }
   #reloadmsg { color: #ffcc44; font-size: 15px; height: 18px; letter-spacing: 1px; }
 
   #topbar { position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
@@ -130,6 +144,8 @@
   #tswitch { position: absolute; left: 18px; top: 90px; display: flex; gap: 8px; pointer-events: auto; z-index: 6; }
   #tswitch .tbtn { width: 46px; height: 46px; font-size: 14px; }
   #tswitch .tbtn.active { border-color: #ffcc44; color: #ffcc44; background: rgba(255,204,68,.15); }
+  /* AIM na dotyku jest przełącznikiem, nie „trzymanym” — stan musi być widoczny */
+  #tbtn-aim.active { border-color: #ffcc44; color: #ffcc44; background: rgba(255,204,68,.2); }
 
   /* Na małych/wąskich ekranach HUD trochę gęściej, żeby nic nie kolidowało z gałkami */
   @media (max-width: 760px), (pointer: coarse) {
@@ -160,6 +176,11 @@
   </div>
   <div id="hitmarker"><i class="h"></i><i class="v"></i></div>
 
+  <div id="scope-overlay">
+    <div id="scope-ring"></div>
+    <i class="sc-h"></i><i class="sc-v"></i>
+  </div>
+
   <div id="topbar">
     <div>ZABÓJSTWA <b id="kills">0</b></div>
     <div>ŚMIERCI <b id="deaths">0</b></div>
@@ -185,6 +206,7 @@
     <div id="reloadmsg"></div>
     <div id="ammo">12<small>/∞</small></div>
     <div id="weapname">Pistolet</div>
+    <div id="grenades">G — GRANATY 2</div>
   </div>
 
   <div id="vignette"></div>
@@ -204,6 +226,8 @@
     <div class="tbtn" data-slot="3">4</div>
   </div>
   <div id="tbtns">
+    <div class="tbtn" id="tbtn-nade">G</div>
+    <div class="tbtn" id="tbtn-aim">AIM</div>
     <div class="tbtn" id="tbtn-reload">R</div>
     <div class="tbtn" id="tbtn-jump">↑</div>
   </div>
@@ -276,6 +300,13 @@ const CFG = {
     radius: 0.4, height: 1.8, eye: 1.62,
     speed: 6.2, sprintMul: 1.45, accel: 55, friction: 12,
     airControl: 0.25, jumpVel: 7.4, maxHp: 100, respawnTime: 3,
+    // Celowanie (ADS) — mnożnik rozrzutu dotyczy TYLKO def.spread, bloom rośnie
+    // normalnie, żeby trzymanie serii przy celowaniu nie było przesadnie mocne.
+    adsSpreadMul: 0.5,
+    adsFovDrop: 3,        // o ile stopni zwęża się FOV przy zwykłym ADS
+    scopeFov: 20,         // pełny zoom lunety SCAR-20
+    scopeSpeedMul: 0.3,   // CS2 niemal zatrzymuje gracza w lunecie
+    aimLerp: 0.12,        // czas dojścia do docelowego FOV (s)
   },
   // stepHeight — maksymalna wysokość, na którą encja wejdzie SAMYM CHODZENIEM
   // (schody, krawężniki, rampy zbudowane ze stopni). Musi być wyraźnie niższa
@@ -287,6 +318,15 @@ const CFG = {
     reactionTime: 0.32, fireRate: 0.55, damage: 11, spread: 0.055,
     burst: 3, burstPause: 0.9, respawnTime: 4, coverHpRatio: 0.45,
     retargetInterval: 0.45,   // jak często bot przelicza, kogo atakować
+    // Animacja śmierci: upadek → leżenie → zanik. Suma 1.6s mieści się
+    // z zapasem w respawnTime, więc balans respawnów zostaje bez zmian.
+    deathFall: 0.35, deathLie: 0.9, deathFade: 0.35,
+    deathTilt: Math.PI / 2 * 0.95,   // o ile przechyla się ciało (≈85°)
+    deathDrop: 0.9,                  // o ile obniża się grupa, żeby tułów legł przy ziemi
+  },
+  grenade: {
+    count: 2, throwSpeed: 11, upBoost: 3, fuseTime: 2.5, radius: 6,
+    maxDamage: 100, minDamage: 10, bounce: 0.45,
   },
   mouseSensitivity: 0.0022,   // bazowa; mnożnik z menu (settings.sensMul) nakłada się na nią
 };
@@ -345,7 +385,8 @@ const scene = new THREE.Scene();
 const FOG_COLOR = 0xbcc9d6;
 scene.fog = new THREE.Fog(FOG_COLOR, 70, 300);
 
-const camera = new THREE.PerspectiveCamera(78, innerWidth / innerHeight, 0.05, 900);
+const BASE_FOV = 78;   // FOV od biodra; ADS i luneta zjeżdżają z niego w updateFov()
+const camera = new THREE.PerspectiveCamera(BASE_FOV, innerWidth / innerHeight, 0.05, 900);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
@@ -1069,6 +1110,8 @@ const player = {
   vel: new THREE.Vector3(),
   yaw: Math.PI, pitch: 0,
   recoilPitch: 0, recoilYaw: 0,   // odrzut — chwilowy offset nad "prawdziwym" celowaniem, opada do 0
+  aiming: false,                  // PPM / przycisk AIM — celowanie (ADS), przy SCAR-ze luneta
+  grenadesLeft: CFG.grenade.count,
   onGround: true,
   hp: CFG.player.maxHp,
   alive: true,
@@ -1176,6 +1219,7 @@ function pauseGame() {
   if (!running || paused) return;
   paused = true;
   mouseDown = false;
+  player.aiming = false;   // PPM puszczone poza oknem inaczej zostawiłoby zoom na stałe
   for (const k in keys) keys[k] = false;       // żeby klawisz nie "został wciśnięty"
   if (document.pointerLockElement) document.exitPointerLock();
   showOverlay('pause');
@@ -1293,11 +1337,22 @@ function updateEdgeTurn(dt) {
 }
 
 document.addEventListener('mousedown', (e) => {
-  if (!isPlaying() || e.button !== 0) return;
-  mouseDown = true;
-  if (!currentWeapon().auto) tryShoot();   // semi-auto: jeden strzał na klik
+  if (!isPlaying()) return;
+  if (e.button === 0) {
+    mouseDown = true;
+    if (!currentWeapon().auto) tryShoot();   // semi-auto: jeden strzał na klik
+  } else if (e.button === 2) {
+    // PPM = celowanie. Świadomie NIE dotyka mouseDown — inaczej trzymanie PPM
+    // wymuszałoby ogień ciągły przez updateWeapons() na broniach auto.
+    player.aiming = true;
+  }
 });
-document.addEventListener('mouseup', (e) => { if (e.button === 0) mouseDown = false; });
+document.addEventListener('mouseup', (e) => {
+  if (e.button === 0) mouseDown = false;
+  else if (e.button === 2) player.aiming = false;
+});
+// Bez tego PPM otwiera menu kontekstowe przeglądarki na środku gry
+document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Escape') {                 // ESC przełącza menu w obie strony
@@ -1312,6 +1367,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Digit2') switchWeapon(1);
   if (e.code === 'Digit3') switchWeapon(2);
   if (e.code === 'Digit4') switchWeapon(3);
+  if (e.code === 'KeyG') throwGrenade();
   if (e.code === 'Space') e.preventDefault();
 });
 document.addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -1347,6 +1403,8 @@ const tlookZone = document.getElementById('tlook-zone');
 const tbtnFire  = document.getElementById('tbtn-fire');
 const tbtnJump  = document.getElementById('tbtn-jump');
 const tbtnReload = document.getElementById('tbtn-reload');
+const tbtnAim   = document.getElementById('tbtn-aim');
+const tbtnNade  = document.getElementById('tbtn-nade');
 
 /* --- Gałka ruchu: pierwszy dotyk w strefie ustawia bazę pod palcem (nie w
    stałym miejscu), żeby działało wygodnie niezależnie gdzie kciuk wyląduje.
@@ -1474,6 +1532,23 @@ document.querySelectorAll('#tswitch .tbtn').forEach((btn) => {
   }, { passive: false });
 });
 
+/* Celowanie na dotyku to PRZEŁĄCZNIK, nie przycisk trzymany: telefon ma zajęte
+   oba kciuki (gałka + obrót), więc dokładanie trzeciego palca na stałe nie ma
+   prawa działać. Ten sam przycisk obsługuje lunetę SCAR-a — luneta jest tylko
+   gated na player.aiming && broń==='scar'. */
+tbtnAim.addEventListener('touchstart', (e) => {
+  if (isPlaying()) {
+    player.aiming = !player.aiming;
+    tbtnAim.classList.toggle('active', player.aiming);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+tbtnNade.addEventListener('touchstart', (e) => {
+  if (isPlaying()) throwGrenade();
+  e.preventDefault();
+}, { passive: false });
+
 /* Na dotyku "kliknij aby zagrać" musi też działać przez touchend — klik
    syntetyczny po touchend zwykle i tak nadejdzie, ale wywołanie wprost tutaj
    usuwa opóźnienie/niepewność na niektórych przeglądarkach mobilnych. */
@@ -1538,6 +1613,35 @@ function applyAimAssist(dt) {
   player.pitch = Math.max(-Math.PI / 2 + 0.02, Math.min(Math.PI / 2 - 0.02, player.pitch));
 }
 
+/* --- Celowanie: FOV, luneta, HUD ---
+ * Jeden sterownik zamiast dwóch osobnych (zwykły ADS i luneta SCAR-a), żeby
+ * obie ścieżki nie biły się o camera.fov. Cel liczony co klatkę, dojście do
+ * niego wygładzone — zoom nigdy nie przeskakuje.
+ */
+const isScoped = () => player.aiming && player.alive && currentWeapon().id === 'scar';
+
+function updateAiming(dt) {
+  const scoped = isScoped();
+  const targetFov = scoped ? CFG.player.scopeFov
+    : (player.aiming && player.alive) ? BASE_FOV - CFG.player.adsFovDrop
+    : BASE_FOV;
+
+  const next = camera.fov + (targetFov - camera.fov) * Math.min(1, dt / CFG.player.aimLerp);
+  if (Math.abs(next - camera.fov) > 0.0015) {   // updateProjectionMatrix tylko gdy realnie drgnęło
+    camera.fov = next;
+    camera.updateProjectionMatrix();
+  }
+
+  el.scope.classList.toggle('on', scoped);
+  el.crosshair.style.display = scoped ? 'none' : '';
+  el.crosshair.style.transform = (player.aiming && !scoped)
+    ? 'translate(-50%, -50%) scale(0.6)'
+    : 'translate(-50%, -50%)';
+  // Przycisk AIM to przełącznik, a pauza/śmierć potrafią zgasić player.aiming
+  // z zewnątrz — synchronizujemy podświetlenie ze stanem, nie odwrotnie.
+  tbtnAim.classList.toggle('active', player.aiming);
+}
+
 function updatePlayer(dt) {
   // Odrzut opada wykładniczo z powrotem do 0, więc celownik samoistnie wraca
   // do miejsca, w które faktycznie mierzył gracz przed strzałem/serią.
@@ -1568,7 +1672,10 @@ function updatePlayer(dt) {
   if (len > 0) { wishX /= len; wishZ /= len; }
 
   const sprinting = keys.ShiftLeft && fwd > 0;
-  const maxSpeed = CFG.player.speed * (sprinting ? CFG.player.sprintMul : 1);
+  // W lunecie gracz ledwo się przesuwa — tak jak w CS2
+  const maxSpeed = CFG.player.speed
+    * (sprinting ? CFG.player.sprintMul : 1)
+    * (isScoped() ? CFG.player.scopeSpeedMul : 1);
   const control = player.onGround ? 1 : CFG.player.airControl;
 
   // Przyspieszanie w kierunku wish + tarcie gdy brak inputu
@@ -1638,8 +1745,9 @@ function respawnPlayer() {
   player.alive = true;
   document.getElementById('deadmsg').style.display = 'none';
   viewmodel.visible = true;
-  // pełne magazynki po respawnie
+  // pełne magazynki i granaty po respawnie
   for (const w of weaponState) { w.ammo = w.def.magSize; w.reloading = false; }
+  player.grenadesLeft = CFG.grenade.count;
   updateHud();
 }
 
@@ -1652,6 +1760,7 @@ function damagePlayer(amount, attacker) {
     player.alive = false;
     player.deaths++;
     player.respawnTimer = CFG.player.respawnTime;
+    player.aiming = false;
     viewmodel.visible = false;
     document.getElementById('deadmsg').style.display = 'block';
     if (attacker) {
@@ -1994,7 +2103,9 @@ function shootables() {
 function fireHitscan(def, st) {
   camera.getWorldPosition(_origin);
   camera.getWorldDirection(_dir);
-  applySpread(_dir, def.spread + st.bloom);
+  // Celowanie zwęża tylko bazowy rozrzut broni — bloom z serii rośnie tak samo
+  // jak od biodra, więc ADS nie zamienia ognia ciągłego w wolny od kary.
+  applySpread(_dir, def.spread * (player.aiming ? CFG.player.adsSpreadMul : 1) + st.bloom);
 
   _rc.set(_origin, _dir);
   _rc.far = def.range;
@@ -2094,6 +2205,145 @@ function updateWeapons(dt) {
   // Celownik rozsuwa się razem z rozrzutem
   const gap = 3 + (st.bloom / (st.def.bloom || 1)) * 3 + (Math.hypot(player.vel.x, player.vel.z) * 0.5);
   setCrosshairGap(gap);
+}
+
+/* ==========================================================================
+   5b. GRANAT — utility poza cyklem broni 1-4 (klawisz G / przycisk G)
+   ==========================================================================
+ * Nie wchodzi do WEAPONS[] ani switchWeapon() — to osobny bind, tak jak
+ * utility w CS2. Naraz w powietrzu jest najwyżej jeden granat.
+ */
+const grenadeMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(0.09, 10, 8),
+  new THREE.MeshStandardMaterial({ color: 0x3f5136, roughness: 0.7, metalness: 0.25 })
+);
+grenadeMesh.visible = false;
+grenadeMesh.castShadow = true;
+scene.add(grenadeMesh);
+
+const grenadeLight = new THREE.PointLight(0xffa23c, 0, 26, 2);
+grenadeLight.visible = false;
+scene.add(grenadeLight);
+
+/** Aktywny granat: null gdy żaden nie leci. */
+let liveGrenade = null;
+
+const _gRc = new THREE.Raycaster();
+const _gStep = new THREE.Vector3();
+const _gNormal = new THREE.Vector3();
+const _gEye = new THREE.Vector3();
+const _gNormalMat = new THREE.Matrix3();
+const _gDir = new THREE.Vector3();
+
+function throwGrenade() {
+  if (!player.alive || liveGrenade || player.grenadesLeft <= 0) return;
+
+  // Start przy dłoni, wektor z kamery + odziedziczony pęd gracza — ten sam
+  // wzorzec co wyrzut łuski w ejectShell().
+  const from = new THREE.Vector3(0.25, -0.16, -0.5);
+  camera.localToWorld(from);
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+
+  const vel = dir.multiplyScalar(CFG.grenade.throwSpeed)
+    .add(new THREE.Vector3(0, CFG.grenade.upBoost, 0))
+    .add(new THREE.Vector3(player.vel.x, 0, player.vel.z));
+
+  liveGrenade = { pos: from.clone(), vel, fuse: CFG.grenade.fuseTime };
+  grenadeMesh.position.copy(from);
+  grenadeMesh.visible = true;
+
+  player.grenadesLeft--;
+  updateHud();
+}
+
+function updateGrenades(dt) {
+  const g = liveGrenade;
+  if (!g) return;
+
+  // Zapalnik tyka niezależnie od odbić
+  g.fuse -= dt;
+  if (g.fuse <= 0) { explodeGrenade(g.pos); return; }
+
+  g.vel.y += CFG.world.gravity * dt;
+  _gStep.copy(g.vel).multiplyScalar(dt);
+
+  const dist = _gStep.length();
+  if (dist > 1e-5) {
+    _gDir.copy(_gStep).divideScalar(dist);
+    _gRc.set(g.pos, _gDir);
+    _gRc.far = dist + 0.09;
+    const hit = _gRc.intersectObjects(worldMeshes, false)[0];
+    if (hit && hit.face) {
+      // Normalna jest w przestrzeni LOKALNEJ mesha — do odbicia potrzebna światowa
+      _gNormalMat.getNormalMatrix(hit.object.matrixWorld);
+      _gNormal.copy(hit.face.normal).applyNormalMatrix(_gNormalMat).normalize();
+      g.pos.copy(hit.point).addScaledVector(_gNormal, 0.09);
+      g.vel.reflect(_gNormal).multiplyScalar(CFG.grenade.bounce);
+    } else {
+      g.pos.add(_gStep);
+    }
+  }
+
+  // Podłoże obsługuje ta sama logika co u encji — płaszczyzna y=0 nie ma kolidera
+  if (g.pos.y < 0.09) {
+    g.pos.y = 0.09;
+    g.vel.y *= -CFG.grenade.bounce;
+    g.vel.x *= 0.7; g.vel.z *= 0.7;
+  }
+
+  grenadeMesh.position.copy(g.pos);
+}
+
+/** Liniowy spadek obrażeń: maxDamage w epicentrum → minDamage na granicy promienia. */
+function blastDamageAt(distance) {
+  const c = CFG.grenade;
+  if (distance >= c.radius) return 0;
+  return c.maxDamage + (c.minDamage - c.maxDamage) * (distance / c.radius);
+}
+
+function explodeGrenade(pos) {
+  liveGrenade = null;
+  grenadeMesh.visible = false;
+
+  for (const c of combatants()) {
+    if (!c.alive) continue;
+    const dist = c.pos.distanceTo(pos);
+    if (dist >= CFG.grenade.radius) continue;
+
+    // Bez tego granat rani przez ściany
+    _gEye.set(c.pos.x, c.pos.y + c.eye, c.pos.z);
+    if (!hasLineOfSight(pos, _gEye)) continue;
+
+    const dmg = blastDamageAt(dist);
+    if (dmg <= 0) continue;
+    if (c.isPlayer) {
+      // Samobój: attacker=null, bo damagePlayer() dopisałby graczowi zabójstwo
+      damagePlayer(dmg, null);
+    } else {
+      damageBot(c, dmg, player);
+    }
+  }
+
+  spawnExplosionFx(pos);
+  alertNearbyBots(pos, player);
+}
+
+function spawnExplosionFx(pos) {
+  for (let i = 0; i < 14; i++) {
+    const m = new THREE.Mesh(impactGeo, new THREE.MeshBasicMaterial({ color: 0xff8a2b }));
+    m.position.copy(pos);
+    m.scale.setScalar(2.2 + Math.random() * 2.4);
+    const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.7, Math.random() - 0.5).normalize();
+    m.position.addScaledVector(dir, Math.random() * 1.5);
+    scene.add(m);
+    effects.push({ obj: m, ttl: 0.4, life: 0.4, type: 'impact' });
+  }
+  grenadeLight.position.copy(pos);
+  grenadeLight.visible = true;
+  grenadeLight.intensity = 40;
+
+  if (player.pos.distanceTo(pos) < CFG.grenade.radius) flashVignette();
 }
 
 /* ==========================================================================
@@ -2209,6 +2459,8 @@ function createBot(index) {
     pos: new THREE.Vector3(), vel: new THREE.Vector3(),
     onGround: true,
     hp: CFG.bot.maxHp, alive: true, respawnTimer: 0,
+    dying: false, deathT: 0, fading: false,
+    ownMats: null,              // prywatne klony materiałów — tworzone przy 1. śmierci
     state: 'patrol',            // patrol | chase | attack | cover
     target: new THREE.Vector3(),
     enemy: null,                // aktualny przeciwnik (gracz ALBO inny bot)
@@ -2251,6 +2503,19 @@ function spawnBot(bot) {
   clampToMap(bot.pos, 2);
   resolveOverlap(bot, CFG.bot.radius, CFG.bot.height);   // losowy offset spawnu mógł trafić w bryłę
   pickPatrolTarget(bot);
+
+  // Cofnięcie animacji śmierci — bez tego bot odrodziłby się przewrócony
+  // i przezroczysty (rotation.x/opacity zostają z poprzedniego wcielenia).
+  bot.dying = false;
+  bot.fading = false;
+  bot.deathT = 0;
+  bot.group.rotation.x = 0;
+  bot.group.rotation.z = 0;
+  if (bot.ownMats) {
+    for (const m of bot.ownMats) { m.opacity = 1; m.transparent = false; m.depthWrite = true; }
+  }
+  bot.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+
   bot.group.visible = true;
   bot.group.position.copy(bot.pos);
 }
@@ -2273,8 +2538,11 @@ function damageBot(bot, amount, attacker) {
   }
 
   if (bot.hp <= 0) {
+    // alive=false wystarczy, żeby bot wypadł z shootables() i z celowania innych
+    // botów. Grupy NIE chowamy — od tej chwili przejmuje ją updateBotDeath().
     bot.alive = false;
-    bot.group.visible = false;
+    bot.dying = true;
+    bot.deathT = 0;
     bot.respawnTimer = CFG.bot.respawnTime;
     // Boty, które celowały w trupa, muszą przestać
     for (const c of bots) if (c.enemy === bot) c.enemy = null;
@@ -2288,6 +2556,74 @@ function damageBot(bot, amount, attacker) {
     return true;
   }
   return false;
+}
+
+/* --- Animacja śmierci (CS2-style: przewraca się, leży, znika) ---
+ *
+ * UWAGA na materiały: BOT_MATS to JEDEN komplet współdzielony przez wszystkie
+ * boty, więc animowanie na nich opacity wygasiłoby całą mapę naraz. Przy
+ * pierwszej śmierci danego bota podmieniamy je w jego meshach na prywatne
+ * klony — raz na bota, potem już tylko resetujemy opacity przy respawnie.
+ * bodyMat (kolor unikalny per bot) klonowania nie wymaga.
+ */
+const SHARED_BOT_MAT_UUIDS = new Set(Object.values(BOT_MATS).map(m => m.uuid));
+
+function botOwnMaterials(bot) {
+  if (bot.ownMats) return bot.ownMats;
+  const clonesByUuid = new Map();
+  const own = [];
+  bot.group.traverse((o) => {
+    if (!o.isMesh) return;
+    if (SHARED_BOT_MAT_UUIDS.has(o.material.uuid)) {
+      let clone = clonesByUuid.get(o.material.uuid);
+      if (!clone) {
+        clone = o.material.clone();
+        clonesByUuid.set(o.material.uuid, clone);
+        own.push(clone);
+      }
+      o.material = clone;
+    } else if (!own.includes(o.material)) {
+      own.push(o.material);          // bodyMat — i tak prywatny dla tego bota
+    }
+  });
+  bot.ownMats = own;
+  return own;
+}
+
+function updateBotDeath(bot, dt) {
+  const c = CFG.bot;
+  bot.deathT += dt;
+  const t = bot.deathT;
+
+  // Faza 1 — upadek do tyłu z wyhamowaniem (ease-out)
+  if (t < c.deathFall) {
+    const k = 1 - Math.pow(1 - t / c.deathFall, 3);
+    bot.group.rotation.x = k * c.deathTilt;
+    bot.group.position.y = bot.pos.y - k * c.deathDrop;
+    return;
+  }
+
+  bot.group.rotation.x = c.deathTilt;
+  bot.group.position.y = bot.pos.y - c.deathDrop;
+
+  // Faza 2 — ciało po prostu leży
+  if (t < c.deathFall + c.deathLie) return;
+
+  // Faza 3 — zanik
+  if (!bot.fading) {
+    bot.fading = true;
+    for (const m of botOwnMaterials(bot)) { m.transparent = true; m.depthWrite = false; }
+    // Przezroczyste ciało nadal rzucałoby pełny, ostry cień aż do zniknięcia
+    bot.group.traverse(o => { if (o.isMesh) o.castShadow = false; });
+  }
+  const f = Math.min(1, (t - c.deathFall - c.deathLie) / c.deathFade);
+  for (const m of bot.ownMats) m.opacity = 1 - f;
+
+  if (f >= 1) {
+    bot.group.visible = false;
+    bot.dying = false;
+    bot.fading = false;
+  }
 }
 
 /* --- Percepcja --- */
@@ -2468,6 +2804,7 @@ function botShoot(bot) {
 /* --- Maszyna stanów --- */
 function updateBot(bot, dt) {
   if (!bot.alive) {
+    if (bot.dying) updateBotDeath(bot, dt);
     bot.respawnTimer -= dt;
     if (bot.respawnTimer <= 0) spawnBot(bot);
     return;
@@ -2638,6 +2975,15 @@ function spawnImpact(point, normal) {
 }
 
 function updateEffects(dt) {
+  // Rozbłysk eksplozji gaśnie szybko — ma być błyskiem, nie stałym źródłem światła
+  if (grenadeLight.visible) {
+    grenadeLight.intensity -= dt * 150;
+    if (grenadeLight.intensity <= 0) {
+      grenadeLight.intensity = 0;
+      grenadeLight.visible = false;
+    }
+  }
+
   for (let i = effects.length - 1; i >= 0; i--) {
     const e = effects[i];
     e.ttl -= dt;
@@ -2667,6 +3013,9 @@ const el = {
   killfeed: document.getElementById('killfeed'),
   hitmarker: document.getElementById('hitmarker'),
   vignette: document.getElementById('vignette'),
+  crosshair: document.getElementById('crosshair'),
+  scope: document.getElementById('scope-overlay'),
+  grenades: document.getElementById('grenades'),
   slots: [...document.querySelectorAll('#weaponslots div')],
   ch: {
     l: document.getElementById('ch-l'), r: document.getElementById('ch-r'),
@@ -2684,6 +3033,8 @@ function updateHud() {
   el.ammo.innerHTML = `${st.ammo}<small>/∞</small>`;
   el.weapname.textContent = st.def.name;
   el.reloadmsg.textContent = st.reloading ? 'PRZEŁADOWANIE…' : (st.ammo === 0 ? 'NACIŚNIJ R' : '');
+  el.grenades.textContent = `G — GRANATY ${player.grenadesLeft}`;
+  el.grenades.classList.toggle('empty', player.grenadesLeft === 0);
   el.kills.textContent = player.kills;
   el.deaths.textContent = player.deaths;
   el.slots.forEach((d, i) => d.classList.toggle('active', i === activeSlot));
@@ -2747,8 +3098,10 @@ function frame(now) {
   if (isPlaying()) {
     clock += dt;
     updateEdgeTurn(dt);
+    updateAiming(dt);
     updatePlayer(dt);
     updateWeapons(dt);
+    updateGrenades(dt);
     for (const bot of bots) updateBot(bot, dt);
     updateEffects(dt);
     updateHudTimers(dt);
@@ -2763,7 +3116,10 @@ function frame(now) {
    krokiem o zadanym dt, zamiast mierzyć ją przez zegar i liczbę klatek. */
 window.GAME = {
   CFG, WEAPONS, player, bots, weaponState, scene, camera, colliders, coverPoints, settings,
-  renderer, moveEntity, resolveOverlap, overlapsAnything,
+  renderer, keys, moveEntity, resolveOverlap, overlapsAnything,
+  switchWeapon, damageBot, damagePlayer, isScoped,
+  throwGrenade, explodeGrenade, blastDamageAt,
+  getLiveGrenade: () => liveGrenade,
 };
 
 document.getElementById('loading').remove();
