@@ -178,6 +178,7 @@
     <div data-slot="0">1 — Pistolet</div>
     <div data-slot="1">2 — AK-47</div>
     <div data-slot="2">3 — SMG</div>
+    <div data-slot="3">4 — SCAR-20</div>
   </div>
 
   <div id="bottom-right">
@@ -200,6 +201,7 @@
     <div class="tbtn" data-slot="0">1</div>
     <div class="tbtn" data-slot="1">2</div>
     <div class="tbtn" data-slot="2">3</div>
+    <div class="tbtn" data-slot="3">4</div>
   </div>
   <div id="tbtns">
     <div class="tbtn" id="tbtn-reload">R</div>
@@ -300,6 +302,12 @@ const WEAPONS = [
   { id:'smg',    name:'SMG',      dmg:19, headMul:2.4, rpm:900,  auto:true,
     spread:0.013, bloom:0.009, magSize:25, reloadTime:1.7, range:90,
     recoil:0.028, kick:0.07, color:0x39404d, size:[0.10,0.15,0.46] },
+  // Statystyki wg realnego CS2 SCAR-20: 80 dmg w korpus / 320 w głowę (x4),
+  // magazynek 20, 240 na minutę (najszybciej strzelający snajperski karabin
+  // w CS2), przeładowanie 3.1s — "lepszy i szybszy" snajper zgodnie z prośbą.
+  { id:'scar',   name:'SCAR-20',  dmg:80, headMul:4.0, rpm:240,  auto:false,
+    spread:0.004, bloom:0.006, magSize:20, reloadTime:3.1, range:220,
+    recoil:0.055, kick:0.20, color:0x5a6b4a, size:[0.115,0.17,0.82] },
 ];
 
 /* ==========================================================================
@@ -1155,6 +1163,7 @@ document.addEventListener('pointerlockerror', () => { pointerLocked = false; });
 function startGame() {
   running = true;
   paused = false;
+  ensureAudio();   // wymaga gestu użytkownika — startGame zawsze woła się z klika/dotyku
   overlay.style.display = 'none';
   document.body.classList.add('playing');      // kursor ukryty
   // wyzeruj pozycję kursora do środka, żeby wznowienie nie szarpnęło widokiem
@@ -1302,6 +1311,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Digit1') switchWeapon(0);
   if (e.code === 'Digit2') switchWeapon(1);
   if (e.code === 'Digit3') switchWeapon(2);
+  if (e.code === 'Digit4') switchWeapon(3);
   if (e.code === 'Space') e.preventDefault();
 });
 document.addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -1792,6 +1802,72 @@ const muzzleLight = new THREE.PointLight(0xffc46a, 0, 14, 2);
 muzzleLight.position.set(0.3, -0.15, -1.0);
 camera.add(muzzleLight);
 
+/* --- Dźwięk wystrzału ---
+ * Cały plik jest jednym samodzielnym HTML-em bez zewnętrznych zasobów (tak
+ * jak tekstury rysowane na <canvas> zamiast wczytywane z plików), więc
+ * odgłosy strzałów też są syntezowane w locie przez Web Audio API zamiast
+ * odtwarzane z plików dźwiękowych. Każdy strzał to dwie nakładające się
+ * warstwy: szum (przez filtr) na "trzask" + krótki oscylator na niski
+ * "łomot", każda z własną obwiednią głośności. Parametry per broń dają
+ * odróżnialny charakter (pistolet/AK/SMG/SCAR) bez ani jednego pliku audio.
+ */
+let audioCtx = null;
+let noiseBuffer = null;
+
+function ensureAudio() {
+  if (audioCtx) { if (audioCtx.state === 'suspended') audioCtx.resume(); return; }
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  audioCtx = new Ctx();
+  const len = Math.floor(audioCtx.sampleRate * 0.3);
+  noiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+}
+
+/* Parametry syntezy strzału per id broni — dobrane charakterem, nie realnym
+ * próbkowaniem: pistolet krótki i jaśniejszy, AK głębszy i mocniejszy, SMG
+ * najkrótszy/najcieńszy (żeby seria z wysokim RPM nie zlewała się w hałas),
+ * SCAR najgłośniejszy i najgłębszy — wielki, potężny "huk" snajperki. */
+const SHOT_SOUND = {
+  pistol: { noiseHz: 2600, noiseQ: 0.7, noiseDecay: 0.10, toneHz: 210, toneDecay: 0.07, gain: 0.5 },
+  rifle:  { noiseHz: 1700, noiseQ: 0.6, noiseDecay: 0.14, toneHz: 130, toneDecay: 0.10, gain: 0.65 },
+  smg:    { noiseHz: 2200, noiseQ: 0.8, noiseDecay: 0.08, toneHz: 260, toneDecay: 0.05, gain: 0.45 },
+  scar:   { noiseHz: 1100, noiseQ: 0.5, noiseDecay: 0.22, toneHz: 85,  toneDecay: 0.20, gain: 0.85 },
+};
+
+function playShot(def) {
+  if (!audioCtx) return;
+  const p = SHOT_SOUND[def.id] || SHOT_SOUND.rifle;
+  const t0 = audioCtx.currentTime;
+
+  // Warstwa "trzask" — szum przez filtr pasmowoprzepustowy z szybkim zanikiem.
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = noiseBuffer;
+  const noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.value = p.noiseHz;
+  noiseFilter.Q.value = p.noiseQ;
+  const noiseGain = audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(p.gain, t0);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, t0 + p.noiseDecay);
+  noise.connect(noiseFilter).connect(noiseGain).connect(audioCtx.destination);
+  noise.start(t0);
+  noise.stop(t0 + p.noiseDecay + 0.02);
+
+  // Warstwa "łomot" — oscylator o niskiej częstotliwości, też z zanikiem.
+  const tone = audioCtx.createOscillator();
+  tone.type = 'triangle';
+  tone.frequency.setValueAtTime(p.toneHz, t0);
+  tone.frequency.exponentialRampToValueAtTime(p.toneHz * 0.6, t0 + p.toneDecay);
+  const toneGain = audioCtx.createGain();
+  toneGain.gain.setValueAtTime(p.gain * 0.8, t0);
+  toneGain.gain.exponentialRampToValueAtTime(0.001, t0 + p.toneDecay);
+  tone.connect(toneGain).connect(audioCtx.destination);
+  tone.start(t0);
+  tone.stop(t0 + p.toneDecay + 0.02);
+}
+
 let vmRecoil = 0;       // odrzut viewmodelu (pozycja Z + obrót X)
 let vmKickSide = 0;     // losowe szarpnięcie w bok przy strzale
 let vmReload = 0;       // wygładzony postęp animacji przeładowania (0..1)
@@ -1833,6 +1909,7 @@ function tryShoot() {
   vmRecoil = def.kick;
   vmKickSide = (Math.random() - 0.5) * def.kick * 1.6;   // lekkie szarpnięcie w bok
   flashTimer = 0.05;
+  playShot(def);
 
   // Błysk: losowa skala i obrót, żeby dwa kolejne strzały nie wyglądały tak samo
   const fl = vmMeshes[activeSlot].userData.flash;
