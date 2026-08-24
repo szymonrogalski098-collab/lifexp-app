@@ -120,18 +120,74 @@ export function translateStaticPage() {
   });
 }
 
-window.applyLang = (lang) => {
-  i18next.changeLanguage(lang, () => {
-    localStorage.setItem('lifexp-lang', lang);
-    document.documentElement.lang = lang;
-    translateStaticPage();
-    refreshDynamicI18n();
-    ['en', 'pl'].forEach(l => {
-      const el = document.getElementById('lang-opt-' + l);
-      if (el) el.style.borderColor = l === lang ? 'var(--accent)' : 'var(--border)';
+// Samo przełączenie języka w UI, BEZ zapisywania gdziekolwiek. Wspólne dla
+// wyboru w Ustawieniach i dla synchronizacji z profilem przy starcie — ta druga
+// ścieżka czyta język Z profilu, więc nie ma czego do niego odsyłać.
+function applyLangToUI(lang) {
+  return new Promise(resolve => {
+    i18next.changeLanguage(lang, () => {
+      document.documentElement.lang = lang;
+      translateStaticPage();
+      refreshDynamicI18n();
+      ['en', 'pl'].forEach(l => {
+        const el = document.getElementById('lang-opt-' + l);
+        if (el) el.style.borderColor = l === lang ? 'var(--accent)' : 'var(--border)';
+      });
+      resolve();
     });
   });
+}
+
+// Zapis języka do profilu w Firestore — to on przenosi ustawienie między
+// urządzeniami. Świadomie best-effort i bez await: wybór jest już w
+// localStorage i już widoczny na ekranie, więc brak sieci nie może wywrócić
+// przełącznika. Lokalny userProfile aktualizujemy od razu, żeby nie trzeba
+// było czekać na kolejny loadProfile().
+function saveLangToProfile(lang) {
+  if (!currentUser) return;
+  if (userProfile) userProfile.lang = lang;
+  updateDoc(doc(db, 'users', currentUser.uid), { lang })
+    .catch(e => console.error('lang save to profile failed:', e));
+}
+
+// Wybór użytkownika w Ustawieniach. localStorage zostaje (dzięki niemu NASTĘPNY
+// start jest natychmiastowy, bez czekania na Firestore), profil dochodzi obok.
+window.applyLang = (lang) => {
+  localStorage.setItem('lifexp-lang', lang);
+  applyLangToUI(lang);
+  saveLangToProfile(lang);
 };
+
+// Uzgodnienie języka z profilem — wołane w bootstrapie zaraz po loadProfile(),
+// jeszcze pod ekranem ładowania, żeby ewentualne przełączenie było niewidoczne.
+//
+// Źródłem prawdy jest PROFIL (przenosi się między urządzeniami), localStorage
+// jest tylko cache'em na natychmiastowy start. Na nowym urządzeniu localStorage
+// jest pusty, więc i18next wystartował na LANG_DEFAULT — tutaj to korygujemy.
+async function syncLangWithProfile() {
+  // Cały krok jest opakowany: to jedyny await między loadProfile() a
+  // hideBootOverlay(), więc wyjątek tutaj zostawiłby użytkownika na wiecznym
+  // ekranie ładowania. Zły język to drobiazg, zablokowany start to nie.
+  try {
+    await i18nReady;
+    const profileLang = userProfile?.lang;
+
+    if (profileLang) {
+      localStorage.setItem('lifexp-lang', profileLang);
+      if (profileLang !== i18next.language) await applyLangToUI(profileLang);
+      return;
+    }
+
+    // Migracja kont sprzed tej zmiany: profil jeszcze nie zna języka, ale to
+    // urządzenie pamięta wybór — przenieś go do profilu, żeby nie zginął przy
+    // następnym logowaniu gdzie indziej. Gdy nie ma ani jednego, ani drugiego,
+    // zostaje LANG_DEFAULT, na którym i18next i tak już wystartował.
+    const localLang = localStorage.getItem('lifexp-lang');
+    if (localLang) saveLangToProfile(localLang);
+  } catch (e) {
+    console.error('syncLangWithProfile failed:', e);
+  }
+}
 
 // Ponownie renderuje sekcje generowane z JS (poziom, osiągnięcia, ciekawostki),
 // żeby zmiana języka odświeżyła też treści już wyrenderowane wcześniej.
@@ -286,6 +342,9 @@ onAuthStateChanged(auth, async user => {
     hideBootOverlay();
     return;
   }
+
+  // Język z profilu — jeszcze pod ekranem ładowania (patrz syncLangWithProfile).
+  await syncLangWithProfile();
 
   // Email verification gate
   if (!userProfile.emailVerified) {
