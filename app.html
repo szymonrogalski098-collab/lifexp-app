@@ -580,6 +580,36 @@
     .md-btn:hover { border-color: var(--accent); color: var(--text); }
     .md-btn:active { transform: scale(.94); }
 
+    /* Edytor Markdown: edycja + podgląd na żywo.
+       Powyżej 700px (ten sam próg co reszta apki — tu chowa się sidebar i
+       wchodzi dolna nawigacja) oba panele stoją obok siebie i przełącznik
+       trybu jest zbędny, więc znika. Poniżej pokazujemy jeden panel naraz,
+       sterowany atrybutem data-mode na wrapperze. */
+    .md-panes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .md-preview {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 14px; overflow-y: auto; font-size: 14px;
+      min-height: 46vh; max-height: 46vh;
+    }
+    .md-preview:empty::before {
+      content: attr(data-empty); color: var(--text2); font-size: 13px;
+    }
+    /* Przełącznik Edytuj/Podgląd używa .filter-chip — CELOWO tego samego,
+       słabszego komponentu co filtr Aktywne/Zarchiwizowane, żeby w jednym
+       widoku nie pojawił się trzeci przełącznik wyglądający jak segmented
+       control Notatki/Zadania. */
+    .md-mode-switch { justify-content: flex-start; }
+    .md-editor[data-mode="edit"] .md-preview { display: none; }
+    .md-editor[data-mode="preview"] > .md-panes > textarea { display: none; }
+
+    @media (min-width: 701px) {
+      .md-panes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .md-mode-switch { display: none; }
+      /* Powyżej progu oba panele są widoczne niezależnie od data-mode. */
+      .md-editor[data-mode="edit"] .md-preview,
+      .md-editor[data-mode="preview"] > .md-panes > textarea { display: block; }
+    }
+
     /* Ikona notatki na liście — kolor bierze się z pola `color` notatki. */
     .note-icon {
       flex: none; width: 34px; height: 34px; border-radius: 9px;
@@ -2483,7 +2513,7 @@
 
   <!-- Edytor notatki — Zapisz w lewym górnym rogu, BEZ autosave -->
   <div class="modal-overlay" id="note-editor">
-    <div class="modal" style="max-width:620px;width:100%">
+    <div class="modal" style="max-width:880px;width:100%">
       <div class="note-editor-bar">
         <button class="btn-success" onclick="saveNote()" data-i18n="notes.save">Zapisz</button>
         <div class="spacer"></div>
@@ -2514,7 +2544,19 @@
         <button type="button" class="md-btn" onclick="mdFormat('note-content','ul')" title="Bullet list" data-i18n-title="notes.mdList"><i class="ti ti-list"></i></button>
         <button type="button" class="md-btn" onclick="mdFormat('note-content','ol')" title="Numbered list" data-i18n-title="notes.mdListNumbers"><i class="ti ti-list-numbers"></i></button>
       </div>
-      <textarea id="note-content" placeholder="Napisz coś..." data-i18n-placeholder="notes.contentPh"></textarea>
+
+      <!-- Edycja + podgląd na żywo. Powyżej 700px oba panele obok siebie;
+           poniżej — jeden naraz, przełączany chipami (data-mode na wrapperze). -->
+      <div class="md-editor" id="note-md-editor" data-mode="edit">
+        <div class="filter-chips md-mode-switch">
+          <button type="button" class="filter-chip active" data-mode="edit" onclick="setMdMode('note-md-editor','edit')" data-i18n="notes.modeEdit">Edytuj</button>
+          <button type="button" class="filter-chip" data-mode="preview" onclick="setMdMode('note-md-editor','preview')" data-i18n="notes.modePreview">Podgląd</button>
+        </div>
+        <div class="md-panes">
+          <textarea id="note-content" placeholder="Napisz coś..." data-i18n-placeholder="notes.contentPh"></textarea>
+          <div class="md-preview md-body" id="note-preview" aria-live="polite"></div>
+        </div>
+      </div>
       <p class="text2" id="note-editor-hint" style="margin-top:8px;font-size:12px"></p>
     </div>
   </div>
@@ -2531,7 +2573,7 @@
 
   <!-- Formularz zadania: treść + termin + rozmiar (rozmiar WIDOCZNY, nie schowany) -->
   <div class="modal-overlay" id="todo-form" onclick="if(event.target===this)closeTodoForm()">
-    <div class="modal" style="max-width:460px;width:100%">
+    <div class="modal" style="max-width:720px;width:100%">
       <h3 style="margin-bottom:14px" id="todo-form-title" data-i18n="notes.newTodo">Nowe zadanie</h3>
       <div class="form-group">
         <label data-i18n="notes.todoText">Co jest do zrobienia?</label>
@@ -2542,7 +2584,16 @@
           <button type="button" class="md-btn" onclick="mdFormat('todo-text','ul')" title="Bullet list" data-i18n-title="notes.mdList"><i class="ti ti-list"></i></button>
           <button type="button" class="md-btn" onclick="mdFormat('todo-text','ol')" title="Numbered list" data-i18n-title="notes.mdListNumbers"><i class="ti ti-list-numbers"></i></button>
         </div>
-        <textarea id="todo-text" rows="4" maxlength="500" placeholder="np. Dokończyć wypracowanie" data-i18n-placeholder="notes.todoTextPh"></textarea>
+        <div class="md-editor" id="todo-md-editor" data-mode="edit">
+          <div class="filter-chips md-mode-switch">
+            <button type="button" class="filter-chip active" data-mode="edit" onclick="setMdMode('todo-md-editor','edit')" data-i18n="notes.modeEdit">Edytuj</button>
+            <button type="button" class="filter-chip" data-mode="preview" onclick="setMdMode('todo-md-editor','preview')" data-i18n="notes.modePreview">Podgląd</button>
+          </div>
+          <div class="md-panes">
+            <textarea id="todo-text" rows="4" maxlength="500" placeholder="np. Dokończyć wypracowanie" data-i18n-placeholder="notes.todoTextPh"></textarea>
+            <div class="md-preview md-body" id="todo-preview" aria-live="polite"></div>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label data-i18n="notes.due">Termin</label>

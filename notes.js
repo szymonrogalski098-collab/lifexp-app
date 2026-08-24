@@ -150,7 +150,7 @@ export async function loadNotes() {
   // Pierwszy render leci na escapeHtml (biblioteki mogą jeszcze nie być w
   // pamięci), po doładowaniu przerysowujemy już z Markdownem — ten sam
   // dwuetapowy schemat co loadExusChat.
-  ensureMarkdownLibs().then(() => { renderNotes(); renderTodos(); });
+  ensureMarkdownLibs().then(() => { renderNotes(); renderTodos(); refreshMdPreviews(); });
 }
 
 async function loadNotesList() {
@@ -165,7 +165,10 @@ async function loadTodosList() {
 
 function syncNotesTabs() {
   document.querySelectorAll('#notes-tabs .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === notesTab));
-  document.querySelectorAll('#notes-view-tabs .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.view === notesView));
+  // .filter-chip, NIE .seg-btn: ten przełącznik jest lżejszym komponentem od
+  // czasu poprawki hierarchii, a selektor został na starej klasie — przez co
+  // pętla nie trafiała w nic i podświetlenie nigdy nie schodziło z "Aktywne".
+  document.querySelectorAll('#notes-view-tabs .filter-chip').forEach(b => b.classList.toggle('active', b.dataset.view === notesView));
   document.getElementById('notes-pane-notes').style.display = notesTab === 'notes' ? '' : 'none';
   document.getElementById('notes-pane-todos').style.display = notesTab === 'todos' ? '' : 'none';
   // FAB dodaje notatki, więc na zakładce Zadań nie ma czego robić.
@@ -253,6 +256,7 @@ window.mdFormat = (targetId, kind) => {
     ta.value = value.slice(0, lineStart) + out + value.slice(lineEnd);
     ta.focus();
     ta.setSelectionRange(lineStart, lineStart + out.length);
+    ta.dispatchEvent(new Event('input'));   // jedna ścieżka odświeżania podglądu
     return;
   }
 
@@ -262,7 +266,67 @@ window.mdFormat = (targetId, kind) => {
   ta.value = value.slice(0, start) + mark + selected + mark + value.slice(end);
   ta.focus();
   ta.setSelectionRange(start + mark.length, start + mark.length + selected.length);
+  ta.dispatchEvent(new Event('input'));     // jedna ścieżka odświeżania podglądu
 };
+
+// Przełącznik Edytuj/Podgląd (tylko poniżej 700px — wyżej oba panele są
+// widoczne naraz i przełącznik jest schowany CSS-em). Ten sam wzorzec co
+// pickActivityIcon/pickActivityColor: ustaw stan, a potem przejdź po WSZYSTKICH
+// przyciskach i ustaw klasę z porównania ze stanem — nigdy tylko na klikniętym.
+window.setMdMode = (editorId, mode) => {
+  const wrap = document.getElementById(editorId);
+  if (!wrap) return;
+  wrap.dataset.mode = mode;
+  wrap.querySelectorAll('.md-mode-switch .filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+};
+
+// Podgląd odświeżany na zdarzeniu `input` (nie `change`/`blur` — te lecą
+// dopiero po wyjściu z pola, więc pisanie nie byłoby widać na żywo).
+// Debounce 150ms, żeby przy długiej notatce nie parsować Markdownu na każdy
+// wciśnięty klawisz.
+const MD_PREVIEW_DEBOUNCE_MS = 150;
+const mdPreviewTimers = new Map();
+
+function updateMdPreview(textareaId, previewId) {
+  const ta = document.getElementById(textareaId);
+  const out = document.getElementById(previewId);
+  if (!ta || !out) return;
+  out.innerHTML = renderMarkdown(ta.value);
+}
+
+function scheduleMdPreview(textareaId, previewId) {
+  clearTimeout(mdPreviewTimers.get(textareaId));
+  mdPreviewTimers.set(textareaId, setTimeout(() => updateMdPreview(textareaId, previewId), MD_PREVIEW_DEBOUNCE_MS));
+}
+
+// Podpięcie raz, przy starcie modułu — oba pola siedzą w statycznym HTML.
+const MD_EDITORS = [
+  { textarea: 'note-content', preview: 'note-preview' },
+  { textarea: 'todo-text',    preview: 'todo-preview' },
+];
+
+function initMdEditors() {
+  for (const { textarea, preview } of MD_EDITORS) {
+    const ta = document.getElementById(textarea);
+    if (!ta) continue;
+    ta.addEventListener('input', () => scheduleMdPreview(textarea, preview));
+  }
+}
+initMdEditors();
+
+// Otwarcie modala i przyciski toolbara zmieniają wartość programowo, a to NIE
+// generuje zdarzenia `input` — stąd jawne odświeżenie w obu tych ścieżkach.
+function refreshMdPreviews() {
+  for (const { textarea, preview } of MD_EDITORS) {
+    // data-empty zasila :empty::before w CSS — tekst z i18n, więc ustawiamy go
+    // tutaj, a nie na sztywno w markupie.
+    const out = document.getElementById(preview);
+    if (out) out.dataset.empty = i18next.t('notes.previewEmpty');
+    updateMdPreview(textarea, preview);
+  }
+}
 
 // marked i DOMPurify NIE są w <head> app.html — Ex-us dociąga je leniwie przy
 // otwarciu czatu (patrz exusEnsureMarkdownLibs w assistants.js) i ta sama
@@ -394,6 +458,8 @@ window.openNoteEditor = (id) => {
   renderNoteIconPicker();
   renderNoteColorPicker();
   document.getElementById('note-editor-hint').textContent = '';
+  setMdMode('note-md-editor', 'edit');
+  refreshMdPreviews();
   document.getElementById('note-editor').classList.add('open');
 };
 
@@ -538,6 +604,8 @@ window.openTodoForm = (id) => {
   document.getElementById('todo-text').value = t?.text || '';
   document.getElementById('todo-due').value = t?.dueDate || '';
   setTodoSize(t?.size || 'S');
+  setMdMode('todo-md-editor', 'edit');
+  refreshMdPreviews();
   document.getElementById('todo-form').classList.add('open');
 };
 
