@@ -548,6 +548,61 @@
       font-family: inherit; font-size: 14px; line-height: 1.6;
     }
 
+    /* Filtr Aktywne/Zarchiwizowane — CELOWO słabszy wizualnie niż segmented
+       control Notatki/Zadania nad nim: sam kontur zamiast wypełnienia, mniejszy
+       font, wyrównany do prawej i nie na całą szerokość. Ma się czytać jako
+       filtr listy, nie jako drugi poziom nawigacji. */
+    .filter-chips { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 10px; }
+    .filter-chip {
+      background: none; border: 1px solid var(--border); color: var(--text2);
+      border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: border-color .15s, color .15s;
+      font-family: inherit;
+    }
+    .filter-chip:hover { color: var(--text); }
+    .filter-chip.active { border-color: var(--accent); color: var(--accent); }
+
+    /* Siatka pickerów ikony/koloru — te same przyciski co w Ustawieniach,
+       tutaj tylko opakowane we wspólny wrap (w Ustawieniach robi to inline style). */
+    .picker-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    /* Pasek formatowania nad textareą. To NIE jest WYSIWYG — przyciski wstawiają
+       znaczniki Markdown wokół zaznaczenia w zwykłym <textarea>, a render dzieje
+       się dopiero przy wyświetlaniu (marked + DOMPurify). */
+    .md-toolbar {
+      display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .md-btn {
+      background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+      border-radius: 8px; padding: 6px 10px; font-size: 15px; line-height: 1;
+      cursor: pointer; transition: border-color .15s, color .15s;
+    }
+    .md-btn:hover { border-color: var(--accent); color: var(--text); }
+    .md-btn:active { transform: scale(.94); }
+
+    /* Ikona notatki na liście — kolor bierze się z pola `color` notatki. */
+    .note-icon {
+      flex: none; width: 34px; height: 34px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; background: var(--bg3);
+    }
+
+    /* Wyrenderowany Markdown (podgląd notatki na liście, treść zadania).
+       Marginesy zbite, bo to fragmenty w wierszu listy, nie dokument. */
+    .md-body > *:first-child { margin-top: 0; }
+    .md-body > *:last-child { margin-bottom: 0; }
+    .md-body p { margin: 0 0 6px; }
+    .md-body h1, .md-body h2, .md-body h3 { font-size: 14px; margin: 6px 0 4px; }
+    .md-body ul, .md-body ol { margin: 4px 0; padding-left: 20px; }
+    .md-body code { font-family: var(--mono); background: var(--bg3); padding: 1px 4px; border-radius: 4px; }
+    .md-body a { color: var(--accent); }
+    /* Podgląd na liście notatek — maks. 2 linie, reszta ucięta. */
+    .note-preview {
+      font-size: 12px; color: var(--text2); margin-top: 4px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
     /* ── Zadania + budowa PC ──
        Desktop: lista po lewej, widok builda po prawej. Mobile: stack.
        Prawa kolumna jest CELOWO osobnym kontenerem (#pcbuild-view) — Część 5
@@ -1786,9 +1841,9 @@
 
         <!-- ── Podzakładka: Notatki ── -->
         <div id="notes-pane-notes">
-          <div class="segmented" id="notes-view-tabs" style="margin-bottom:14px">
-            <button class="seg-btn active" data-view="active" onclick="selectNotesView('active')" data-i18n="notes.viewActive">Aktywne</button>
-            <button class="seg-btn" data-view="archived" onclick="selectNotesView('archived')" data-i18n="notes.viewArchived">Zarchiwizowane</button>
+          <div class="filter-chips" id="notes-view-tabs">
+            <button class="filter-chip active" data-view="active" onclick="selectNotesView('active')" data-i18n="notes.viewActive">Aktywne</button>
+            <button class="filter-chip" data-view="archived" onclick="selectNotesView('archived')" data-i18n="notes.viewArchived">Zarchiwizowane</button>
           </div>
           <div class="card" style="padding:0;overflow:hidden" id="notes-list"></div>
           <button class="fab" id="notes-fab" onclick="openNoteEditor()" aria-label="Dodaj notatkę" data-i18n-aria="notes.addAria">+</button>
@@ -2437,6 +2492,28 @@
       <div class="form-group">
         <input type="text" id="note-title" maxlength="80" placeholder="Tytuł" data-i18n-placeholder="notes.titlePh">
       </div>
+
+      <!-- Ikona i kolor — ten sam wzorzec co pickery aktywności w Ustawieniach:
+           ukryty input trzyma wartość, siatka przycisków podświetla wybraną
+           obwódką var(--accent). -->
+      <div class="form-group">
+        <label data-i18n="notes.icon">Ikona</label>
+        <input type="hidden" id="note-icon">
+        <div class="picker-grid" id="note-icon-picker"></div>
+      </div>
+      <div class="form-group">
+        <label data-i18n="notes.color">Kolor</label>
+        <input type="hidden" id="note-color">
+        <div class="picker-grid" id="note-color-picker"></div>
+      </div>
+
+      <div class="md-toolbar" id="note-md-toolbar">
+        <button type="button" class="md-btn" onclick="mdFormat('note-content','bold')" title="Bold" data-i18n-title="notes.mdBold"><i class="ti ti-bold"></i></button>
+        <button type="button" class="md-btn" onclick="mdFormat('note-content','italic')" title="Italic" data-i18n-title="notes.mdItalic"><i class="ti ti-italic"></i></button>
+        <button type="button" class="md-btn" onclick="mdFormat('note-content','head')" title="Heading" data-i18n-title="notes.mdHeading"><i class="ti ti-heading"></i></button>
+        <button type="button" class="md-btn" onclick="mdFormat('note-content','ul')" title="Bullet list" data-i18n-title="notes.mdList"><i class="ti ti-list"></i></button>
+        <button type="button" class="md-btn" onclick="mdFormat('note-content','ol')" title="Numbered list" data-i18n-title="notes.mdListNumbers"><i class="ti ti-list-numbers"></i></button>
+      </div>
       <textarea id="note-content" placeholder="Napisz coś..." data-i18n-placeholder="notes.contentPh"></textarea>
       <p class="text2" id="note-editor-hint" style="margin-top:8px;font-size:12px"></p>
     </div>
@@ -2458,7 +2535,14 @@
       <h3 style="margin-bottom:14px" id="todo-form-title" data-i18n="notes.newTodo">Nowe zadanie</h3>
       <div class="form-group">
         <label data-i18n="notes.todoText">Co jest do zrobienia?</label>
-        <textarea id="todo-text" rows="3" maxlength="500" placeholder="np. Dokończyć wypracowanie" data-i18n-placeholder="notes.todoTextPh"></textarea>
+        <div class="md-toolbar" id="todo-md-toolbar">
+          <button type="button" class="md-btn" onclick="mdFormat('todo-text','bold')" title="Bold" data-i18n-title="notes.mdBold"><i class="ti ti-bold"></i></button>
+          <button type="button" class="md-btn" onclick="mdFormat('todo-text','italic')" title="Italic" data-i18n-title="notes.mdItalic"><i class="ti ti-italic"></i></button>
+          <button type="button" class="md-btn" onclick="mdFormat('todo-text','head')" title="Heading" data-i18n-title="notes.mdHeading"><i class="ti ti-heading"></i></button>
+          <button type="button" class="md-btn" onclick="mdFormat('todo-text','ul')" title="Bullet list" data-i18n-title="notes.mdList"><i class="ti ti-list"></i></button>
+          <button type="button" class="md-btn" onclick="mdFormat('todo-text','ol')" title="Numbered list" data-i18n-title="notes.mdListNumbers"><i class="ti ti-list-numbers"></i></button>
+        </div>
+        <textarea id="todo-text" rows="4" maxlength="500" placeholder="np. Dokończyć wypracowanie" data-i18n-placeholder="notes.todoTextPh"></textarea>
       </div>
       <div class="form-group">
         <label data-i18n="notes.due">Termin</label>

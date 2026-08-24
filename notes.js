@@ -10,7 +10,7 @@ const NOTES_MAX = 30;
 const NOTE_MAX_LINES = 1000;
 const TODOS_MAX = 30;
 
-let notes = [];        // { id, title, content, createdAt, archived }
+let notes = [];        // { id, title, content, icon, color, createdAt, archived }
 let todos = [];        // { id, text, size, dueDate, done, createdAt, penaltyApplied }
 
 let notesTab = 'notes';    // 'notes' | 'todos'   — górny przełącznik
@@ -147,6 +147,10 @@ export async function loadNotes() {
   renderNotes();
   renderTodos();
   renderPcBuild();
+  // Pierwszy render leci na escapeHtml (biblioteki mogą jeszcze nie być w
+  // pamięci), po doładowaniu przerysowujemy już z Markdownem — ten sam
+  // dwuetapowy schemat co loadExusChat.
+  ensureMarkdownLibs().then(() => { renderNotes(); renderTodos(); });
 }
 
 async function loadNotesList() {
@@ -180,6 +184,126 @@ window.selectNotesView = (view) => {
 };
 
 // ════════════════════════════════════════════════════════════════════
+// Ikona i kolor notatki, pasek Markdown, renderowanie treści
+// ════════════════════════════════════════════════════════════════════
+
+// Ten sam wzorzec co renderActivityIconPicker/renderActivityColorPicker w
+// settings.js: ukryty input trzyma wartość, siatka przycisków podświetla
+// wybraną obwódką var(--accent), ponowne kliknięcie odznacza.
+const NOTE_ICON_PRESETS  = ['ti-notebook','ti-bulb','ti-star','ti-flag','ti-heart','ti-briefcase','ti-school','ti-shopping-cart','ti-plane','ti-home','ti-code','ti-music'];
+const NOTE_COLOR_PRESETS = ['#6c63ff','#4ecca3','#ffd700','#ff6b6b','#8a8fa8','#ff9f43','#00d2d3','#feca57'];
+
+function renderNoteIconPicker() {
+  const el = document.getElementById('note-icon-picker');
+  if (!el) return;
+  const current = document.getElementById('note-icon').value;
+  el.innerHTML = NOTE_ICON_PRESETS.map(ic => `
+    <button type="button" class="btn-secondary" data-icon="${ic}" onclick="pickNoteIcon('${ic}')"
+      style="padding:6px 10px;font-size:16px;border-color:${ic === current ? 'var(--accent)' : 'var(--border)'}"><i class="ti ${ic}"></i></button>
+  `).join('');
+}
+
+window.pickNoteIcon = (icon) => {
+  const hidden = document.getElementById('note-icon');
+  hidden.value = (hidden.value === icon) ? '' : icon;
+  document.querySelectorAll('#note-icon-picker button').forEach(b => {
+    b.style.borderColor = (b.dataset.icon === hidden.value) ? 'var(--accent)' : 'var(--border)';
+  });
+};
+
+function renderNoteColorPicker() {
+  const el = document.getElementById('note-color-picker');
+  if (!el) return;
+  const current = document.getElementById('note-color').value;
+  el.innerHTML = NOTE_COLOR_PRESETS.map(c => `
+    <button type="button" data-color="${c}" onclick="pickNoteColor('${c}')"
+      style="width:28px;height:28px;border-radius:8px;background:${c};border:2px solid ${c === current ? 'var(--accent)' : 'var(--border)'};padding:0"></button>
+  `).join('');
+}
+
+window.pickNoteColor = (color) => {
+  const hidden = document.getElementById('note-color');
+  hidden.value = (hidden.value === color) ? '' : color;
+  document.querySelectorAll('#note-color-picker button').forEach(b => {
+    b.style.borderColor = (b.dataset.color === hidden.value) ? 'var(--accent)' : 'var(--border)';
+  });
+};
+
+// Pasek formatowania. Zwykły <textarea> + wstawianie znaczników Markdown —
+// żadnego contenteditable ani WYSIWYG. Znaczniki lądują WOKÓŁ zaznaczenia
+// (a nie na końcu pola), po czym zaznaczenie wraca na sam tekst, żeby dało się
+// pisać dalej bez klikania w pole.
+const MD_INLINE = { bold: '**', italic: '_' };
+const MD_LINE   = { head: '## ', ul: '- ', ol: '1. ' };
+
+window.mdFormat = (targetId, kind) => {
+  const ta = document.getElementById(targetId);
+  if (!ta) return;
+  const value = ta.value;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+
+  if (MD_LINE[kind]) {
+    // Prefiks liniowy dotyczy CAŁYCH linii objętych zaznaczeniem (przy pustym
+    // zaznaczeniu — linii z kursorem), stąd rozszerzenie zakresu do granic linii.
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+    let lineEnd = value.indexOf('\n', end);
+    if (lineEnd === -1) lineEnd = value.length;
+    const lines = value.slice(lineStart, lineEnd).split('\n');
+    const out = lines.map((l, i) => (kind === 'ol' ? `${i + 1}. ` : MD_LINE[kind]) + l).join('\n');
+    ta.value = value.slice(0, lineStart) + out + value.slice(lineEnd);
+    ta.focus();
+    ta.setSelectionRange(lineStart, lineStart + out.length);
+    return;
+  }
+
+  const mark = MD_INLINE[kind];
+  if (!mark) return;
+  const selected = value.slice(start, end);
+  ta.value = value.slice(0, start) + mark + selected + mark + value.slice(end);
+  ta.focus();
+  ta.setSelectionRange(start + mark.length, start + mark.length + selected.length);
+};
+
+// marked i DOMPurify NIE są w <head> app.html — Ex-us dociąga je leniwie przy
+// otwarciu czatu (patrz exusEnsureMarkdownLibs w assistants.js) i ta sama
+// decyzja obowiązuje tutaj, żeby nie obciążać startu apki dwoma CDN-ami dla
+// użytkowników, którzy Notatnika nie otwierają.
+let mdLibsPromise = null;
+function ensureMarkdownLibs() {
+  if (mdLibsPromise) return mdLibsPromise;
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src; el.async = true;
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error('nie udało się załadować ' + src));
+    document.head.appendChild(el);
+  });
+  mdLibsPromise = Promise.all([
+    window.marked ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js'),
+    window.DOMPurify ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js'),
+  ]).then(() => true).catch((err) => {
+    console.error('[Notatnik] Markdown niedostępny, pokazuję zwykły tekst:', err);
+    return false;
+  });
+  return mdLibsPromise;
+}
+
+// JEDYNE miejsce, w którym treść notatki/zadania zamienia się w HTML.
+// DOMPurify jest tu obowiązkowy, nie opcjonalny — bez obu bibliotek zjeżdżamy
+// na escapeHtml, więc żaden wynik marked.parse() nigdy nie trafia do innerHTML
+// bez sanitizacji.
+function renderMarkdown(text) {
+  if (window.marked && window.DOMPurify) {
+    try {
+      return DOMPurify.sanitize(marked.parse(text || '', { breaks: true }));
+    } catch (err) {
+      console.error('[Notatnik] błąd parsowania Markdown, pokazuję zwykły tekst:', err);
+    }
+  }
+  return escapeHtml(text || '');
+}
+
+// ════════════════════════════════════════════════════════════════════
 // Notatki
 // ════════════════════════════════════════════════════════════════════
 
@@ -202,15 +326,21 @@ function renderNotes() {
     el.innerHTML = `<div class="sheet-empty">${i18next.t(key)}</div>`;
     return;
   }
-  el.innerHTML = list.map(n => `
+  el.innerHTML = list.map(n => {
+    const color = n.color || 'var(--text2)';
+    const icon = n.icon || 'ti-notebook';
+    return `
     <div class="note-item" data-note="${n.id}" onclick="openNoteEditor('${n.id}')">
+      <div class="note-icon" style="color:${escapeHtml(color)}"><i class="ti ${escapeHtml(icon)}"></i></div>
       <div class="ni-main">
         <div class="ni-title">${escapeHtml(n.title || '')}</div>
+        <div class="note-preview md-body">${renderMarkdown(n.content)}</div>
         <div class="ni-date">${formatNoteDate(n.createdAt)}</div>
       </div>
       <button class="note-dots" aria-label="${i18next.t('notes.menuAria')}"
         onclick="event.stopPropagation(); openNoteMenu('${n.id}')">⋯</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   attachNoteLongPress();
 }
 
@@ -259,6 +389,10 @@ window.openNoteEditor = (id) => {
   const note = id ? notes.find(n => n.id === id) : null;
   document.getElementById('note-title').value = note?.title || '';
   document.getElementById('note-content').value = note?.content || '';
+  document.getElementById('note-icon').value = note?.icon || '';
+  document.getElementById('note-color').value = note?.color || '';
+  renderNoteIconPicker();
+  renderNoteColorPicker();
   document.getElementById('note-editor-hint').textContent = '';
   document.getElementById('note-editor').classList.add('open');
 };
@@ -271,6 +405,8 @@ window.closeNoteEditor = () => {
 window.saveNote = async () => {
   const title = document.getElementById('note-title').value.trim();
   const content = document.getElementById('note-content').value;
+  const icon = document.getElementById('note-icon').value;
+  const color = document.getElementById('note-color').value;
 
   if (!title) return toast(i18next.t('notes.needTitle'), 'error');
 
@@ -285,14 +421,14 @@ window.saveNote = async () => {
 
   try {
     if (editingNoteId) {
-      await updateDoc(doc(db, 'users', currentUser.uid, 'notes', editingNoteId), { title, content });
+      await updateDoc(doc(db, 'users', currentUser.uid, 'notes', editingNoteId), { title, content, icon, color });
       const n = notes.find(x => x.id === editingNoteId);
-      if (n) { n.title = title; n.content = content; }
+      if (n) { n.title = title; n.content = content; n.icon = icon; n.color = color; }
     } else {
       const createdAt = new Date().toISOString();
       const ref = await addDoc(collection(db, 'users', currentUser.uid, 'notes'),
-        { title, content, createdAt, archived: false });
-      notes.unshift({ id: ref.id, title, content, createdAt, archived: false });
+        { title, content, icon, color, createdAt, archived: false });
+      notes.unshift({ id: ref.id, title, content, icon, color, createdAt, archived: false });
     }
     closeNoteEditor();
     renderNotes();
@@ -375,7 +511,7 @@ function renderTodos() {
         ${t.done ? 'disabled' : `onclick="markTodoDone('${t.id}')"`}
         aria-label="${i18next.t('notes.markDone')}">${t.done ? '✓' : ''}</button>
       <div class="ti-main" ${t.done ? '' : `onclick="openTodoForm('${t.id}')" style="cursor:pointer"`}>
-        <div class="ti-text">${escapeHtml(t.text || '')}</div>
+        <div class="ti-text md-body">${renderMarkdown(t.text)}</div>
         <div class="ti-meta">
           <span class="todo-size-tag">${t.size || 'S'}</span>
           <span class="${overdue ? 'todo-overdue' : ''}">${escapeHtml(t.dueDate || '')}</span>

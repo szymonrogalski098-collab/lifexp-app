@@ -275,7 +275,10 @@ button:focus-visible {
   outline: none;
 }
 
-input, select {
+/* textarea celowo w tym samym zestawie co input/select — bez tego przeglądarka
+   maluje je domyślnym BIAŁYM tłem na ciemnym motywie (dotyczyło pola opisu w
+   zgłoszeniach błędów i treści broadcastu, zanim doszły pola Notatnika). */
+input, select, textarea {
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -287,7 +290,8 @@ input, select {
   width: 100%;
   transition: border-color .15s;
 }
-input:focus, select:focus { border-color: var(--accent); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; line-height: 1.6; }
 
 .card {
   background: var(--bg2);
