@@ -1,0 +1,723 @@
+import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { confirmDialog, currentUser, dateISOLocal, db, escapeHtml, toast, userProfile } from "./core.js";
+
+// ── Notatnik: dwie podzakładki (Notatki + Zadania) w jednym module ──
+// Notatki i Zadania siedzą w jednym pliku, bo dzieli je tylko widok — obie
+// listy są prostym CRUD-em na podkolekcji użytkownika, a Zadania dodatkowo
+// napędzają mechanikę budowy PC (niżej, sekcja "budowa PC").
+
+const NOTES_MAX = 30;
+const NOTE_MAX_LINES = 1000;
+const TODOS_MAX = 30;
+
+let notes = [];        // { id, title, content, icon, color, createdAt, archived }
+let todos = [];        // { id, text, size, dueDate, done, createdAt, penaltyApplied }
+
+let notesTab = 'notes';    // 'notes' | 'todos'   — górny przełącznik
+let notesView = 'active';  // 'active' | 'archived' — widok w podzakładce Notatki
+
+let editingNoteId = null;  // null = nowa notatka
+let menuNoteId = null;     // notatka, dla której otwarto menu
+let editingTodoId = null;  // null = nowe zadanie
+let todoSize = 'S';
+
+// ════════════════════════════════════════════════════════════════════
+// BUDOWA PC — mechanika punktów
+//
+// Celowo TRZYMANA OSOBNO od renderowania: funkcje niżej są czyste (dostają
+// stan, zwracają nowy stan, nie dotykają DOM ani Firestore), a widok czyta
+// tylko gotowy wynik. Dzięki temu podmiana placeholdera na model 3D nie
+// wymaga ruszania ani jednej linijki tej sekcji.
+// ════════════════════════════════════════════════════════════════════
+
+const PIECES_PER_COMPONENT = 3;
+const TODO_SIZE_PIECES = { S: 1, M: 2, L: 3 };
+
+// Obudowa i płyta główna ZAWSZE pierwsze i w tej kolejności; pozostałe cztery
+// losowane raz na użytkownika.
+const PC_FIXED_PREFIX = ['case', 'motherboard'];
+const PC_RANDOM_POOL  = ['gpu', 'cpu', 'psu', 'ram'];
+const PC_COMPONENT_COUNT = PC_FIXED_PREFIX.length + PC_RANDOM_POOL.length;
+
+function shuffled(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Świeży build — losowanie kolejności dzieje się TYLKO tutaj, a ensurePcBuild()
+// woła to dokładnie raz na użytkownika (patrz komentarz tam).
+function makePcBuild() {
+  const componentOrder = [...PC_FIXED_PREFIX, ...shuffled(PC_RANDOM_POOL)];
+  const progress = {};
+  for (const c of componentOrder) progress[c] = 0;
+  return { componentOrder, progress, currentComponentIndex: 0 };
+}
+
+// Odczyt bez tworzenia. Zwraca null, gdy użytkownik jeszcze nie ma builda albo
+// zapisany kształt jest uszkodzony — wtedy widok pokazuje "dodaj pierwsze zadanie".
+function getPcBuild() {
+  const b = userProfile?.pcBuild;
+  if (!b || !Array.isArray(b.componentOrder) || b.componentOrder.length !== PC_COMPONENT_COUNT) return null;
+  if (!b.progress || typeof b.currentComponentIndex !== 'number') return null;
+  return b;
+}
+
+function clonePcBuild(b) {
+  return { componentOrder: [...b.componentOrder], progress: { ...b.progress }, currentComponentIndex: b.currentComponentIndex };
+}
+
+// Dopisanie kawałków do AKTUALNIE budowanego komponentu. Nadmiar przepada —
+// zadanie L kończące komponent stojący na 2/3 daje +1, nie przenosi +2 dalej.
+// Komponent N+1 rusza dopiero, gdy N osiągnie 3/3 (stąd pojedynczy indeks).
+function addPiecesToBuild(build, pieces) {
+  const b = clonePcBuild(build);
+  const idx = b.currentComponentIndex;
+  if (idx >= b.componentOrder.length) return b;      // cały PC gotowy
+  const comp = b.componentOrder[idx];
+  b.progress[comp] = Math.min(PIECES_PER_COMPONENT, (b.progress[comp] || 0) + pieces);
+  if (b.progress[comp] >= PIECES_PER_COMPONENT) b.currentComponentIndex = idx + 1;
+  return b;
+}
+
+// Kara: -1 kawałek z OSTATNIEGO komponentu stojącego na pełnych 3/3, licząc od
+// końca kolejności. Aktualnie budowany nigdy nie obrywa, więc currentComponentIndex
+// zostaje nietknięty. Gdy żaden komponent nie jest na 3/3 — kara nie ma efektu.
+function applyPenaltyToBuild(build) {
+  const b = clonePcBuild(build);
+  for (let i = b.componentOrder.length - 1; i >= 0; i--) {
+    const comp = b.componentOrder[i];
+    if ((b.progress[comp] || 0) >= PIECES_PER_COMPONENT) {
+      b.progress[comp] = PIECES_PER_COMPONENT - 1;
+      return b;
+    }
+  }
+  return b;
+}
+
+async function savePcBuild(build) {
+  userProfile.pcBuild = build;
+  await updateDoc(doc(db, 'users', currentUser.uid), { pcBuild: build });
+}
+
+// Losowanie kolejności odpala się przy PIERWSZYM zadaniu i tylko wtedy: jeśli
+// profil ma już pcBuild, zwracamy go bez zmian, więc kolejność jest stała na
+// zawsze dla danego konta.
+async function ensurePcBuild() {
+  const existing = getPcBuild();
+  if (existing) return existing;
+  const build = makePcBuild();
+  await savePcBuild(build);
+  return build;
+}
+
+// Kary za przeterminowane zadania. `penaltyApplied` na zadaniu gwarantuje, że
+// jedno spóźnienie kosztuje dokładnie jeden kawałek, choćby użytkownik wchodził
+// w zakładkę sto razy. Flagę stawiamy TAKŻE gdy kara nie miała efektu (brak
+// ukończonego komponentu) — inaczej to samo zadanie próbowałoby karać w
+// nieskończoność, gdy build wreszcie urośnie.
+async function applyOverduePenalties() {
+  // dateISOLocal, NIE todayStr: dueDate pochodzi z <input type="date">, czyli
+  // z LOKALNEGO kalendarza uzytkownika, a todayStr() liczy w UTC. Wieczorem w
+  // UTC+2 te dwie daty sie rozjezdzaja i kara/nagroda wypadalaby o dzien obok.
+  const today = dateISOLocal();
+  const overdue = todos.filter(t => !t.done && !t.penaltyApplied && t.dueDate && t.dueDate < today);
+  if (!overdue.length) return;
+
+  let build = getPcBuild();
+  for (const t of overdue) {
+    if (build) build = applyPenaltyToBuild(build);
+    await updateDoc(doc(db, 'users', currentUser.uid, 'todos', t.id), { penaltyApplied: true });
+    t.penaltyApplied = true;
+  }
+  if (build) await savePcBuild(build);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Wczytywanie i przełączanie zakładek
+// ════════════════════════════════════════════════════════════════════
+
+export async function loadNotes() {
+  await Promise.all([loadNotesList(), loadTodosList()]);
+  await applyOverduePenalties();
+  syncNotesTabs();
+  renderNotes();
+  renderTodos();
+  renderPcBuild();
+  // Pierwszy render leci na escapeHtml (biblioteki mogą jeszcze nie być w
+  // pamięci), po doładowaniu przerysowujemy już z Markdownem — ten sam
+  // dwuetapowy schemat co loadExusChat.
+  ensureMarkdownLibs().then(() => { renderNotes(); renderTodos(); refreshMdPreviews(); });
+}
+
+async function loadNotesList() {
+  const snap = await getDocs(query(collection(db, 'users', currentUser.uid, 'notes'), orderBy('createdAt', 'desc')));
+  notes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function loadTodosList() {
+  const snap = await getDocs(query(collection(db, 'users', currentUser.uid, 'todos'), orderBy('createdAt', 'desc')));
+  todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+function syncNotesTabs() {
+  document.querySelectorAll('#notes-tabs .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === notesTab));
+  // .filter-chip, NIE .seg-btn: ten przełącznik jest lżejszym komponentem od
+  // czasu poprawki hierarchii, a selektor został na starej klasie — przez co
+  // pętla nie trafiała w nic i podświetlenie nigdy nie schodziło z "Aktywne".
+  document.querySelectorAll('#notes-view-tabs .filter-chip').forEach(b => b.classList.toggle('active', b.dataset.view === notesView));
+  document.getElementById('notes-pane-notes').style.display = notesTab === 'notes' ? '' : 'none';
+  document.getElementById('notes-pane-todos').style.display = notesTab === 'todos' ? '' : 'none';
+  // FAB dodaje notatki, więc na zakładce Zadań nie ma czego robić.
+  document.getElementById('notes-fab').style.display = notesTab === 'notes' ? '' : 'none';
+}
+
+window.selectNotesTab = (tab) => {
+  notesTab = tab;
+  syncNotesTabs();
+};
+
+window.selectNotesView = (view) => {
+  notesView = view;
+  syncNotesTabs();
+  renderNotes();
+};
+
+// ════════════════════════════════════════════════════════════════════
+// Ikona i kolor notatki, pasek Markdown, renderowanie treści
+// ════════════════════════════════════════════════════════════════════
+
+// Ten sam wzorzec co renderActivityIconPicker/renderActivityColorPicker w
+// settings.js: ukryty input trzyma wartość, siatka przycisków podświetla
+// wybraną obwódką var(--accent), ponowne kliknięcie odznacza.
+const NOTE_ICON_PRESETS  = ['ti-notebook','ti-bulb','ti-star','ti-flag','ti-heart','ti-briefcase','ti-school','ti-shopping-cart','ti-plane','ti-home','ti-code','ti-music'];
+const NOTE_COLOR_PRESETS = ['#6c63ff','#4ecca3','#ffd700','#ff6b6b','#8a8fa8','#ff9f43','#00d2d3','#feca57'];
+
+function renderNoteIconPicker() {
+  const el = document.getElementById('note-icon-picker');
+  if (!el) return;
+  const current = document.getElementById('note-icon').value;
+  el.innerHTML = NOTE_ICON_PRESETS.map(ic => `
+    <button type="button" class="btn-secondary" data-icon="${ic}" onclick="pickNoteIcon('${ic}')"
+      style="padding:6px 10px;font-size:16px;border-color:${ic === current ? 'var(--accent)' : 'var(--border)'}"><i class="ti ${ic}"></i></button>
+  `).join('');
+}
+
+window.pickNoteIcon = (icon) => {
+  const hidden = document.getElementById('note-icon');
+  hidden.value = (hidden.value === icon) ? '' : icon;
+  document.querySelectorAll('#note-icon-picker button').forEach(b => {
+    b.style.borderColor = (b.dataset.icon === hidden.value) ? 'var(--accent)' : 'var(--border)';
+  });
+};
+
+function renderNoteColorPicker() {
+  const el = document.getElementById('note-color-picker');
+  if (!el) return;
+  const current = document.getElementById('note-color').value;
+  el.innerHTML = NOTE_COLOR_PRESETS.map(c => `
+    <button type="button" data-color="${c}" onclick="pickNoteColor('${c}')"
+      style="width:28px;height:28px;border-radius:8px;background:${c};border:2px solid ${c === current ? 'var(--accent)' : 'var(--border)'};padding:0"></button>
+  `).join('');
+}
+
+window.pickNoteColor = (color) => {
+  const hidden = document.getElementById('note-color');
+  hidden.value = (hidden.value === color) ? '' : color;
+  document.querySelectorAll('#note-color-picker button').forEach(b => {
+    b.style.borderColor = (b.dataset.color === hidden.value) ? 'var(--accent)' : 'var(--border)';
+  });
+};
+
+// Pasek formatowania. Zwykły <textarea> + wstawianie znaczników Markdown —
+// żadnego contenteditable ani WYSIWYG. Znaczniki lądują WOKÓŁ zaznaczenia
+// (a nie na końcu pola), po czym zaznaczenie wraca na sam tekst, żeby dało się
+// pisać dalej bez klikania w pole.
+const MD_INLINE = { bold: '**', italic: '_' };
+const MD_LINE   = { head: '## ', ul: '- ', ol: '1. ' };
+
+window.mdFormat = (targetId, kind) => {
+  const ta = document.getElementById(targetId);
+  if (!ta) return;
+  const value = ta.value;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+
+  if (MD_LINE[kind]) {
+    // Prefiks liniowy dotyczy CAŁYCH linii objętych zaznaczeniem (przy pustym
+    // zaznaczeniu — linii z kursorem), stąd rozszerzenie zakresu do granic linii.
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+    let lineEnd = value.indexOf('\n', end);
+    if (lineEnd === -1) lineEnd = value.length;
+    const lines = value.slice(lineStart, lineEnd).split('\n');
+    const out = lines.map((l, i) => (kind === 'ol' ? `${i + 1}. ` : MD_LINE[kind]) + l).join('\n');
+    ta.value = value.slice(0, lineStart) + out + value.slice(lineEnd);
+    ta.focus();
+    ta.setSelectionRange(lineStart, lineStart + out.length);
+    ta.dispatchEvent(new Event('input'));   // jedna ścieżka odświeżania podglądu
+    return;
+  }
+
+  const mark = MD_INLINE[kind];
+  if (!mark) return;
+  const selected = value.slice(start, end);
+  ta.value = value.slice(0, start) + mark + selected + mark + value.slice(end);
+  ta.focus();
+  ta.setSelectionRange(start + mark.length, start + mark.length + selected.length);
+  ta.dispatchEvent(new Event('input'));     // jedna ścieżka odświeżania podglądu
+};
+
+// Przełącznik Edytuj/Podgląd (tylko poniżej 700px — wyżej oba panele są
+// widoczne naraz i przełącznik jest schowany CSS-em). Ten sam wzorzec co
+// pickActivityIcon/pickActivityColor: ustaw stan, a potem przejdź po WSZYSTKICH
+// przyciskach i ustaw klasę z porównania ze stanem — nigdy tylko na klikniętym.
+window.setMdMode = (editorId, mode) => {
+  const wrap = document.getElementById(editorId);
+  if (!wrap) return;
+  wrap.dataset.mode = mode;
+  wrap.querySelectorAll('.md-mode-switch .filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+};
+
+// Podgląd odświeżany na zdarzeniu `input` (nie `change`/`blur` — te lecą
+// dopiero po wyjściu z pola, więc pisanie nie byłoby widać na żywo).
+// Debounce 150ms, żeby przy długiej notatce nie parsować Markdownu na każdy
+// wciśnięty klawisz.
+const MD_PREVIEW_DEBOUNCE_MS = 150;
+const mdPreviewTimers = new Map();
+
+function updateMdPreview(textareaId, previewId) {
+  const ta = document.getElementById(textareaId);
+  const out = document.getElementById(previewId);
+  if (!ta || !out) return;
+  out.innerHTML = renderMarkdown(ta.value);
+}
+
+function scheduleMdPreview(textareaId, previewId) {
+  clearTimeout(mdPreviewTimers.get(textareaId));
+  mdPreviewTimers.set(textareaId, setTimeout(() => updateMdPreview(textareaId, previewId), MD_PREVIEW_DEBOUNCE_MS));
+}
+
+// Podpięcie raz, przy starcie modułu — oba pola siedzą w statycznym HTML.
+const MD_EDITORS = [
+  { textarea: 'note-content', preview: 'note-preview' },
+  { textarea: 'todo-text',    preview: 'todo-preview' },
+];
+
+function initMdEditors() {
+  for (const { textarea, preview } of MD_EDITORS) {
+    const ta = document.getElementById(textarea);
+    if (!ta) continue;
+    ta.addEventListener('input', () => scheduleMdPreview(textarea, preview));
+  }
+}
+initMdEditors();
+
+// Otwarcie modala i przyciski toolbara zmieniają wartość programowo, a to NIE
+// generuje zdarzenia `input` — stąd jawne odświeżenie w obu tych ścieżkach.
+function refreshMdPreviews() {
+  for (const { textarea, preview } of MD_EDITORS) {
+    // data-empty zasila :empty::before w CSS — tekst z i18n, więc ustawiamy go
+    // tutaj, a nie na sztywno w markupie.
+    const out = document.getElementById(preview);
+    if (out) out.dataset.empty = i18next.t('notes.previewEmpty');
+    updateMdPreview(textarea, preview);
+  }
+}
+
+// marked i DOMPurify NIE są w <head> app.html — Ex-us dociąga je leniwie przy
+// otwarciu czatu (patrz exusEnsureMarkdownLibs w assistants.js) i ta sama
+// decyzja obowiązuje tutaj, żeby nie obciążać startu apki dwoma CDN-ami dla
+// użytkowników, którzy Notatnika nie otwierają.
+let mdLibsPromise = null;
+function ensureMarkdownLibs() {
+  if (mdLibsPromise) return mdLibsPromise;
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src; el.async = true;
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error('nie udało się załadować ' + src));
+    document.head.appendChild(el);
+  });
+  mdLibsPromise = Promise.all([
+    window.marked ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js'),
+    window.DOMPurify ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js'),
+  ]).then(() => true).catch((err) => {
+    console.error('[Notatnik] Markdown niedostępny, pokazuję zwykły tekst:', err);
+    return false;
+  });
+  return mdLibsPromise;
+}
+
+// JEDYNE miejsce, w którym treść notatki/zadania zamienia się w HTML.
+// DOMPurify jest tu obowiązkowy, nie opcjonalny — bez obu bibliotek zjeżdżamy
+// na escapeHtml, więc żaden wynik marked.parse() nigdy nie trafia do innerHTML
+// bez sanitizacji.
+function renderMarkdown(text) {
+  if (window.marked && window.DOMPurify) {
+    try {
+      return DOMPurify.sanitize(marked.parse(text || '', { breaks: true }));
+    } catch (err) {
+      console.error('[Notatnik] błąd parsowania Markdown, pokazuję zwykły tekst:', err);
+    }
+  }
+  return escapeHtml(text || '');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Notatki
+// ════════════════════════════════════════════════════════════════════
+
+function visibleNotes() {
+  return notes.filter(n => (notesView === 'archived') === !!n.archived);
+}
+
+function formatNoteDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const loc = i18next.language === 'pl' ? 'pl-PL' : 'en-US';
+  return d.toLocaleDateString(loc, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function renderNotes() {
+  const el = document.getElementById('notes-list');
+  const list = visibleNotes();
+  if (!list.length) {
+    const key = notesView === 'archived' ? 'notes.emptyArchived' : 'notes.empty';
+    el.innerHTML = `<div class="sheet-empty">${i18next.t(key)}</div>`;
+    return;
+  }
+  el.innerHTML = list.map(n => {
+    const color = n.color || 'var(--text2)';
+    const icon = n.icon || 'ti-notebook';
+    return `
+    <div class="note-item" data-note="${n.id}" onclick="openNoteEditor('${n.id}')">
+      <div class="note-icon" style="color:${escapeHtml(color)}"><i class="ti ${escapeHtml(icon)}"></i></div>
+      <div class="ni-main">
+        <div class="ni-title">${escapeHtml(n.title || '')}</div>
+        <div class="note-preview md-body">${renderMarkdown(n.content)}</div>
+        <div class="ni-date">${formatNoteDate(n.createdAt)}</div>
+      </div>
+      <button class="note-dots" aria-label="${i18next.t('notes.menuAria')}"
+        onclick="event.stopPropagation(); openNoteMenu('${n.id}')">⋯</button>
+    </div>`;
+  }).join('');
+  attachNoteLongPress();
+}
+
+// Long-press na mobile otwiera to samo menu co trzy kropki na desktopie.
+// Appka nie miała wcześniej tego wzorca, więc jest napisany tutaj od zera:
+// pointerdown startuje licznik, a ruch palcem (scroll) albo puszczenie przed
+// czasem go kasuje, żeby przewijanie listy nie otwierało menu przypadkiem.
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_TOLERANCE = 10;
+
+function attachNoteLongPress() {
+  document.querySelectorAll('#notes-list .note-item').forEach(row => {
+    let timer = null, startX = 0, startY = 0, fired = false;
+
+    const cancel = () => { clearTimeout(timer); timer = null; };
+
+    row.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return;      // desktop ma trzy kropki
+      startX = e.clientX; startY = e.clientY; fired = false;
+      timer = setTimeout(() => {
+        fired = true;
+        openNoteMenu(row.dataset.note);
+      }, LONG_PRESS_MS);
+    });
+    row.addEventListener('pointermove', (e) => {
+      if (!timer) return;
+      if (Math.abs(e.clientX - startX) > LONG_PRESS_MOVE_TOLERANCE ||
+          Math.abs(e.clientY - startY) > LONG_PRESS_MOVE_TOLERANCE) cancel();
+    });
+    row.addEventListener('pointerup', cancel);
+    row.addEventListener('pointercancel', cancel);
+    // Po długim przytrzymaniu tłumimy zwykłe kliknięcie, żeby zaraz po menu
+    // nie otworzył się jeszcze edytor notatki.
+    row.addEventListener('click', (e) => {
+      if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; }
+    }, true);
+  });
+}
+
+window.openNoteEditor = (id) => {
+  const active = notes.filter(n => !n.archived);
+  if (!id && active.length >= NOTES_MAX) {
+    return toast(i18next.t('notes.maxNotes', { max: NOTES_MAX }), 'error');
+  }
+  editingNoteId = id || null;
+  const note = id ? notes.find(n => n.id === id) : null;
+  document.getElementById('note-title').value = note?.title || '';
+  document.getElementById('note-content').value = note?.content || '';
+  document.getElementById('note-icon').value = note?.icon || '';
+  document.getElementById('note-color').value = note?.color || '';
+  renderNoteIconPicker();
+  renderNoteColorPicker();
+  document.getElementById('note-editor-hint').textContent = '';
+  setMdMode('note-md-editor', 'edit');
+  refreshMdPreviews();
+  document.getElementById('note-editor').classList.add('open');
+};
+
+window.closeNoteEditor = () => {
+  document.getElementById('note-editor').classList.remove('open');
+  editingNoteId = null;
+};
+
+window.saveNote = async () => {
+  const title = document.getElementById('note-title').value.trim();
+  const content = document.getElementById('note-content').value;
+  const icon = document.getElementById('note-icon').value;
+  const color = document.getElementById('note-color').value;
+
+  if (!title) return toast(i18next.t('notes.needTitle'), 'error');
+
+  // Limit linii liczymy na treści, żeby komunikat mógł podać realną liczbę —
+  // cichy obcinacz byłby gorszy niż jasne "skróć o tyle a tyle".
+  const lines = content.split('\n').length;
+  if (lines > NOTE_MAX_LINES) {
+    const msg = i18next.t('notes.maxLines', { lines, max: NOTE_MAX_LINES });
+    document.getElementById('note-editor-hint').textContent = msg;
+    return toast(msg, 'error');
+  }
+
+  try {
+    if (editingNoteId) {
+      await updateDoc(doc(db, 'users', currentUser.uid, 'notes', editingNoteId), { title, content, icon, color });
+      const n = notes.find(x => x.id === editingNoteId);
+      if (n) { n.title = title; n.content = content; n.icon = icon; n.color = color; }
+    } else {
+      const createdAt = new Date().toISOString();
+      const ref = await addDoc(collection(db, 'users', currentUser.uid, 'notes'),
+        { title, content, icon, color, createdAt, archived: false });
+      notes.unshift({ id: ref.id, title, content, icon, color, createdAt, archived: false });
+    }
+    closeNoteEditor();
+    renderNotes();
+    toast(i18next.t('notes.saved'));
+  } catch (e) {
+    console.error(e);
+    toast(i18next.t('shop.saveError'), 'error');
+  }
+};
+
+window.openNoteMenu = (id) => {
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  menuNoteId = id;
+  document.getElementById('note-menu-title').textContent = note.title || '';
+  document.getElementById('note-menu-archive').textContent =
+    i18next.t(note.archived ? 'notes.menuRestore' : 'notes.menuArchive');
+  document.getElementById('note-menu-delete').textContent =
+    i18next.t(note.archived ? 'notes.menuDeleteForever' : 'notes.menuDelete');
+  document.getElementById('note-menu').classList.add('open');
+};
+
+window.closeNoteMenu = () => {
+  document.getElementById('note-menu').classList.remove('open');
+  menuNoteId = null;
+};
+
+// Archiwizacja to zwykły przełącznik flagi — z widoku "Zarchiwizowane" ten sam
+// przycisk przywraca notatkę z powrotem do aktywnych.
+window.noteMenuArchive = async () => {
+  const note = notes.find(n => n.id === menuNoteId);
+  if (!note) return;
+  const archived = !note.archived;
+  closeNoteMenu();
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid, 'notes', note.id), { archived });
+    note.archived = archived;
+    renderNotes();
+    toast(i18next.t(archived ? 'notes.archived' : 'notes.restored'));
+  } catch (e) {
+    console.error(e);
+    toast(i18next.t('shop.saveError'), 'error');
+  }
+};
+
+window.noteMenuDelete = async () => {
+  const note = notes.find(n => n.id === menuNoteId);
+  if (!note) return;
+  const wasArchived = !!note.archived;
+  closeNoteMenu();
+  const msg = i18next.t(wasArchived ? 'notes.confirmDeleteForever' : 'notes.confirmDelete');
+  if (!await confirmDialog(msg, i18next.t('common.delete'))) return;
+  try {
+    await deleteDoc(doc(db, 'users', currentUser.uid, 'notes', note.id));
+    notes = notes.filter(n => n.id !== note.id);
+    renderNotes();
+    toast(i18next.t('notes.deleted'));
+  } catch (e) {
+    console.error(e);
+    toast(i18next.t('common.deleteError'), 'error');
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// Zadania (To Do)
+// ════════════════════════════════════════════════════════════════════
+
+function renderTodos() {
+  const el = document.getElementById('todos-list');
+  if (!todos.length) {
+    el.innerHTML = `<div class="sheet-empty">${i18next.t('notes.emptyTodos')}</div>`;
+    return;
+  }
+  const today = dateISOLocal();
+  el.innerHTML = todos.map(t => {
+    const overdue = !t.done && t.dueDate && t.dueDate < today;
+    return `
+    <div class="todo-item ${t.done ? 'done' : ''}">
+      <button class="todo-check ${t.done ? 'checked' : ''}"
+        ${t.done ? 'disabled' : `onclick="markTodoDone('${t.id}')"`}
+        aria-label="${i18next.t('notes.markDone')}">${t.done ? '✓' : ''}</button>
+      <div class="ti-main" ${t.done ? '' : `onclick="openTodoForm('${t.id}')" style="cursor:pointer"`}>
+        <div class="ti-text md-body">${renderMarkdown(t.text)}</div>
+        <div class="ti-meta">
+          <span class="todo-size-tag">${t.size || 'S'}</span>
+          <span class="${overdue ? 'todo-overdue' : ''}">${escapeHtml(t.dueDate || '')}</span>
+          ${t.done ? `<span>${i18next.t('notes.doneTag')}</span>` : ''}
+          ${overdue ? `<span class="todo-overdue">${i18next.t('notes.overdueTag')}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.setTodoSize = (size) => {
+  todoSize = size;
+  document.querySelectorAll('#todo-size-tabs .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.size === size));
+};
+
+window.openTodoForm = (id) => {
+  if (!id && todos.length >= TODOS_MAX) {
+    return toast(i18next.t('notes.maxTodos', { max: TODOS_MAX }), 'error');
+  }
+  editingTodoId = id || null;
+  const t = id ? todos.find(x => x.id === id) : null;
+  document.getElementById('todo-form-title').textContent = i18next.t(id ? 'notes.editTodo' : 'notes.newTodo');
+  document.getElementById('todo-text').value = t?.text || '';
+  document.getElementById('todo-due').value = t?.dueDate || '';
+  setTodoSize(t?.size || 'S');
+  setMdMode('todo-md-editor', 'edit');
+  refreshMdPreviews();
+  document.getElementById('todo-form').classList.add('open');
+};
+
+window.closeTodoForm = () => {
+  document.getElementById('todo-form').classList.remove('open');
+  editingTodoId = null;
+};
+
+window.saveTodo = async () => {
+  const text = document.getElementById('todo-text').value.trim();
+  const dueDate = document.getElementById('todo-due').value;
+
+  if (!text) return toast(i18next.t('notes.needText'), 'error');
+  if (!dueDate) return toast(i18next.t('notes.needDue'), 'error');
+  if (dueDate < dateISOLocal()) return toast(i18next.t('notes.dueInPast'), 'error');
+
+  // Potwierdzenie TYLKO przy dodawaniu — przy edycji użytkownik zna już stawkę.
+  if (!editingTodoId) {
+    const ok = await confirmDialog(
+      i18next.t('notes.addConfirm', { date: dueDate, interpolation: { escapeValue: false } }),
+      i18next.t('notes.addConfirmOk'));
+    if (!ok) return;
+  }
+
+  try {
+    if (editingTodoId) {
+      await updateDoc(doc(db, 'users', currentUser.uid, 'todos', editingTodoId), { text, dueDate, size: todoSize });
+      const t = todos.find(x => x.id === editingTodoId);
+      if (t) { t.text = text; t.dueDate = dueDate; t.size = todoSize; }
+    } else {
+      // Pierwsze zadanie zakłada build (i losuje kolejność komponentów).
+      await ensurePcBuild();
+      const createdAt = new Date().toISOString();
+      const ref = await addDoc(collection(db, 'users', currentUser.uid, 'todos'),
+        { text, dueDate, size: todoSize, done: false, createdAt, penaltyApplied: false });
+      todos.unshift({ id: ref.id, text, dueDate, size: todoSize, done: false, createdAt, penaltyApplied: false });
+    }
+    closeTodoForm();
+    renderTodos();
+    renderPcBuild();
+    toast(i18next.t('notes.todoSaved'));
+  } catch (e) {
+    console.error(e);
+    toast(i18next.t('shop.saveError'), 'error');
+  }
+};
+
+// Odznaczenie jest jednokierunkowe: cofnięcie musiałoby odbierać przyznane
+// kawałki, a tego mechanika nie definiuje — dlatego przycisk gaśnie po kliknięciu.
+window.markTodoDone = async (id) => {
+  const t = todos.find(x => x.id === id);
+  if (!t || t.done) return;
+
+  // Kawałki należą się tylko za zrobienie w terminie; dzień terminu jeszcze się liczy.
+  const inTime = dateISOLocal() <= t.dueDate;
+  const pieces = TODO_SIZE_PIECES[t.size] || 1;
+
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid, 'todos', id), { done: true });
+    t.done = true;
+
+    if (inTime) {
+      const build = await ensurePcBuild();
+      await savePcBuild(addPiecesToBuild(build, pieces));
+      toast(i18next.t('notes.earnedPieces', { n: pieces }));
+    } else {
+      toast(i18next.t('notes.lateNoPieces'));
+    }
+    renderTodos();
+    renderPcBuild();
+  } catch (e) {
+    console.error(e);
+    toast(i18next.t('shop.saveError'), 'error');
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// Widok budowy PC — PLACEHOLDER do podmiany na 3D
+//
+// Czyta wyłącznie stan zwrócony przez getPcBuild() i nic nie liczy. Żeby
+// wstawić tu model 3D, wystarczy podmienić ciało tej jednej funkcji.
+// ════════════════════════════════════════════════════════════════════
+
+function renderPcBuild() {
+  const el = document.getElementById('pcbuild-view');
+  const build = getPcBuild();
+
+  if (!build) {
+    el.innerHTML = `<h3 style="margin-bottom:10px">${i18next.t('notes.pcTitle')}</h3>
+      <p class="text2">${i18next.t('notes.pcNoBuild')}</p>`;
+    return;
+  }
+
+  const done = build.currentComponentIndex >= build.componentOrder.length;
+  const rows = build.componentOrder.map((comp, i) => {
+    const filled = build.progress[comp] || 0;
+    const state = i === build.currentComponentIndex ? 'current' : (i > build.currentComponentIndex ? 'locked' : '');
+    const pips = Array.from({ length: PIECES_PER_COMPONENT },
+      (_, p) => `<div class="pc-pip ${p < filled ? 'filled' : ''}"></div>`).join('');
+    return `
+      <div class="pc-comp ${state}">
+        <div class="pc-name">${i18next.t('notes.comp_' + comp)}</div>
+        <div class="pc-pips">${pips}</div>
+        <div class="pc-count">${filled}/${PIECES_PER_COMPONENT}</div>
+      </div>`;
+  }).join('');
+
+  const caption = done
+    ? i18next.t('notes.pcComplete')
+    : i18next.t('notes.pcCurrent') + ': ' + i18next.t('notes.comp_' + build.componentOrder[build.currentComponentIndex]);
+
+  el.innerHTML = `<h3 style="margin-bottom:10px">${i18next.t('notes.pcTitle')}</h3>
+    <p class="text2" style="margin-bottom:12px">${caption}</p>
+    ${rows}`;
+}
