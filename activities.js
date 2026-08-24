@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, limit, orderBy, query, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { activityDefById, confettiBurst, confirmDialog, currentUser, db, escapeHtml, formatMinutes, getDailyLimit, getTodayPts, loadProfile, pulseEl, rateGeneral, showLevelup, toast, todayStr, userProfile } from "./core.js";
+import { activityDefById, activityDefs, confettiBurst, confirmDialog, currentUser, db, escapeHtml, formatMinutes, getDailyLimit, getTodayPts, loadProfile, pulseEl, rateGeneral, showLevelup, toast, todayStr, userProfile } from "./core.js";
 import { XP_PER_LEVEL, levelTitle, loadDashboard } from "./dashboard.js";
 import { queueOfflineDraft } from "./offline.js";
 
