@@ -3,6 +3,13 @@ import { activityDefById, confettiBurst, confirmDialog, currentUser, db, escapeH
 import { XP_PER_LEVEL, levelTitle, loadDashboard } from "./dashboard.js";
 import { queueOfflineDraft } from "./offline.js";
 
+// Ten sam log + komunikat powtarza się w każdym handlerze zapisu w tym pliku;
+// trzymamy go lokalnie, bo treść komunikatu jest specyficzna dla tych ścieżek.
+function reportSaveError(e) {
+  toast(i18next.t('shop.saveError'), 'error');
+  console.error(e);
+}
+
 let selectedGenTime = null;
 let generatedActivity = null;
 // ── Log Activity ──────────────────────────────────────
@@ -38,6 +45,61 @@ window.updatePointsPreview = () => {
   });
 };
 
+function resetActivityForm() {
+  document.getElementById('act-type').value = '';
+  document.getElementById('act-minutes').value = '';
+  document.getElementById('act-desc').value = '';
+  document.getElementById('pts-preview').style.display = 'none';
+}
+
+// Offline → szkic do lokalnej kolejki. Prawdziwy zapis (i cap limitem dziennym)
+// dopiero przy zatwierdzeniu online — dlatego punkty w podsumowaniu to szacunek.
+function queueActivityDraft({ type, min, desc, ptsPerH, earned, opt }) {
+  const name = type === '__generated__' ? (opt?.dataset.genName || '—') : activityDefById(type).name;
+  const payload = { type, minutes: min, desc, ptsPerHour: ptsPerH, dateStr: todayStr() };
+  if (type === '__generated__' && opt?.dataset.genName) payload.typeName = opt.dataset.genName;
+  queueOfflineDraft('activity',
+    i18next.t('offline.sumActivity', { name, min, pts: earned, interpolation: { escapeValue: false } }),
+    payload);
+}
+
+// Trzy zapisy składające się na jedną zalogowaną aktywność: wpis w `activities`,
+// dzienny licznik punktów i sumy na profilu. Aktywności z generatora (poza
+// edytowalną listą activityDefs) dostają zdenormalizowaną nazwę, bo
+// activityDefById nie ma dla nich definicji.
+async function persistActivity({ type, min, desc, actualEarned, opt }) {
+  const activityDoc = { type, duration: min, points: actualEarned, desc, timestamp: new Date() };
+  if (type === '__generated__' && opt?.dataset.genName) activityDoc.typeName = opt.dataset.genName;
+  await addDoc(collection(db, 'users', currentUser.uid, 'activities'), activityDoc);
+
+  const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', todayStr());
+  const daySnap = await getDoc(dayRef);
+  if (daySnap.exists()) {
+    await updateDoc(dayRef, { pointsEarned: increment(actualEarned) });
+  } else {
+    await setDoc(dayRef, { pointsEarned: actualEarned, gamingMinutes: 0 });
+  }
+
+  await updateDoc(doc(db, 'users', currentUser.uid), {
+    'points.total': increment(actualEarned),
+    'points.earnedAllTime': increment(actualEarned)
+  });
+}
+
+// Reward feedback: pulse the balance, then celebrate a level-up or confetti.
+// Poziom sprzed zapisu przychodzi z zewnątrz, bo userProfile jest już po
+// loadProfile() i sam nie pamięta stanu sprzed przyznania punktów.
+function celebrateActivity(beforeLevel) {
+  pulseEl(document.querySelector('.balance-card'));
+  const afterEarned = userProfile.points?.earnedAllTime || 0;
+  const afterLevel = Math.floor(afterEarned / XP_PER_LEVEL) + 1;
+  if (afterLevel > beforeLevel) {
+    setTimeout(() => showLevelup(afterLevel, levelTitle(afterLevel)), 350);
+  } else {
+    confettiBurst();
+  }
+}
+
 window.logActivity = async () => {
   const type = document.getElementById('act-type').value;
   const min = parseInt(document.getElementById('act-minutes').value);
@@ -50,19 +112,9 @@ window.logActivity = async () => {
   const ptsPerH = parseInt(opt?.dataset.pts || 0);
   let earned = Math.round((min / 60) * ptsPerH);
 
-  // Offline → szkic do lokalnej kolejki. Prawdziwy zapis (i cap limitem dziennym)
-  // dopiero przy zatwierdzeniu online — dlatego punkty w podsumowaniu to szacunek.
   if (!navigator.onLine) {
-    const name = type === '__generated__' ? (opt?.dataset.genName || '—') : activityDefById(type).name;
-    const payload = { type, minutes: min, desc, ptsPerHour: ptsPerH, dateStr: todayStr() };
-    if (type === '__generated__' && opt?.dataset.genName) payload.typeName = opt.dataset.genName;
-    queueOfflineDraft('activity',
-      i18next.t('offline.sumActivity', { name, min, pts: earned, interpolation: { escapeValue: false } }),
-      payload);
-    document.getElementById('act-type').value = '';
-    document.getElementById('act-minutes').value = '';
-    document.getElementById('act-desc').value = '';
-    document.getElementById('pts-preview').style.display = 'none';
+    queueActivityDraft({ type, min, desc, ptsPerH, earned, opt });
+    resetActivityForm();
     return;
   }
 
@@ -84,45 +136,15 @@ window.logActivity = async () => {
   const beforeLevel = Math.floor(beforeEarned / XP_PER_LEVEL) + 1;
 
   try {
-    // Add activity record. Aktywności z generatora (poza edytowalną listą activityDefs)
-    // dostają zdenormalizowaną nazwę, bo activityDefById nie ma dla nich definicji.
-    const activityDoc = { type, duration: min, points: actualEarned, desc, timestamp: new Date() };
-    if (type === '__generated__' && opt?.dataset.genName) activityDoc.typeName = opt.dataset.genName;
-    await addDoc(collection(db, 'users', currentUser.uid, 'activities'), activityDoc);
-
-    // Update daily log
-    const dayRef = doc(db, 'users', currentUser.uid, 'dailyLog', todayStr());
-    const daySnap = await getDoc(dayRef);
-    if (daySnap.exists()) {
-      await updateDoc(dayRef, { pointsEarned: increment(actualEarned) });
-    } else {
-      await setDoc(dayRef, { pointsEarned: actualEarned, gamingMinutes: 0 });
-    }
-
-    // Update total points
-    await updateDoc(doc(db, 'users', currentUser.uid), {
-      'points.total': increment(actualEarned),
-      'points.earnedAllTime': increment(actualEarned)
-    });
+    await persistActivity({ type, min, desc, actualEarned, opt });
 
     await loadProfile();
-    document.getElementById('act-type').value = '';
-    document.getElementById('act-minutes').value = '';
-    document.getElementById('act-desc').value = '';
-    document.getElementById('pts-preview').style.display = 'none';
+    resetActivityForm();
     showPage('dashboard');
     await loadDashboard();
     toast(i18next.t('toast.earnedPts', { pts: actualEarned }));
 
-    // Reward feedback: pulse the balance, then celebrate a level-up or confetti.
-    pulseEl(document.querySelector('.balance-card'));
-    const afterEarned = userProfile.points?.earnedAllTime || 0;
-    const afterLevel = Math.floor(afterEarned / XP_PER_LEVEL) + 1;
-    if (afterLevel > beforeLevel) {
-      setTimeout(() => showLevelup(afterLevel, levelTitle(afterLevel)), 350);
-    } else {
-      confettiBurst();
-    }
+    celebrateActivity(beforeLevel);
   } catch (e) {
     toast(i18next.t('errors.saveRetry'), 'error');
     console.error(e);
@@ -148,6 +170,27 @@ document.getElementById('game-select').addEventListener('change', function () {
   document.getElementById('game-custom-wrap').style.display = this.value === 'Inna' ? 'block' : 'none';
 });
 
+function resetGamingForm() {
+  document.getElementById('game-select').value = '';
+  document.getElementById('game-minutes').value = '';
+  document.getElementById('game-custom').value = '';
+  document.getElementById('game-custom-wrap').style.display = 'none';
+}
+
+// Zapis sesji + dopisanie minut do dziennego licznika (tworzonego, jeśli to
+// pierwszy wpis danego dnia).
+async function persistGamingSession({ game, min, date, dayRef, daySnap }) {
+  await addDoc(collection(db, 'users', currentUser.uid, 'gamingSessions'), {
+    game, duration: min, date, timestamp: new Date()
+  });
+
+  if (daySnap.exists()) {
+    await updateDoc(dayRef, { gamingMinutes: increment(min) });
+  } else {
+    await setDoc(dayRef, { pointsEarned: 0, gamingMinutes: min });
+  }
+}
+
 window.logGaming = async () => {
   let game = document.getElementById('game-select').value;
   if (game === 'Inna') game = document.getElementById('game-custom').value.trim();
@@ -163,10 +206,7 @@ window.logGaming = async () => {
     queueOfflineDraft('gaming',
       i18next.t('offline.sumGaming', { game, min, interpolation: { escapeValue: false } }),
       { game, minutes: min, date });
-    document.getElementById('game-select').value = '';
-    document.getElementById('game-minutes').value = '';
-    document.getElementById('game-custom').value = '';
-    document.getElementById('game-custom-wrap').style.display = 'none';
+    resetGamingForm();
     return;
   }
 
@@ -183,27 +223,14 @@ window.logGaming = async () => {
       return;
     }
 
-    await addDoc(collection(db, 'users', currentUser.uid, 'gamingSessions'), {
-      game, duration: min, date, timestamp: new Date()
-    });
-
-    if (daySnap.exists()) {
-      await updateDoc(dayRef, { gamingMinutes: increment(min) });
-    } else {
-      await setDoc(dayRef, { pointsEarned: 0, gamingMinutes: min });
-    }
+    await persistGamingSession({ game, min, date, dayRef, daySnap });
 
     await loadDashboard();
     await loadGamingHistory();
     toast(i18next.t('logGaming.saved', { time: formatMinutes(min), game, interpolation: { escapeValue: false } }));
-    document.getElementById('game-select').value = '';
-    document.getElementById('game-minutes').value = '';
-    document.getElementById('game-custom').value = '';
-    document.getElementById('game-custom-wrap').style.display = 'none';
-    document.getElementById('game-minutes').value = '';
+    resetGamingForm();
   } catch (e) {
-    toast(i18next.t('shop.saveError'), 'error');
-    console.error(e);
+    reportSaveError(e);
   }
   btn.disabled = false;
 };
@@ -272,6 +299,62 @@ function resetShopForm() {
   document.querySelector('#page-shop .btn-danger').textContent = i18next.t('shop.register');
 }
 
+// Punkty za zakup: total maleje o `delta`, spentAllTime rośnie o tyle samo.
+// Przy edycji `delta` to RÓŻNICA względem poprzedniego kosztu (może być ujemna,
+// gdy zakup potaniał — wtedy punkty wracają).
+function applyPurchasePointsDelta(delta) {
+  return updateDoc(doc(db, 'users', currentUser.uid), {
+    'points.total': increment(-delta),
+    'points.spentAllTime': increment(delta),
+  });
+}
+
+// Wspólny epilog obu ścieżek: przeładuj profil, dashboard i listę zakupów,
+// pokaż komunikat i wyczyść formularz.
+async function refreshAfterPurchase(successMessage) {
+  await loadProfile();
+  await loadDashboard();
+  await loadPurchases();
+  toast(successMessage);
+  resetShopForm();
+}
+
+async function updateExistingPurchase({ desc, amount, pts, btn }) {
+  const ref = doc(db, 'users', currentUser.uid, 'purchases', editingPurchaseId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) { resetShopForm(); return; }
+  const diff = pts - (snap.data().pointsCost || 0);
+  const total = userProfile?.points?.total || 0;
+  if (diff > 0 && diff > total) return toast(i18next.t('shop.notEnough'), 'error');
+
+  btn.disabled = true;
+  try {
+    await updateDoc(ref, { description: desc, amount, pointsCost: pts });
+    await applyPurchasePointsDelta(diff);
+    await refreshAfterPurchase(i18next.t('shop.updated'));
+  } catch (e) {
+    reportSaveError(e);
+  }
+  btn.disabled = false;
+}
+
+async function createPurchase({ desc, amount, pts, btn }) {
+  const total = userProfile?.points?.total || 0;
+  if (pts > total) return toast(i18next.t('shop.notEnough'), 'error');
+
+  btn.disabled = true;
+  try {
+    await addDoc(collection(db, 'users', currentUser.uid, 'purchases'), {
+      description: desc, amount, pointsCost: pts, timestamp: new Date()
+    });
+    await applyPurchasePointsDelta(pts);
+    await refreshAfterPurchase(i18next.t('shop.registered', { pts }));
+  } catch (e) {
+    reportSaveError(e);
+  }
+  btn.disabled = false;
+}
+
 window.logPurchase = async () => {
   const desc = document.getElementById('shop-desc').value.trim();
   const amount = parseFloat(document.getElementById('shop-amount').value);
@@ -283,57 +366,10 @@ window.logPurchase = async () => {
   const btn = document.querySelector('#page-shop .btn-danger');
 
   if (editingPurchaseId) {
-    const ref = doc(db, 'users', currentUser.uid, 'purchases', editingPurchaseId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) { resetShopForm(); return; }
-    const diff = pts - (snap.data().pointsCost || 0);
-    const total = userProfile?.points?.total || 0;
-    if (diff > 0 && diff > total) return toast(i18next.t('shop.notEnough'), 'error');
-
-    btn.disabled = true;
-    try {
-      await updateDoc(ref, { description: desc, amount, pointsCost: pts });
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        'points.total': increment(-diff),
-        'points.spentAllTime': increment(diff),
-      });
-      await loadProfile();
-      await loadDashboard();
-      await loadPurchases();
-      toast(i18next.t('shop.updated'));
-      resetShopForm();
-    } catch (e) {
-      toast(i18next.t('shop.saveError'), 'error');
-      console.error(e);
-    }
-    btn.disabled = false;
-    return;
+    await updateExistingPurchase({ desc, amount, pts, btn });
+  } else {
+    await createPurchase({ desc, amount, pts, btn });
   }
-
-  const total = userProfile?.points?.total || 0;
-  if (pts > total) return toast(i18next.t('shop.notEnough'), 'error');
-
-  btn.disabled = true;
-  try {
-    await addDoc(collection(db, 'users', currentUser.uid, 'purchases'), {
-      description: desc, amount, pointsCost: pts, timestamp: new Date()
-    });
-
-    await updateDoc(doc(db, 'users', currentUser.uid), {
-      'points.total': increment(-pts),
-      'points.spentAllTime': increment(pts)
-    });
-
-    await loadProfile();
-    await loadDashboard();
-    await loadPurchases();
-    toast(i18next.t('shop.registered', { pts }));
-    resetShopForm();
-  } catch (e) {
-    toast(i18next.t('shop.saveError'), 'error');
-    console.error(e);
-  }
-  btn.disabled = false;
 };
 
 window.editPurchase = async (id) => {
@@ -366,8 +402,7 @@ window.deletePurchase = async (id) => {
     await loadPurchases();
     toast(i18next.t('shop.deleted'));
   } catch (e) {
-    toast(i18next.t('shop.saveError'), 'error');
-    console.error(e);
+    reportSaveError(e);
   }
 };
 

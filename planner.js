@@ -7,10 +7,11 @@ import { XP_PER_LEVEL, levelTitle, loadDashboard, revertActivityPoints } from ".
 // przeglądania dawnych dni (świadomie: patrz plan). Każde zadanie to jeden
 // dokument w users/{uid}/plannerTasks. Ukończenie zadania NIE jest osobnym
 // systemem punktów — tworzy zwykły wpis w users/{uid}/activities, dokładnie
-// tak jak window.logActivity, więc trafia też do Historii/Statystyk i do
-// tego samego salda (points.total/earnedAllTime), z tym samym dziennym
-// limitem (getTodayPts/getDailyLimit). Odznaczenie cofa to przez
-// revertActivityPoints (patrz przy window.deleteActivity) — bez modala
+// tak jak window.logActivity (activities.js), więc trafia też do
+// Historii/Statystyk i do tego samego salda (points.total/earnedAllTime),
+// z tym samym dziennym limitem (getTodayPts/getDailyLimit z core.js).
+// Odznaczenie cofa to przez revertActivityPoints — wspólne z
+// window.deleteActivity, oba w dashboard.js — bez modala
 // potwierdzenia, bo odznaczenie checkboxa ma być natychmiastowe.
 let plannerTasks = [];
 let plannerEditingId = null;      // id edytowanego zadania w sheet, null = tryb dodawania
@@ -284,7 +285,7 @@ async function markPlannerTaskDone(task) {
 }
 
 // Odznaczenie = cofnięcie dokładnie tego co markPlannerTaskDone przyznał
-// (revertActivityPoints, współdzielone z window.deleteActivity) + usunięcie
+// (revertActivityPoints z dashboard.js, współdzielone z window.deleteActivity) + usunięcie
 // wpisu z activities/Historii — bez modala potwierdzenia (checkbox, nie delete).
 async function unmarkPlannerTaskDone(task) {
   try {

@@ -266,61 +266,90 @@ export function renderLevel(xp) {
 }
 
 // ── Streak ────────────────────────────────────────────
+const streakDayKey = (date) => date.toISOString().split('T')[0];
+
+// Dni, w których cokolwiek zarobiono — tylko one podtrzymują serię.
+async function fetchStreakActiveDays() {
+  const snap = await getDocs(collection(db, 'users', currentUser.uid, 'dailyLog'));
+  const activeDays = new Set();
+  snap.forEach(d => { if ((d.data().pointsEarned || 0) > 0) activeDays.add(d.id); });
+  return activeDays;
+}
+
+// "Zamrożenie" serii przysługuje raz na 7 dni i pozwala przeskoczyć JEDNĄ lukę.
+function isStreakFreezeAvailable() {
+  const lastFreeze   = userProfile.streakFreezeLastUsed;
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return !lastFreeze || new Date(lastFreeze) < sevenDaysAgo;
+}
+
+// Zapis "zużyto zamrożenie" celowo BEZ await — seria ma się wyrenderować od
+// razu, a utrwalenie daty może dojechać w tle.
+function consumeStreakFreeze() {
+  updateDoc(doc(db, 'users', currentUser.uid), { streakFreezeLastUsed: todayStr() });
+  userProfile.streakFreezeLastUsed = todayStr();
+}
+
+// Cofamy się dzień po dniu od dziś (albo od wczoraj, jeśli dziś jeszcze nic nie
+// zarobiono — trwająca seria nie może się zerwać o poranku) aż do pierwszej
+// luki, którą wolno przeskoczyć najwyżej raz, kosztem zamrożenia.
+function calculateStreakDays(activeDays, freezeAvailable) {
+  let streak = 0, freezeUsedNow = false;
+  const cursor = new Date();
+  if (!activeDays.has(streakDayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+
+  while (true) {
+    if (activeDays.has(streakDayKey(cursor))) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else if (!freezeUsedNow && freezeAvailable && streak > 0) {
+      freezeUsedNow = true;
+      cursor.setDate(cursor.getDate() - 1);
+      consumeStreakFreeze();
+    } else {
+      break;
+    }
+  }
+  return { streak, freezeUsedNow };
+}
+
+function renderStreakBadge(badge, streak) {
+  if (streak > 0) {
+    document.getElementById('dash-streak-num').textContent = streak;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Kolory na sztywno (biały/półprzezroczysty biały), bo ten element zawsze siedzi
+// na kolorowej karcie salda — var(--accent)/var(--text2) bywają ciemne (np. Apple)
+// i stają się nieczytelne na tle gradientu, tak jak wcześniej .balance-amount.
+function renderStreakFreezeHint(freezeEl, { freezeUsedNow, freezeAvailable, streak }) {
+  if (!freezeEl) return;
+  if (freezeUsedNow) {
+    freezeEl.textContent = i18next.t('dashboard.freezeUsed');
+    freezeEl.style.color = '#fff';
+    freezeEl.style.display = 'block';
+  } else if (freezeAvailable && streak > 0) {
+    freezeEl.textContent = i18next.t('dashboard.freezeAvailable');
+    freezeEl.style.color = 'rgba(255,255,255,.7)';
+    freezeEl.style.display = 'block';
+  } else {
+    freezeEl.style.display = 'none';
+  }
+}
+
 async function renderStreak() {
   const badge    = document.getElementById('dash-streak');
   const freezeEl = document.getElementById('dash-freeze');
   try {
-    const snap = await getDocs(collection(db, 'users', currentUser.uid, 'dailyLog'));
-    const activeDays = new Set();
-    snap.forEach(d => { if ((d.data().pointsEarned || 0) > 0) activeDays.add(d.id); });
+    const activeDays = await fetchStreakActiveDays();
+    const freezeAvailable = isStreakFreezeAvailable();
+    const { streak, freezeUsedNow } = calculateStreakDays(activeDays, freezeAvailable);
 
-    const dayKey = (date) => date.toISOString().split('T')[0];
-
-    const lastFreeze   = userProfile.streakFreezeLastUsed;
-    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const freezeAvailable = !lastFreeze || new Date(lastFreeze) < sevenDaysAgo;
-
-    let streak = 0, freezeUsedNow = false;
-    const cursor = new Date();
-    if (!activeDays.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
-
-    while (true) {
-      if (activeDays.has(dayKey(cursor))) {
-        streak++;
-        cursor.setDate(cursor.getDate() - 1);
-      } else if (!freezeUsedNow && freezeAvailable && streak > 0) {
-        freezeUsedNow = true;
-        cursor.setDate(cursor.getDate() - 1);
-        updateDoc(doc(db, 'users', currentUser.uid), { streakFreezeLastUsed: todayStr() });
-        userProfile.streakFreezeLastUsed = todayStr();
-      } else {
-        break;
-      }
-    }
-
-    if (streak > 0) {
-      document.getElementById('dash-streak-num').textContent = streak;
-      badge.style.display = 'block';
-    } else {
-      badge.style.display = 'none';
-    }
-
-    if (freezeEl) {
-      // Kolory na sztywno (biały/półprzezroczysty biały), bo ten element zawsze siedzi
-      // na kolorowej karcie salda — var(--accent)/var(--text2) bywają ciemne (np. Apple)
-      // i stają się nieczytelne na tle gradientu, tak jak wcześniej .balance-amount.
-      if (freezeUsedNow) {
-        freezeEl.textContent = i18next.t('dashboard.freezeUsed');
-        freezeEl.style.color = '#fff';
-        freezeEl.style.display = 'block';
-      } else if (freezeAvailable && streak > 0) {
-        freezeEl.textContent = i18next.t('dashboard.freezeAvailable');
-        freezeEl.style.color = 'rgba(255,255,255,.7)';
-        freezeEl.style.display = 'block';
-      } else {
-        freezeEl.style.display = 'none';
-      }
-    }
+    renderStreakBadge(badge, streak);
+    renderStreakFreezeHint(freezeEl, { freezeUsedNow, freezeAvailable, streak });
 
     return streak;
   } catch (e) {

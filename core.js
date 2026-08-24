@@ -277,7 +277,7 @@ onAuthStateChanged(auth, async user => {
   applyAccountModeVisibility();
 
   // Ankieta personalizacji — tylko raz, przed pierwszym renderem Dashboardu
-  // z prawdziwym zestawem modułów (patrz komentarz przy openOnboarding).
+  // z prawdziwym zestawem modułów (patrz komentarz przy openOnboarding w settings.js).
   if (userProfile.enabledModules === undefined) {
     await openOnboarding();
   }

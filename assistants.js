@@ -5,7 +5,7 @@ import { loadPlanner } from "./planner.js";
 
 // ── "Siri-ous AI" — żartobliwy moduł "na chwilę" ────────
 // Cały blok jest celowo samodzielny (patrz komentarz przy .aic-shell w
-// <style> i przy MODULE_REGISTRY) — bez Firestore, bez backendu, tylko
+// <style> w app.html i przy MODULE_REGISTRY w core.js) — bez Firestore, bez backendu, tylko
 // localStorage, żeby usunięcie później było trywialne. Odpowiedzi są
 // TYLKO po polsku (świadoma decyzja — to tymczasowa żartobliwa funkcja,
 // nie warto tłumaczyć 80+ jednolinijkowców na angielski).
@@ -359,8 +359,8 @@ window.sendAicMessage = () => {
 // komentarz w sendExusMessage. Wiadomości "chat" idą do aiAssistantChat
 // (conversationId spina je w jedną rozmowę po stronie backendu); pasek
 // limitu tokenów odświeżamy osobnym wywołaniem aiAssistantPing po każdej
-// wymianie, bo żadna z powyższych funkcji go nie zwraca. httpsCallable/
-// functions pochodzą z importu firebase-functions.js na górze pliku.
+// wymianie, bo żadna z powyższych funkcji go nie zwraca. httpsCallable jest
+// importowane z firebase-functions.js, a instancja `functions` z core.js.
 const EXUS_HISTORY_KEY = 'lifexp-exus-history';
 const EXUS_CONV_KEY = 'lifexp-exus-conversation-id';
 const AICHAT_ACTIVE_KEY = 'lifexp-aichat-active';
@@ -565,6 +565,77 @@ window.switchAiAssistant = (which) => {
   if (exusPill) exusPill.classList.toggle('active', which === 'exus');
 };
 
+// Bąbelek "..." pokazywany na czas oczekiwania na backend. Zwraca funkcję,
+// która go usuwa — element ma unikalne id, więc równoległe wywołania się nie
+// pozjadają.
+function exusShowTyping() {
+  const el = document.getElementById('exus-messages');
+  const typingId = 'exus-typing-' + Date.now();
+  el.insertAdjacentHTML('beforeend',
+    `<div class="exus-row ai" id="${typingId}"><div class="exus-bubble exus-typing"><span></span><span></span><span></span></div></div>`);
+  el.scrollTop = el.scrollHeight;
+  return () => {
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+  };
+}
+
+// Zwykła rozmowa: dopiero tutaj wołamy aiAssistantChat. conversationId
+// pomijamy przy pierwszej wiadomości nowej rozmowy — backend sam ją wtedy
+// zakłada i zwraca świeże id w odpowiedzi.
+async function exusRequestChatReply(text) {
+  const chat = httpsCallable(functions, 'aiAssistantChat');
+  const payload = { message: text };
+  if (exusConversationId) payload.conversationId = exusConversationId;
+  const res = await chat(payload);
+  const d = res.data || {};
+  if (d.conversationId) {
+    exusConversationId = d.conversationId;
+    exusSaveConversationId();
+  }
+  return { role: 'ai', text: d.reply || '(brak odpowiedzi)' };
+}
+
+// Każda wiadomość usera idzie NAJPIERW do aiClassifyIntent, które samo
+// decyduje co to jest: prośba o zadanie do Planera (intent:"task"),
+// prośba o cel na dashboardzie (intent:"goal"), czy zwykła rozmowa
+// (intent:"chat"). Dla "task"/"goal" pokazujemy odpowiednią kartę
+// propozycji i aiAssistantChat wcale nie jest wołane (patrz
+// exusRenderProposalCard/exusRenderGoalProposalCard niżej). Dla "chat"
+// z dodatkowym polem `note` (np. limit 3 celów już osiągnięty) — samo
+// `note` jako wiadomość systemowa, bez wołania aiAssistantChat. Zwykłe
+// "chat" bez `note` to dokładnie ta sama ścieżka co wcześniej.
+async function exusResolveResponse(text) {
+  const classify = httpsCallable(functions, 'aiClassifyIntent');
+  const classifyRes = await classify({ message: text });
+  const cd = classifyRes.data || {};
+
+  if (cd.intent === 'task' && cd.proposal) {
+    return { role: 'proposal', id: 'prop-' + Date.now(), proposal: cd.proposal, status: 'pending' };
+  }
+  if (cd.intent === 'goal' && cd.proposal) {
+    return { role: 'goal-proposal', id: 'goalprop-' + Date.now(), proposal: cd.proposal, status: 'pending' };
+  }
+  if (cd.note) {
+    return { role: 'system', text: cd.note };
+  }
+  return exusRequestChatReply(text);
+}
+
+// Żadne z wywołań obsługujących wiadomość nie zwraca danych licznika, więc
+// pasek limitu odświeżamy osobnym wywołaniem aiAssistantPing — kolejne
+// wywołanie backendu na wiadomość, akceptowalne, bo priorytetem jest
+// zawsze aktualny wskaźnik. Błąd tego wywołania nie może zepsuć już
+// wyświetlonej odpowiedzi/karty, więc łapiemy go osobno i po cichu
+// pomijamy (pasek po prostu zostaje przy starej wartości).
+async function exusRefreshLimitBar() {
+  try {
+    const ping = httpsCallable(functions, 'aiAssistantPing');
+    const res = await ping();
+    exusUpdateLimitBar(res.data || {});
+  } catch (_) {}
+}
+
 window.sendExusMessage = async () => {
   const input = document.getElementById('exus-input');
   const text = input.value.trim();
@@ -574,53 +645,16 @@ window.sendExusMessage = async () => {
   exusRenderMessages(true);
   input.value = '';
 
-  const el = document.getElementById('exus-messages');
-  const typingId = 'exus-typing-' + Date.now();
-  el.insertAdjacentHTML('beforeend',
-    `<div class="exus-row ai" id="${typingId}"><div class="exus-bubble exus-typing"><span></span><span></span><span></span></div></div>`);
-  el.scrollTop = el.scrollHeight;
+  const removeTyping = exusShowTyping();
 
   let newMessage;
   try {
-    // Każda wiadomość usera idzie NAJPIERW do aiClassifyIntent, które samo
-    // decyduje co to jest: prośba o zadanie do Planera (intent:"task"),
-    // prośba o cel na dashboardzie (intent:"goal"), czy zwykła rozmowa
-    // (intent:"chat"). Dla "task"/"goal" pokazujemy odpowiednią kartę
-    // propozycji i aiAssistantChat wcale nie jest wołane (patrz
-    // exusRenderProposalCard/exusRenderGoalProposalCard niżej). Dla "chat"
-    // z dodatkowym polem `note` (np. limit 3 celów już osiągnięty) — samo
-    // `note` jako wiadomość systemowa, bez wołania aiAssistantChat. Zwykłe
-    // "chat" bez `note` to dokładnie ta sama ścieżka co wcześniej.
-    const classify = httpsCallable(functions, 'aiClassifyIntent');
-    const classifyRes = await classify({ message: text });
-    const cd = classifyRes.data || {};
-
-    if (cd.intent === 'task' && cd.proposal) {
-      newMessage = { role: 'proposal', id: 'prop-' + Date.now(), proposal: cd.proposal, status: 'pending' };
-    } else if (cd.intent === 'goal' && cd.proposal) {
-      newMessage = { role: 'goal-proposal', id: 'goalprop-' + Date.now(), proposal: cd.proposal, status: 'pending' };
-    } else if (cd.note) {
-      newMessage = { role: 'system', text: cd.note };
-    } else {
-      const chat = httpsCallable(functions, 'aiAssistantChat');
-      const payload = { message: text };
-      // conversationId pomijamy przy pierwszej wiadomości nowej rozmowy —
-      // backend sam ją wtedy zakłada i zwraca świeże id w odpowiedzi.
-      if (exusConversationId) payload.conversationId = exusConversationId;
-      const res = await chat(payload);
-      const d = res.data || {};
-      if (d.conversationId) {
-        exusConversationId = d.conversationId;
-        exusSaveConversationId();
-      }
-      newMessage = { role: 'ai', text: d.reply || '(brak odpowiedzi)' };
-    }
+    newMessage = await exusResolveResponse(text);
   } catch (err) {
     newMessage = { role: 'system', text: err.message || err.code || 'Nieznany błąd połączenia z Ex-us.' };
   }
 
-  const typingEl = document.getElementById(typingId);
-  if (typingEl) typingEl.remove();
+  removeTyping();
   exusMessages.push(newMessage);
   exusSaveHistory();
   // Odpowiedzi AI mogą zawierać Markdown — daj bibliotekom (już ładowanym
@@ -629,17 +663,7 @@ window.sendExusMessage = async () => {
   if (newMessage.role === 'ai') await exusEnsureMarkdownLibs();
   exusRenderMessages(true);
 
-  // Żadne z powyższych wywołań nie zwraca danych licznika, więc pasek
-  // limitu odświeżamy osobnym wywołaniem aiAssistantPing — kolejne
-  // wywołanie backendu na wiadomość, akceptowalne, bo priorytetem jest
-  // zawsze aktualny wskaźnik. Błąd tego wywołania nie może zepsuć już
-  // wyświetlonej odpowiedzi/karty, więc łapiemy go osobno i po cichu
-  // pomijamy (pasek po prostu zostaje przy starej wartości).
-  try {
-    const ping = httpsCallable(functions, 'aiAssistantPing');
-    const res = await ping();
-    exusUpdateLimitBar(res.data || {});
-  } catch (_) {}
+  await exusRefreshLimitBar();
 };
 
 // Zatwierdzenie karty propozycji zadania — woła aiConfirmTask z DOKŁADNIE

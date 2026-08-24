@@ -46,8 +46,8 @@ let choreTab = 'current';     // 'current' | 'prev'
 let choreSelectedDay = null;  // dateISO rozwiniętego dnia
 let chorePicking = false;
 
-// monthLabelLocale() jest zdefiniowana niżej (sekcja Money) — reużywana też tutaj,
-// deklaracje function są hoistowane więc kolejność w pliku nie ma znaczenia.
+// monthLabelLocale() mieszka w core.js (importowana na górze pliku) — ten sam
+// format "Miesiąc rok" reużywają obowiązki i Money, więc jest wspólnym helperem.
 const monthLabel = (mk) => monthLabelLocale(mk);
 const selectedMonthKey = () => { const { cur, prev } = monthKeys(); return choreTab === 'current' ? cur : prev; };
 function syncChoreTabs() {

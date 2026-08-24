@@ -1,6 +1,13 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { confirmDialog, currentUser, db, escapeHtml, toast, todayStr, userProfile } from "./core.js";
 
+// Ten sam log + komunikat powtarza się w każdym handlerze zapisu w tym pliku;
+// trzymamy go lokalnie, bo treść komunikatu jest specyficzna dla tych ścieżek.
+function reportSaveError(e) {
+  console.error(e);
+  toast(i18next.t('shop.saveError'), 'error');
+}
+
 // ── Zgłaszanie błędów (Bug Reports) ───────────────────
 // Zgłoszenia trafiają do TOP-LEVEL kolekcji `bugReports` (nie pod users/{uid}),
 // bo panel admina (konto o emailu BUG_ADMIN_EMAIL) musi widzieć zgłoszenia
@@ -171,8 +178,7 @@ window.sendBugReply = async (id) => {
     const threadEl = document.getElementById(`bug-thread-${id}`);
     if (threadEl) threadEl.innerHTML = bugThreadHTML(r);
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
   inp.disabled = false;
   inp.focus();
@@ -297,8 +303,7 @@ export async function submitBugReport() {
     updateBugRateLimitUI();
     toast(i18next.t('bugReport.sent'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
   btn.disabled = false;
 }
@@ -400,8 +405,7 @@ window.addBugKeyword = async () => {
     renderBugKeywordsSettings();
     toast(i18next.t('bugReport.keywordAdded'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 };
 
@@ -413,8 +417,7 @@ window.deleteBugKeyword = async (i) => {
     renderBugKeywordsSettings();
     toast(i18next.t('bugReport.keywordDeleted'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 };
 

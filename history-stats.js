@@ -3,34 +3,40 @@ import { activityDefById, confirmDialog, currentUser, db, escapeHtml, formatMinu
 import { activityRowHTML, loadDashboard } from "./dashboard.js";
 
 // ── Stats section ─────────────────────────────────────
-export async function loadStatsSection() {
+// Dwa okna 7-dniowe: bieżący tydzień (dziś wstecz) i poprzedni (dni 7-13 wstecz).
+// Oba liczone od TEGO SAMEGO `today`, żeby porównanie tydzień-do-tygodnia nie
+// rozjechało się przy wywołaniu tuż przed północą.
+function statsDayWindows() {
   const today = new Date();
+  const isoDaysAgo = (n) => {
+    const d = new Date(today); d.setDate(d.getDate() - n);
+    return d.toISOString().split('T')[0];
+  };
   const days7 = [], days14 = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    days7.push(d.toISOString().split('T')[0]);
-  }
-  for (let i = 13; i >= 7; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    days14.push(d.toISOString().split('T')[0]);
-  }
+  for (let i = 6; i >= 0; i--) days7.push(isoDaysAgo(i));
+  for (let i = 13; i >= 7; i--) days14.push(isoDaysAgo(i));
+  return { days7, days14 };
+}
 
+// Jeden równoległy odczyt dailyLog dla wszystkich 14 dni naraz. Dni bez wpisu
+// dostają wyzerowany rekord, żeby wywołujący nie musiał sprawdzać istnienia.
+async function fetchDailyLogs(days) {
   const dayDataMap = {};
-  await Promise.all([...days7, ...days14].map(async d => {
+  await Promise.all(days.map(async d => {
     const snap = await getDoc(doc(db, 'users', currentUser.uid, 'dailyLog', d));
     dayDataMap[d] = snap.exists() ? snap.data() : { pointsEarned: 0, gamingMinutes: 0 };
   }));
+  return dayDataMap;
+}
 
-  const thisWeekPts    = days7.reduce((s, d)  => s + (dayDataMap[d]?.pointsEarned  || 0), 0);
-  const lastWeekPts    = days14.reduce((s, d)  => s + (dayDataMap[d]?.pointsEarned  || 0), 0);
-  const thisWeekGaming = days7.reduce((s, d)  => s + (dayDataMap[d]?.gamingMinutes  || 0), 0);
-  const lastWeekGaming = days14.reduce((s, d) => s + (dayDataMap[d]?.gamingMinutes  || 0), 0);
+function sumDailyField(days, dayDataMap, field) {
+  return days.reduce((sum, d) => sum + (dayDataMap[d]?.[field] || 0), 0);
+}
 
-  // ── Wykres słupkowy ────────────────────────────────
+function renderStatsWeekChart(days7, dayDataMap) {
   const maxPts    = Math.max(...days7.map(d => dayDataMap[d]?.pointsEarned || 0), 1);
   const DAY_NAMES = i18next.t('dayNamesShort', { returnObjects: true });
-  const chartWrap = document.getElementById('week-chart-wrap');
-  chartWrap.innerHTML = days7.map(d => {
+  document.getElementById('week-chart-wrap').innerHTML = days7.map(d => {
     const pts    = dayDataMap[d]?.pointsEarned || 0;
     const pct    = Math.round((pts / maxPts) * 100);
     const label  = DAY_NAMES[new Date(d + 'T12:00:00').getDay()];
@@ -44,8 +50,12 @@ export async function loadStatsSection() {
         <span style="font-size:10px;color:${isToday ? 'var(--accent)' : 'var(--text2)'};font-weight:${isToday ? '700' : '400'}">${label}</span>
       </div>`;
   }).join('');
+}
 
-  // ── TOP aktywności ──────────────────────────────────
+// Ostatnie 50 aktywności zgrupowane po typie, posortowane malejąco po liczbie
+// wpisów. Zwraca pary [typeId, { count, pts }] — używane i przez listę TOP,
+// i przez ciekawostkę "ulubiona aktywność".
+async function fetchTopActivities() {
   const actSnap = await getDocs(query(
     collection(db, 'users', currentUser.uid, 'activities'),
     orderBy('timestamp', 'desc'), limit(50)
@@ -58,10 +68,12 @@ export async function loadStatsSection() {
     typeMap[type].count++;
     typeMap[type].pts += points || 0;
   });
-  const topActs = Object.entries(typeMap).sort((a, b) => b[1].count - a[1].count);
+  return Object.entries(typeMap).sort((a, b) => b[1].count - a[1].count);
+}
+
+function renderTopActivities(topActs) {
   const MEDALS = ['🥇','🥈','🥉','4.','5.'];
-  const topEl = document.getElementById('top-activities-list');
-  topEl.innerHTML = topActs.length === 0
+  document.getElementById('top-activities-list').innerHTML = topActs.length === 0
     ? `<p class="text2">${i18next.t('dashboard.noDataTop')}</p>`
     : topActs.slice(0, 5).map(([typeId, { count, pts }], i) => `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
@@ -70,8 +82,11 @@ export async function loadStatsSection() {
           <span style="font-size:12px;color:var(--text2);margin-right:4px">${count}×</span>
           <span style="font-weight:700;color:var(--accent2);font-family:var(--mono);font-size:13px">+${pts} ${i18next.t('logActivity.pkt')}</span>
         </div>`).join('');
+}
 
-  // ── Ciekawostki ─────────────────────────────────────
+// Lista gotowych zdań "💡 ..." — każdy blok dokłada zdanie tylko gdy ma o czym
+// mówić, więc pusta tablica oznacza "ukryj całą kartę ciekawostek".
+function buildStatsFacts({ days7, dayDataMap, topActs, thisWeekPts, lastWeekPts, thisWeekGaming, lastWeekGaming }) {
   const facts = [];
 
   if (topActs.length > 0) {
@@ -108,18 +123,41 @@ export async function loadStatsSection() {
     facts.push(i18next.t('facts.bestDay', { day: FULL_DAYS[new Date(bestDay + 'T12:00:00').getDay()], pts: bestPts }));
   }
 
+  return facts;
+}
+
+function renderStatsFacts(facts) {
   const factsCard = document.getElementById('facts-card');
   const factsEl   = document.getElementById('facts-list');
   if (facts.length === 0) {
     factsCard.style.display = 'none';
-  } else {
-    factsCard.style.display = 'block';
-    factsEl.innerHTML = facts.map(f => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:15px;flex-shrink:0;margin-top:1px">💡</span>
-        <p style="margin:0;font-size:14px;line-height:1.6;">${f}</p>
-      </div>`).join('');
+    return;
   }
+  factsCard.style.display = 'block';
+  factsEl.innerHTML = facts.map(f => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:15px;flex-shrink:0;margin-top:1px">💡</span>
+      <p style="margin:0;font-size:14px;line-height:1.6;">${f}</p>
+    </div>`).join('');
+}
+
+export async function loadStatsSection() {
+  const { days7, days14 } = statsDayWindows();
+  const dayDataMap = await fetchDailyLogs([...days7, ...days14]);
+
+  const thisWeekPts    = sumDailyField(days7,  dayDataMap, 'pointsEarned');
+  const lastWeekPts    = sumDailyField(days14, dayDataMap, 'pointsEarned');
+  const thisWeekGaming = sumDailyField(days7,  dayDataMap, 'gamingMinutes');
+  const lastWeekGaming = sumDailyField(days14, dayDataMap, 'gamingMinutes');
+
+  renderStatsWeekChart(days7, dayDataMap);
+
+  const topActs = await fetchTopActivities();
+  renderTopActivities(topActs);
+
+  renderStatsFacts(buildStatsFacts({
+    days7, dayDataMap, topActs, thisWeekPts, lastWeekPts, thisWeekGaming, lastWeekGaming,
+  }));
 }
 
 // ── History (full, paginated client-side) ─────────────

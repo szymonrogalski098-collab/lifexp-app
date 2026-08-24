@@ -3,6 +3,13 @@ import { animateCount, confettiBurst, confirmDialog, currentUser, dateISOLocal, 
 import { checkAchievements, renderGoal } from "./dashboard.js";
 import { queueOfflineDraft } from "./offline.js";
 
+// Ten sam log + komunikat powtarza się w każdym handlerze zapisu w tym pliku;
+// trzymamy go lokalnie, bo treść komunikatu jest specyficzna dla tych ścieżek.
+function reportSaveError(e) {
+  console.error(e);
+  toast(i18next.t('shop.saveError'), 'error');
+}
+
 // ── Money Tracker ─────────────────────────────────────
 // Osobny moduł budżetu (saldo PLN, transakcje, kategorie, pożyczki).
 // Money = prawdziwe pieniądze, punkty = osobne wyzwanie w grze — NIE ma już
@@ -208,28 +215,77 @@ export async function addMoneyCategoryByName(name) {
   return name;
 }
 
+function resetMoneyTxForm() {
+  document.getElementById('mtx-amount').value = '';
+  document.getElementById('mtx-note').value = '';
+  document.getElementById('mtx-newcat').value = '';
+  document.getElementById('mtx-newcat-wrap').style.display = 'none';
+  document.getElementById('mtx-category').value = '';
+  document.getElementById('money-tx-form').style.display = 'none';
+}
+
+// Offline → szkic. Saldo i ewentualna nowa kategoria weryfikowane/tworzone
+// dopiero przy zatwierdzeniu online (świeży stan serwera), więc nazwa nowej
+// kategorii idzie do kolejki jako zwykły tekst. Zwraca false, gdy nie ma czego
+// zakolejkować — wtedy formularz zostaje wypełniony, żeby dało się poprawić.
+function queueMoneyTxDraft(amount) {
+  let cat = document.getElementById('mtx-category').value;
+  if (cat === '__new__') cat = document.getElementById('mtx-newcat').value.trim();
+  if (!cat) { toast(i18next.t('money.chooseCategory'), 'error'); return false; }
+  queueOfflineDraft('money_tx',
+    i18next.t(moneyTxType === 'income' ? 'offline.sumMoneyIncome' : 'offline.sumMoneyExpense',
+      { amount: amount.toFixed(2).replace('.', ','), cat, interpolation: { escapeValue: false } }),
+    { txType: moneyTxType, amount, category: cat,
+      note: document.getElementById('mtx-note').value.trim(),
+      date: document.getElementById('mtx-date').value || todayStr() });
+  return true;
+}
+
+// Zwraca id kategorii, zakładając ją po drodze, gdy wybrano "nowa kategoria".
+// null = brak wyboru (komunikat już pokazany).
+async function resolveMoneyTxCategory() {
+  let category = document.getElementById('mtx-category').value;
+  if (category === '__new__') {
+    const newName = document.getElementById('mtx-newcat').value.trim();
+    if (!newName) { toast(i18next.t('money.chooseCategory'), 'error'); return null; }
+    category = await addMoneyCategoryByName(newName);
+  }
+  if (!category) { toast(i18next.t('money.chooseCategory'), 'error'); return null; }
+  return category;
+}
+
+// Zakup (wydatek) odejmuje też punkty LifeXP — jak dawny sklep. Clamp na 0
+// (saldo PLN jest bramką, punktów nie schodzimy poniżej zera). pointsCost
+// zapisujemy przy transakcji, żeby przy usunięciu dokładnie je zwrócić.
+function pointsCostForTx(amount) {
+  if (moneyTxType !== 'expense') return 0;
+  const wanted = Math.ceil(amount / rateGeneral());
+  return Math.min(wanted, userProfile.points?.total || 0);
+}
+
+async function persistMoneyTx({ amount, category, note, date, pointsCost }) {
+  await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
+    type: moneyTxType, amount, category, note, date, source: 'manual', pointsCost, createdAt: new Date(),
+  });
+  await updateMoneyCurrent(moneyTxType === 'income' ? amount : -amount);
+  if (moneyTxType === 'income') await bumpMoneyIncome(amount);
+}
+
+async function chargePointsForTx(pointsCost) {
+  await updateDoc(doc(db, 'users', currentUser.uid), {
+    'points.total': increment(-pointsCost),
+    'points.spentAllTime': increment(pointsCost),
+  });
+  await loadProfile();
+  refreshDashboardBalances();
+}
+
 window.saveMoneyTx = async () => {
   const amount = round2(parseFloat(document.getElementById('mtx-amount').value));
   if (!amount || amount <= 0) return toast(i18next.t('money.enterAmount'), 'error');
 
-  // Offline → szkic. Saldo i ewentualna nowa kategoria weryfikowane/tworzone
-  // dopiero przy zatwierdzeniu online (świeży stan serwera).
   if (!navigator.onLine) {
-    let cat = document.getElementById('mtx-category').value;
-    if (cat === '__new__') cat = document.getElementById('mtx-newcat').value.trim();
-    if (!cat) return toast(i18next.t('money.chooseCategory'), 'error');
-    queueOfflineDraft('money_tx',
-      i18next.t(moneyTxType === 'income' ? 'offline.sumMoneyIncome' : 'offline.sumMoneyExpense',
-        { amount: amount.toFixed(2).replace('.', ','), cat, interpolation: { escapeValue: false } }),
-      { txType: moneyTxType, amount, category: cat,
-        note: document.getElementById('mtx-note').value.trim(),
-        date: document.getElementById('mtx-date').value || todayStr() });
-    document.getElementById('mtx-amount').value = '';
-    document.getElementById('mtx-note').value = '';
-    document.getElementById('mtx-newcat').value = '';
-    document.getElementById('mtx-newcat-wrap').style.display = 'none';
-    document.getElementById('mtx-category').value = '';
-    document.getElementById('money-tx-form').style.display = 'none';
+    if (queueMoneyTxDraft(amount)) resetMoneyTxForm();
     return;
   }
 
@@ -238,13 +294,8 @@ window.saveMoneyTx = async () => {
     return toast(i18next.t('money.notEnoughBalance'), 'error');
   }
 
-  let category = document.getElementById('mtx-category').value;
-  if (category === '__new__') {
-    const newName = document.getElementById('mtx-newcat').value.trim();
-    if (!newName) return toast(i18next.t('money.chooseCategory'), 'error');
-    category = await addMoneyCategoryByName(newName);
-  }
-  if (!category) return toast(i18next.t('money.chooseCategory'), 'error');
+  const category = await resolveMoneyTxCategory();
+  if (!category) return;
 
   const note = document.getElementById('mtx-note').value.trim();
   const date = document.getElementById('mtx-date').value || todayStr();
@@ -252,43 +303,18 @@ window.saveMoneyTx = async () => {
   const btn = document.getElementById('mtx-save-btn');
   btn.disabled = true;
   try {
-    // Zakup (wydatek) odejmuje też punkty LifeXP — jak dawny sklep. Clamp na 0
-    // (saldo PLN jest bramką, punktów nie schodzimy poniżej zera). pointsCost
-    // zapisujemy przy transakcji, żeby przy usunięciu dokładnie je zwrócić.
-    let pointsCost = 0;
-    if (moneyTxType === 'expense') {
-      const wanted = Math.ceil(amount / rateGeneral());
-      pointsCost = Math.min(wanted, userProfile.points?.total || 0);
-    }
+    const pointsCost = pointsCostForTx(amount);
 
-    await addDoc(collection(db, 'users', currentUser.uid, 'moneyTransactions'), {
-      type: moneyTxType, amount, category, note, date, source: 'manual', pointsCost, createdAt: new Date(),
-    });
-    await updateMoneyCurrent(moneyTxType === 'income' ? amount : -amount);
-    if (moneyTxType === 'income') await bumpMoneyIncome(amount);
+    await persistMoneyTx({ amount, category, note, date, pointsCost });
+    if (pointsCost > 0) await chargePointsForTx(pointsCost);
 
-    if (pointsCost > 0) {
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        'points.total': increment(-pointsCost),
-        'points.spentAllTime': increment(pointsCost),
-      });
-      await loadProfile();
-      refreshDashboardBalances();
-    }
-
-    document.getElementById('mtx-amount').value = '';
-    document.getElementById('mtx-note').value = '';
-    document.getElementById('mtx-newcat').value = '';
-    document.getElementById('mtx-newcat-wrap').style.display = 'none';
-    document.getElementById('mtx-category').value = '';
-    document.getElementById('money-tx-form').style.display = 'none';
+    resetMoneyTxForm();
 
     await loadMoney();
     pulseEl(document.querySelector('#page-money .balance-card'));
     toast(pointsCost > 0 ? i18next.t('money.txSavedPts', { pts: pointsCost }) : i18next.t('money.txSaved'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
   btn.disabled = false;
 };
@@ -320,8 +346,7 @@ window.deleteMoneyTx = async (id) => {
     await loadMoney();
     toast(i18next.t('money.txDeleted'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 };
 
@@ -444,8 +469,7 @@ export async function saveLoan() {
     pulseEl(document.querySelector('#page-money .balance-card'));
     toast(i18next.t('loan.added'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 }
 window.saveLoan = saveLoan;
@@ -474,8 +498,7 @@ export async function saveLoanRepay(id) {
     if (done) { confettiBurst(); toast(i18next.t('loan.settled', { person: l.person, interpolation: { escapeValue: false } })); }
     else toast(i18next.t('loan.repaid', { amount: fmtMoney(amount), interpolation: { escapeValue: false } }));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 }
 window.saveLoanRepay = saveLoanRepay;
@@ -496,8 +519,7 @@ window.deleteLoan = async (id) => {
     await loadMoney();
     toast(i18next.t('loan.deleted'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 };
 
@@ -596,8 +618,7 @@ export async function saveMoneyLimit() {
     moneySettings = { ...(moneySettings || {}), monthlyLimit: limit, currency: 'PLN' };
     toast(i18next.t('money.limitSaved'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 }
 window.saveMoneyLimit = saveMoneyLimit;
@@ -615,8 +636,7 @@ export async function addMoneyCategory() {
     renderMoneyCatSettings();
     toast(i18next.t('money.catAdded'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 }
 window.addMoneyCategory = addMoneyCategory;
@@ -629,8 +649,7 @@ window.deleteMoneyCategory = async (id) => {
     renderMoneyCatSettings();
     toast(i18next.t('money.catDeleted'));
   } catch (e) {
-    console.error(e);
-    toast(i18next.t('shop.saveError'), 'error');
+    reportSaveError(e);
   }
 };
 
