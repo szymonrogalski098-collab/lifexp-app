@@ -1,7 +1,6 @@
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
 import { activityDefById, confirmDialog, escapeHtml, functions, loadProfile } from "./core.js";
 import { renderGoal } from "./dashboard.js";
-import { loadPlanner } from "./planner.js";
 
 // ── "Siri-ous AI" — żartobliwy moduł "na chwilę" ────────
 // Cały blok jest celowo samodzielny (patrz komentarz przy .aic-shell w
@@ -687,12 +686,9 @@ window.exusConfirmProposal = async (id) => {
     exusSaveHistory();
     exusRenderMessages(true);
 
-    // Jeśli Planer dnia jest akurat otwarty (ta sama zakładka/strona co
-    // czat nie istnieje — to osobna strona apki), odśwież jego listę
-    // zadań, żeby nowo dodane od razu było widoczne bez ręcznego wejścia.
-    if (document.getElementById('page-planner')?.classList.contains('active')) {
-      await loadPlanner();
-    }
+    // Planer dnia został usunięty razem z modułem — nie ma już widoku, który
+    // dałoby się tu odświeżyć. Cloud Function aiConfirmTask nadal zapisuje
+    // zadanie do kolekcji plannerTasks, ale nic go już nie wyświetla.
   } catch (err) {
     msg.status = 'pending';
     exusRenderMessages(false);

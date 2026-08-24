@@ -516,35 +516,78 @@
     .sheet-empty { text-align: center; padding: 30px 10px; color: var(--text2); }
 
     /* Strefa bezpieczeństwa pod FAB */
-    #page-planner { padding-bottom: 96px; }
+    #page-notes { padding-bottom: 96px; }
 
-    /* Oś czasu Planera dnia — 24 wiersze po PLANNER_ROW_H px (JS: PLANNER_ROW_H,
-       musi być zsynchronizowane z tą wartością), bloki zadań pozycjonowane
-       absolutnie wg godziny/czasu trwania. Kontener przewija się SAM W SOBIE
-       (nie cała strona), karta ma stały max-height. */
-    .planner-timeline-wrap { max-height: 62vh; overflow-y: auto; position: relative; }
-    .planner-timeline { position: relative; }
-    .planner-hour-row { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border); }
-    .planner-hour-label { position: absolute; left: 10px; top: -8px; font-size: 11px; color: var(--text2); background: var(--bg2); padding: 0 4px; }
-    .planner-now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--warn); z-index: 6; }
-    .planner-now-line::before { content: ''; position: absolute; left: 4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
-    .planner-block {
-      position: absolute; left: 60px; right: 10px; min-height: 30px;
-      border-radius: 10px; padding: 5px 10px; overflow: hidden; cursor: pointer;
-      border-left: 4px solid var(--accent2); background: var(--bg3);
-      transition: opacity .15s ease, transform .1s ease;
+    /* ── Notatnik ── */
+    .note-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+      cursor: pointer; user-select: none; -webkit-user-select: none;
+      -webkit-touch-callout: none;              /* bez systemowego menu przy long-pressie */
+      transition: background .12s ease;
     }
-    .planner-block:active { transform: scale(.98); }
-    .planner-block.done { opacity: .5; }
-    .planner-block .pb-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .planner-block.done .pb-title { text-decoration: line-through; }
-    .planner-block .pb-meta { font-size: 11px; color: var(--text2); display: flex; gap: 6px; align-items: center; }
-    .planner-block .pb-meta .pb-pts { font-family: var(--mono); color: var(--accent2); font-weight: 700; }
-    .planner-block .pb-edit {
-      position: absolute; top: 2px; right: 4px; font-size: 13px; opacity: .55;
-      padding: 5px; line-height: 1;
+    .note-item:last-child { border-bottom: none; }
+    .note-item:active { background: var(--bg3); }
+    .note-item .ni-main { flex: 1; min-width: 0; }
+    .note-item .ni-title {
+      font-size: 14px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .planner-empty { text-align: center; padding: 36px 20px; }
+    .note-item .ni-date { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .note-dots {
+      flex: none; background: none; border: none; color: var(--text2);
+      font-size: 18px; line-height: 1; padding: 6px 8px; cursor: pointer; border-radius: 8px;
+    }
+    .note-dots:hover { background: var(--bg3); color: var(--text); }
+
+    /* Edytor notatki — przycisk Zapisz w LEWYM górnym rogu (brak autosave). */
+    .note-editor-bar { display: flex; gap: 10px; margin-bottom: 14px; }
+    .note-editor-bar .spacer { flex: 1; }
+    #note-content {
+      width: 100%; min-height: 46vh; resize: vertical;
+      font-family: inherit; font-size: 14px; line-height: 1.6;
+    }
+
+    /* ── Zadania + budowa PC ──
+       Desktop: lista po lewej, widok builda po prawej. Mobile: stack.
+       Prawa kolumna jest CELOWO osobnym kontenerem (#pcbuild-view) — Część 5
+       zakłada podmianę tego widoku na 3D bez ruszania mechaniki punktów. */
+    .todos-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    @media (min-width: 900px) {
+      .todos-layout { grid-template-columns: minmax(0, 360px) minmax(0, 1fr); align-items: start; }
+    }
+    .todo-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+    }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-item .ti-main { flex: 1; min-width: 0; }
+    .todo-item .ti-text { font-size: 14px; line-height: 1.5; word-break: break-word; }
+    .todo-item.done .ti-text { text-decoration: line-through; opacity: .55; }
+    .todo-item .ti-meta { font-size: 11px; color: var(--text2); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .todo-size-tag {
+      font-family: var(--mono); font-weight: 700; color: var(--accent2);
+      border: 1px solid var(--border); border-radius: 6px; padding: 0 5px;
+    }
+    .todo-overdue { color: var(--warn); font-weight: 600; }
+    .todo-check {
+      flex: none; width: 26px; height: 26px; border-radius: 50%;
+      border: 2px solid var(--border); background: none; color: var(--accent2);
+      cursor: pointer; font-size: 14px; line-height: 1; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .todo-check.checked { border-color: var(--accent2); background: var(--accent2); color: #fff; cursor: default; }
+
+    /* Pasek postępu komponentu: 3 kwadraciki 0-3. */
+    .pc-comp { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .pc-comp:last-child { border-bottom: none; }
+    .pc-comp .pc-name { flex: 1; font-size: 13px; }
+    .pc-comp.current .pc-name { font-weight: 700; color: var(--accent); }
+    .pc-comp.locked .pc-name { opacity: .45; }
+    .pc-pips { display: flex; gap: 4px; }
+    .pc-pip { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg3); }
+    .pc-pip.filled { background: var(--accent2); border-color: var(--accent2); }
+    .pc-count { font-family: var(--mono); font-size: 12px; color: var(--text2); min-width: 26px; text-align: right; }
 
     /* Ankieta modułów + lista przełączników w Ustawieniach — ten sam wiersz
        "ikona + nazwa + opis + kontrolka" w obu miejscach. */
@@ -1732,27 +1775,36 @@
         <button class="fab" id="chore-fab" onclick="openChoreSheet()" aria-label="Dodaj obowiązek" data-i18n-aria="chores.addAria" style="display:none">+</button>
       </div>
 
-      <!-- PLANER DNIA -->
-      <div class="page" id="page-planner">
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-          <div>
-            <h2 style="margin-bottom:4px" data-i18n="planner.title">Planer dnia</h2>
-            <p class="text2" id="planner-date-label">—</p>
-          </div>
-          <div style="text-align:right">
-            <div class="text2" data-i18n="planner.earnedToday">Dziś zarobione</div>
-            <div class="chore-pln" id="planner-today-pts">0 pkt</div>
-          </div>
+      <!-- NOTATNIK — dwie podzakładki (Notatki / Zadania) w JEDNYM module -->
+      <div class="page" id="page-notes">
+        <h2 style="margin-bottom:14px" data-i18n="notes.title">Notatnik</h2>
+
+        <div class="segmented" id="notes-tabs" style="margin-bottom:16px">
+          <button class="seg-btn active" data-tab="notes" onclick="selectNotesTab('notes')" data-i18n="notes.tabNotes">Notatki</button>
+          <button class="seg-btn" data-tab="todos" onclick="selectNotesTab('todos')" data-i18n="notes.tabTodos">Zadania</button>
         </div>
 
-        <div class="card" style="padding:0;overflow:hidden">
-          <div class="planner-timeline-wrap" id="planner-timeline-wrap">
-            <div class="planner-timeline" id="planner-timeline" onclick="handlePlannerTimelineClick(event)"></div>
+        <!-- ── Podzakładka: Notatki ── -->
+        <div id="notes-pane-notes">
+          <div class="segmented" id="notes-view-tabs" style="margin-bottom:14px">
+            <button class="seg-btn active" data-view="active" onclick="selectNotesView('active')" data-i18n="notes.viewActive">Aktywne</button>
+            <button class="seg-btn" data-view="archived" onclick="selectNotesView('archived')" data-i18n="notes.viewArchived">Zarchiwizowane</button>
           </div>
-          <p class="text2 planner-empty" id="planner-empty" style="display:none" data-i18n="planner.empty">Brak zaplanowanych zadań na dziś. Tapnij + żeby dodać pierwsze.</p>
+          <div class="card" style="padding:0;overflow:hidden" id="notes-list"></div>
+          <button class="fab" id="notes-fab" onclick="openNoteEditor()" aria-label="Dodaj notatkę" data-i18n-aria="notes.addAria">+</button>
         </div>
 
-        <button class="fab" id="planner-fab" onclick="openPlannerSheet()" aria-label="Dodaj zadanie" data-i18n-aria="planner.addAria">+</button>
+        <!-- ── Podzakładka: Zadania (lista + widok budowy PC) ── -->
+        <div id="notes-pane-todos" style="display:none">
+          <div class="todos-layout">
+            <div>
+              <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="openTodoForm()" data-i18n="notes.newTodo">Nowe zadanie</button>
+              <div class="card" style="padding:0;overflow:hidden" id="todos-list"></div>
+            </div>
+            <!-- Widok builda — do podmiany na 3D w osobnym etapie. -->
+            <div class="card" id="pcbuild-view"></div>
+          </div>
+        </div>
       </div>
 
       <!-- SIRI-OUS AI — żartobliwy moduł "na chwilę" (patrz komentarz przy
@@ -2374,49 +2426,55 @@
     </div>
   </div>
 
-  <!-- Bottom-sheet dodawania/edycji zadania w Planerze dnia -->
-  <div class="sheet-backdrop" id="planner-sheet" onclick="if(event.target===this)closePlannerSheet()">
-    <div class="sheet">
-      <div class="sheet-handle-hit" onclick="closePlannerSheet()" role="button" aria-label="Zamknij" data-i18n-aria="planner.closeAria" style="cursor:pointer"><div class="sheet-handle"></div></div>
-      <h3 style="margin-bottom:14px" id="planner-sheet-title" data-i18n="planner.sheetTitleAdd">Nowe zadanie</h3>
-
+  <!-- Edytor notatki — Zapisz w lewym górnym rogu, BEZ autosave -->
+  <div class="modal-overlay" id="note-editor">
+    <div class="modal" style="max-width:620px;width:100%">
+      <div class="note-editor-bar">
+        <button class="btn-success" onclick="saveNote()" data-i18n="notes.save">Zapisz</button>
+        <div class="spacer"></div>
+        <button class="btn-secondary" onclick="closeNoteEditor()" data-i18n="notes.close">Zamknij</button>
+      </div>
       <div class="form-group">
-        <label data-i18n="planner.taskTitle">Co zaplanowałeś?</label>
-        <input type="text" id="planner-title" maxlength="60" placeholder="np. Odrobić matmę" data-i18n-placeholder="planner.taskTitlePh">
+        <input type="text" id="note-title" maxlength="80" placeholder="Tytuł" data-i18n-placeholder="notes.titlePh">
       </div>
+      <textarea id="note-content" placeholder="Napisz coś..." data-i18n-placeholder="notes.contentPh"></textarea>
+      <p class="text2" id="note-editor-hint" style="margin-top:8px;font-size:12px"></p>
+    </div>
+  </div>
 
-      <div class="segmented" id="planner-day-toggle">
-        <button type="button" class="seg-btn active" data-day="today" onclick="setPlannerDay('today')" data-i18n="planner.today">Dziś</button>
-        <button type="button" class="seg-btn" data-day="tomorrow" onclick="setPlannerDay('tomorrow')" data-i18n="planner.tomorrow">Jutro</button>
+  <!-- Menu notatki: trzy kropki (desktop) albo przytrzymanie (mobile) -->
+  <div class="modal-overlay" id="note-menu" onclick="if(event.target===this)closeNoteMenu()">
+    <div class="modal" style="max-width:300px">
+      <p id="note-menu-title" style="margin-bottom:16px;font-weight:600;text-align:center"></p>
+      <button class="btn-secondary" style="width:100%;margin-bottom:8px" id="note-menu-archive" onclick="noteMenuArchive()"></button>
+      <button class="btn-danger" style="width:100%;margin-bottom:8px" id="note-menu-delete" onclick="noteMenuDelete()"></button>
+      <button class="btn-secondary" style="width:100%" onclick="closeNoteMenu()" data-i18n="notes.menuCancel">Anuluj</button>
+    </div>
+  </div>
+
+  <!-- Formularz zadania: treść + termin + rozmiar (rozmiar WIDOCZNY, nie schowany) -->
+  <div class="modal-overlay" id="todo-form" onclick="if(event.target===this)closeTodoForm()">
+    <div class="modal" style="max-width:460px;width:100%">
+      <h3 style="margin-bottom:14px" id="todo-form-title" data-i18n="notes.newTodo">Nowe zadanie</h3>
+      <div class="form-group">
+        <label data-i18n="notes.todoText">Co jest do zrobienia?</label>
+        <textarea id="todo-text" rows="3" maxlength="500" placeholder="np. Dokończyć wypracowanie" data-i18n-placeholder="notes.todoTextPh"></textarea>
       </div>
-
-      <div class="form-row" style="margin-top:14px">
-        <div class="form-group">
-          <label data-i18n="planner.startTime">Godzina startu</label>
-          <input type="time" id="planner-time" onchange="updatePlannerPointsPreview()">
+      <div class="form-group">
+        <label data-i18n="notes.due">Termin</label>
+        <input type="date" id="todo-due">
+      </div>
+      <div class="form-group">
+        <label data-i18n="notes.size">Rozmiar</label>
+        <div class="segmented" id="todo-size-tabs">
+          <button type="button" class="seg-btn active" data-size="S" onclick="setTodoSize('S')" data-i18n="notes.sizeS">S · 1 kawałek</button>
+          <button type="button" class="seg-btn" data-size="M" onclick="setTodoSize('M')" data-i18n="notes.sizeM">M · 2 kawałki</button>
+          <button type="button" class="seg-btn" data-size="L" onclick="setTodoSize('L')" data-i18n="notes.sizeL">L · 3 kawałki</button>
         </div>
-        <div class="form-group">
-          <label data-i18n="logActivity.minutes">Czas (minuty)</label>
-          <input type="number" id="planner-duration" min="5" max="480" placeholder="np. 45" oninput="updatePlannerPointsPreview()">
-        </div>
       </div>
-
-      <div class="form-group">
-        <label data-i18n="logActivity.type">Rodzaj aktywności</label>
-        <select id="planner-type" onchange="updatePlannerPointsPreview()">
-          <option value="" data-i18n="logActivity.choose">— wybierz —</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label data-i18n="planner.points">Punkty za zadanie</label>
-        <input type="number" id="planner-points" min="0" max="999" placeholder="0" oninput="plannerPointsAutoFilled=false">
-        <p class="text2" id="planner-points-hint" style="margin-top:6px;font-size:12px"></p>
-      </div>
-
       <div style="display:flex;gap:10px">
-        <button class="btn-secondary" id="planner-delete-btn" style="display:none" onclick="deletePlannerTask()" data-i18n="common.delete">Usuń</button>
-        <button class="btn-success btn-full" style="flex:1" onclick="savePlannerTask()" data-i18n="planner.save">Zapisz zadanie</button>
+        <button class="btn-secondary" style="flex:1" onclick="closeTodoForm()" data-i18n="notes.menuCancel">Anuluj</button>
+        <button class="btn-success" style="flex:1" onclick="saveTodo()" data-i18n="notes.save">Zapisz</button>
       </div>
     </div>
   </div>

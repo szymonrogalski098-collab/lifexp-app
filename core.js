@@ -15,8 +15,8 @@ import { loadDashboard, renderAchievements, renderGoal, renderLevel } from "./da
 import { loadHistory, loadStats, loadStatsSection } from "./history-stats.js";
 import { I18N_RESOURCES } from "./i18n-resources.js";
 import { loadMoneySettingsUI, moneyBalance, renderMoney } from "./money.js";
+import { loadNotes } from "./notes.js";
 import { initOfflineWrappers, maybeShowOfflineReview, updateOfflineBanner } from "./offline.js";
-import { loadPlanner } from "./planner.js";
 import { applyAccountModeVisibility, initSettingsAccordion, initSettingsModule, openAccountModeStep, openOnboarding, renderActivityDefsSettings, renderChoreDefsSettings, renderGamesList, renderModuleSettings, renderNotifHours, renderNotifHoursInfo, updateNotifStatus, updateParentEmailUI, updateReportInfo } from "./settings.js";
 import { loadBroadcastsPage, maybeShowWhatsNew, renderBugHubNav, renderUpdateHistory, startBroadcastListener } from "./updates.js";
 
@@ -64,8 +64,8 @@ export const MODULE_REGISTRY = [
     ],
     dashboardActionButtons: ['log-activity', 'log-gaming', 'generator'],
     dashboardWidgets: ['week-chart-wrap', 'recent-list', 'top-activities-list', 'achievements-grid'] },
-  { id: 'planner', icon: 'ti-calendar-time', labelKey: 'nav.planner', descKey: 'modules.plannerDesc',
-    pages: [{ id: 'planner', icon: 'ti-calendar-time', labelKey: 'nav.planner', bottomNav: true }] },
+  { id: 'notes', icon: 'ti-notebook', labelKey: 'nav.notes', descKey: 'modules.notesDesc',
+    pages: [{ id: 'notes', icon: 'ti-notebook', labelKey: 'nav.notes', bottomNav: true }] },
   // Żartobliwy moduł "na chwilę" — patrz komentarz przy page-ai-chat.
   // bottomNav:true — boczna kolumna jest CAŁKOWICIE ukryta na telefonie
   // (.sidebar{display:none} poniżej 700px), więc bottomNav:false robiłby
@@ -533,7 +533,7 @@ window.showPage = (id) => {
   if (id === 'log-gaming') { updateGameSelect(); loadGamingHistory(); }
   if (id === 'history') loadHistory();
   if (id === 'chores') loadChores();
-  if (id === 'planner') loadPlanner();
+  if (id === 'notes') loadNotes();
   if (id === 'ai-chat') loadAiChat();
   if (id === 'games' && window.LifeXPGames) LifeXPGames.showMenu();
   if (id === 'settings') {
