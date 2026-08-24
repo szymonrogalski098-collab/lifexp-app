@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3e9be8"/>
+      <stop offset="1" stop-color="#3dd1c4"/>
+    </linearGradient>
+  </defs>
+  <!-- Zaokrąglony kafelek z gradientem niebieski → turkus. Pełne tło (maskable):
+       Android przycina ikonę do własnego kształtu, więc gradient sięga krawędzi. -->
+  <rect width="512" height="512" rx="114" ry="114" fill="url(#tile)"/>
+  <!-- Biała błyskawica w bezpiecznej strefie (środkowe ~80%), żeby maskowanie
+       na Androidzie nigdy nie obcięło jej czubków. -->
+  <path d="M310 90 L165 292 L243 292 L206 422 L352 218 L272 218 Z" fill="#ffffff"/>
+</svg>

@@ -51,7 +51,7 @@ async function waitForActivatedSW(page) {
   }, { timeout: 15000 });
 }
 
-const PRECACHE_FILES = ['style.css', 'manifest.json', 'icon.svg', 'games.js', 'index.html', 'app.html', 'verify.html', 'parent.html'];
+const PRECACHE_FILES = ['style.css', 'manifest.json', 'lifexp-logo.svg', 'icon-192.png', 'icon-512.png', 'games.js', 'index.html', 'app.html', 'verify.html', 'parent.html'];
 
 // `reg.active.state === 'activated'` is NOT a safe signal that precaching has
 // finished: on this environment, that state flips true while the install

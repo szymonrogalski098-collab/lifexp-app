@@ -18,8 +18,8 @@ messaging.onBackgroundMessage((payload) => {
   const n = payload.notification || {};
   self.registration.showNotification(n.title || 'LifeXP', {
     body: n.body || '',
-    icon: 'icon.svg',
-    badge: 'icon.svg',
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
   });
 });
 
@@ -33,8 +33,8 @@ self.addEventListener('notificationclick', (e) => {
 });
 
 // ── PWA app-shell cache ──
-const CACHE = 'lifexp-shell-v52';
-const STATIC = ['style.css', 'manifest.json', 'icon.svg', 'games.js'];
+const CACHE = 'lifexp-shell-v53';
+const STATIC = ['style.css', 'manifest.json', 'lifexp-logo.svg', 'icon-192.png', 'icon-512.png', 'games.js'];
 const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html', 'fps.html'];
 
 // Precache STATIC *i* HTML na starcie — bez tego HTML trafiał do cache TYLKO

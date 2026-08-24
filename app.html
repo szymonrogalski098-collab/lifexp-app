@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0e0f13">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LifeXP">
@@ -1161,6 +1161,43 @@
     }
     .exus-send:active { transform: scale(.9); }
     .exus-send:hover { box-shadow: 0 4px 16px rgba(0,0,0,.28); }
+
+    /* ── Ekran ładowania (eliminacja FOUC) ────────────────
+       Overlay siedzi w STATYCZNYM HTML i nie ma display:none, więc zasłania UI
+       od pierwszego malowania — zanim bootstrap w core.js pobierze profil i
+       pozna prawdziwy język oraz zestaw włączonych modułów. Tło to var(--bg),
+       które blokujący skrypt na górze <body> ustawił już przez klasę theme-*,
+       dzięki czemu ekran ładowania nie mignie przy motywie Apple/Gold.
+       Chowaniem steruje core.js (hideBootOverlay/showBootOverlay). */
+    #boot-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;            /* nad toastem (9999) i confetti (9998) */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      opacity: 1;
+      transition: opacity .2s ease;
+    }
+    /* W trakcie fade-outu overlay nie może przechwytywać kliknięć — pod spodem
+       może już być modal (wybór trybu konta / ankieta). */
+    #boot-overlay.hiding { opacity: 0; pointer-events: none; }
+    #boot-overlay[hidden] { display: none; }
+
+    #boot-overlay img {
+      width: 96px;
+      height: 96px;
+      animation: boot-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes boot-pulse {
+      0%, 100% { opacity: .55; transform: scale(.94); }
+      50%      { opacity: 1;   transform: scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-overlay { transition: none; }
+      #boot-overlay img { animation: none; opacity: 1; transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -1184,6 +1221,13 @@
       if (font && fontStacks[font]) document.body.style.setProperty('--font-user', fontStacks[font]);
     })();
   </script>
+  <!-- Ekran ładowania — MUSI być w statycznym HTML (nie dodawany z JS), inaczej
+       UI zdąży mignąć w złym języku i ze złym zestawem modułów. Bez tekstu,
+       bo w tym momencie nie znamy jeszcze języka użytkownika; alt="" bo to
+       dekoracja, a nie treść. Ukrywa go core.js po zakończeniu bootstrapu. -->
+  <div id="boot-overlay">
+    <img src="lifexp-logo.svg" alt="" width="96" height="96">
+  </div>
   <div class="app-layout">
     <!-- Sidebar -->
     <nav class="sidebar">

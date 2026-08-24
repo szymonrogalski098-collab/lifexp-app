@@ -243,9 +243,38 @@ function renderActivityTypeSelect() {
   if (current) sel.value = current;
 }
 
+// ── Ekran ładowania ───────────────────────────────────
+// Sam overlay jest w statycznym HTML app.html (widoczny od pierwszego
+// malowania) — tutaj tylko go chowamy i pokazujemy. Musi zniknąć w KAŻDEJ
+// ścieżce wyjścia z bootstrapu poniżej, łącznie z błędami i przekierowaniami,
+// inaczej użytkownik zostaje na wiecznym ekranie ładowania.
+let bootOverlayHideTimer = null;
+
+function hideBootOverlay() {
+  const el = document.getElementById('boot-overlay');
+  if (!el || el.hidden) return;
+  clearTimeout(bootOverlayHideTimer);
+  if (prefersReduced()) { el.hidden = true; return; }
+  el.classList.add('hiding');
+  bootOverlayHideTimer = setTimeout(() => {
+    el.hidden = true;
+    el.classList.remove('hiding');
+  }, 200);
+}
+
+// Ponowne pokazanie po modalu wymagającym interakcji (wybór trybu konta,
+// ankieta) — clearTimeout ubija fade-out w locie, gdyby jeszcze trwał.
+function showBootOverlay() {
+  const el = document.getElementById('boot-overlay');
+  if (!el) return;
+  clearTimeout(bootOverlayHideTimer);
+  el.classList.remove('hiding');
+  el.hidden = false;
+}
+
 // ── Auth ──────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
-  if (!user) { window.location.href = 'index.html'; return; }
+  if (!user) { hideBootOverlay(); window.location.href = 'index.html'; return; }
   currentUser = user;
 
   try {
@@ -254,6 +283,7 @@ onAuthStateChanged(auth, async user => {
     console.error('loadProfile failed:', e);
     document.getElementById('user-name').textContent = i18next.t('errors.connectionShort');
     toast(i18next.t('errors.connection'), 'error');
+    hideBootOverlay();
     return;
   }
 
@@ -263,6 +293,7 @@ onAuthStateChanged(auth, async user => {
       await updateDoc(doc(db, 'users', currentUser.uid), { emailVerified: true });
       userProfile.emailVerified = true;
     } else {
+      hideBootOverlay();
       window.location.href = 'verify.html';
       return;
     }
@@ -272,14 +303,18 @@ onAuthStateChanged(auth, async user => {
   // poniżej, więc odpala się raz dla KAŻDEGO konta (też istniejącego sprzed
   // tej funkcji), niezależnie od stanu enabledModules.
   if (userProfile.accountMode === undefined) {
+    hideBootOverlay();
     await openAccountModeStep();
+    showBootOverlay();
   }
   applyAccountModeVisibility();
 
   // Ankieta personalizacji — tylko raz, przed pierwszym renderem Dashboardu
   // z prawdziwym zestawem modułów (patrz komentarz przy openOnboarding w settings.js).
   if (userProfile.enabledModules === undefined) {
+    hideBootOverlay();
     await openOnboarding();
+    showBootOverlay();
   }
   renderModuleNav();
   applyModuleVisibility();
@@ -296,6 +331,11 @@ onAuthStateChanged(auth, async user => {
     console.error('loadDashboard failed:', e);
     toast(i18next.t('errors.loadFailed'), 'error');
   }
+
+  // Bootstrap skończony (również gdy loadActivityDefs/loadDashboard rzuciły —
+  // oba catch idą dalej, bez return) — zdejmij ekran ładowania, zanim pokażą
+  // się modale "Co nowego?" i przegląd szkiców offline.
+  hideBootOverlay();
 
   // Po załadowaniu apki — pokaż „Co nowego?" raz na nową wersję, potem odpal
   // NA ŻYWO nasłuch globalnych wiadomości (nie jednorazowy check — nowa wiadomość
