@@ -1174,8 +1174,10 @@
       inset: 0;
       z-index: 10000;            /* nad toastem (9999) i confetti (9998) */
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 24px;
       background: var(--bg);
       opacity: 1;
       transition: opacity .2s ease;
@@ -1185,18 +1187,35 @@
     #boot-overlay.hiding { opacity: 0; pointer-events: none; }
     #boot-overlay[hidden] { display: none; }
 
-    #boot-overlay img {
-      width: 96px;
-      height: 96px;
-      animation: boot-pulse 1.4s ease-in-out infinite;
+    /* Logo stoi nieruchomo — ruch niesie spinner poniżej. */
+    #boot-overlay img { width: 96px; height: 96px; }
+
+    .boot-spinner {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      animation: boot-spin .8s linear infinite;
+      cursor: pointer;
+      touch-action: manipulation;   /* bez 300ms opóźnienia po stuknięciu */
     }
-    @keyframes boot-pulse {
-      0%, 100% { opacity: .55; transform: scale(.94); }
-      50%      { opacity: 1;   transform: scale(1); }
+    /* Stuknięcie/przytrzymanie rozpędza spinner i przebarwia go na drugi
+       akcent. Celowo CZYSTY CSS, bez listenera w JS: splash ma reagować
+       zanim core.js w ogóle się wykona, a na Slow 3G to sekundy — czyli
+       dokładnie ten moment, w którym użytkownik patrzy na ekran i ma ochotę
+       w niego stuknąć. Listener podpięty z modułu przyszedłby za późno. */
+    .boot-spinner:active {
+      animation-duration: .15s;
+      border-top-color: var(--accent2);
     }
+    /* Nazwa z prefiksem boot-, żeby nie zajmować globalnie generycznego
+       `spin` — reszta apki może go jeszcze potrzebować pod własne animacje. */
+    @keyframes boot-spin { to { transform: rotate(360deg); } }
+
     @media (prefers-reduced-motion: reduce) {
       #boot-overlay { transition: none; }
-      #boot-overlay img { animation: none; opacity: 1; transform: none; }
+      .boot-spinner, .boot-spinner:active { animation: none; opacity: .5; }
     }
   </style>
 </head>
@@ -1227,6 +1246,7 @@
        dekoracja, a nie treść. Ukrywa go core.js po zakończeniu bootstrapu. -->
   <div id="boot-overlay">
     <img src="lifexp-logo.svg" alt="" width="96" height="96">
+    <div class="boot-spinner" aria-hidden="true"></div>
   </div>
   <div class="app-layout">
     <!-- Sidebar -->
