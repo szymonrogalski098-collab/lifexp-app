@@ -33,8 +33,13 @@ self.addEventListener('notificationclick', (e) => {
 });
 
 // ── PWA app-shell cache ──
-const CACHE = 'lifexp-shell-v53';
+const CACHE = 'lifexp-shell-v54';
 const STATIC = ['style.css', 'manifest.json', 'lifexp-logo.svg', 'icon-192.png', 'icon-512.png', 'games.js'];
+// Modele PC (Notatnik → Zadania). Kumulatywne: pc-N zawiera wszystkie
+// komponenty do N-tego włącznie. Same pliki są statyczne i cache-first jak
+// reszta STATIC, ale trzymamy je osobno, bo lista rośnie z etapami budowy.
+const PC_MODELS = ['assets/pc/pc-1.glb', 'assets/pc/pc-2.glb', 'assets/pc/pc-3.glb',
+                   'assets/pc/pc-4.glb', 'assets/pc/pc-5.glb'];
 const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html', 'fps.html'];
 
 // Precache STATIC *i* HTML na starcie — bez tego HTML trafiał do cache TYLKO
@@ -47,7 +52,7 @@ const HTML   = ['index.html', 'app.html', 'verify.html', 'parent.html', 'fps.htm
 // przekierować na app.html" w trybie samolotowym. `cache: 'reload'` pomija
 // zwykły cache HTTP przy pobieraniu (spójne z network-first HTML niżej) —
 // bez tego precache mógłby złapać starą, zbuforowaną przez przeglądarkę kopię.
-const PRECACHE = STATIC.concat(HTML);
+const PRECACHE = STATIC.concat(PC_MODELS).concat(HTML);
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

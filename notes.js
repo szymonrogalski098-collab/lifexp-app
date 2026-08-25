@@ -1,5 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { confirmDialog, currentUser, dateISOLocal, db, escapeHtml, toast, userProfile } from "./core.js";
+import { showPcViewer, stopPcViewer } from "./pc-viewer.js";
 
 // ── Notatnik: dwie podzakładki (Notatki + Zadania) w jednym module ──
 // Notatki i Zadania siedzą w jednym pliku, bo dzieli je tylko widok — obie
@@ -33,25 +34,15 @@ let todoSize = 'S';
 const PIECES_PER_COMPONENT = 3;
 const TODO_SIZE_PIECES = { S: 1, M: 2, L: 3 };
 
-// Obudowa i płyta główna ZAWSZE pierwsze i w tej kolejności; pozostałe cztery
-// losowane raz na użytkownika.
-const PC_FIXED_PREFIX = ['case', 'motherboard'];
-const PC_RANDOM_POOL  = ['gpu', 'cpu', 'psu', 'ram'];
-const PC_COMPONENT_COUNT = PC_FIXED_PREFIX.length + PC_RANDOM_POOL.length;
+// Kolejność budowy jest STAŁA i taka sama dla wszystkich — wcześniej cztery
+// ostatnie komponenty były losowane, ale modele 3D (pc-1..pc-6.glb) są
+// kumulatywne i zapieczone w tej jednej kolejności, więc losowanie
+// rozjeżdżałoby stan z tym, co widać na ekranie.
+const PC_COMPONENT_ORDER = ['case', 'motherboard', 'gpu', 'cpu', 'psu', 'ram'];
+const PC_COMPONENT_COUNT = PC_COMPONENT_ORDER.length;
 
-function shuffled(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// Świeży build — losowanie kolejności dzieje się TYLKO tutaj, a ensurePcBuild()
-// woła to dokładnie raz na użytkownika (patrz komentarz tam).
 function makePcBuild() {
-  const componentOrder = [...PC_FIXED_PREFIX, ...shuffled(PC_RANDOM_POOL)];
+  const componentOrder = [...PC_COMPONENT_ORDER];
   const progress = {};
   for (const c of componentOrder) progress[c] = 0;
   return { componentOrder, progress, currentComponentIndex: 0 };
@@ -103,15 +94,35 @@ async function savePcBuild(build) {
   await updateDoc(doc(db, 'users', currentUser.uid), { pcBuild: build });
 }
 
-// Losowanie kolejności odpala się przy PIERWSZYM zadaniu i tylko wtedy: jeśli
-// profil ma już pcBuild, zwracamy go bez zmian, więc kolejność jest stała na
-// zawsze dla danego konta.
+// Build zakłada się przy PIERWSZYM zadaniu i tylko wtedy: jeśli profil już go
+// ma, zwracamy bez zmian. Konta założone przed przejściem na stałą kolejność
+// zachowują swoją wylosowaną — patrz pcOrderMatchesModels() w pc-viewer.js.
 async function ensurePcBuild() {
   const existing = getPcBuild();
-  if (existing) return existing;
+  if (existing) return normalizePcOrder(existing);
   const build = makePcBuild();
   await savePcBuild(build);
   return build;
+}
+
+// Konta założone przed przejściem na stałą kolejność mają w profilu wylosowaną
+// kolejność czterech ostatnich komponentów. Modele pc-1..pc-6.glb są kumulatywne
+// i zapieczone w kolejności stałej, więc taki profil pokazywałby model
+// rozjechany ze swoim własnym postępem. Przestawiamy więc componentOrder na
+// stałą, ZACHOWUJĄC postęp każdego komponentu z osobna — nikt nie traci
+// kawałków, zmienia się tylko ich kolejność. currentComponentIndex liczymy od
+// nowa jako pierwszy komponent, który nie stoi na 3/3.
+function normalizePcOrder(build) {
+  const already = build.componentOrder.every((c, i) => c === PC_COMPONENT_ORDER[i]);
+  if (already) return build;
+
+  const fixed = { componentOrder: [...PC_COMPONENT_ORDER], progress: {}, currentComponentIndex: 0 };
+  for (const c of PC_COMPONENT_ORDER) fixed.progress[c] = build.progress[c] || 0;
+  fixed.currentComponentIndex = PC_COMPONENT_ORDER.findIndex(c => fixed.progress[c] < PIECES_PER_COMPONENT);
+  if (fixed.currentComponentIndex === -1) fixed.currentComponentIndex = PC_COMPONENT_ORDER.length;
+
+  savePcBuild(fixed).catch(e => console.error('normalizePcOrder save failed:', e));
+  return fixed;
 }
 
 // Kary za przeterminowane zadania. `penaltyApplied` na zadaniu gwarantuje, że
@@ -173,6 +184,9 @@ function syncNotesTabs() {
   document.getElementById('notes-pane-todos').style.display = notesTab === 'todos' ? '' : 'none';
   // FAB dodaje notatki, więc na zakładce Zadań nie ma czego robić.
   document.getElementById('notes-fab').style.display = notesTab === 'notes' ? '' : 'none';
+  // Zejście z zakładki Zadania ubija pętlę renderowania 3D od razu, nie czekając
+  // na IntersectionObserver w pc-viewer.js (ten łapie też wyjście z całej strony).
+  if (notesTab !== 'todos') stopPcViewer();
 }
 
 window.selectNotesTab = (tab) => {
@@ -689,17 +703,22 @@ window.markTodoDone = async (id) => {
 // wstawić tu model 3D, wystarczy podmienić ciało tej jednej funkcji.
 // ════════════════════════════════════════════════════════════════════
 
-function renderPcBuild() {
-  const el = document.getElementById('pcbuild-view');
-  const build = getPcBuild();
-
-  if (!build) {
-    el.innerHTML = `<h3 style="margin-bottom:10px">${i18next.t('notes.pcTitle')}</h3>
-      <p class="text2">${i18next.t('notes.pcNoBuild')}</p>`;
-    return;
+// Ile komponentów od POCZĄTKU kolejności stoi na komplecie, bez przerwy.
+// To ta liczba wybiera plik pc-N.glb — nie currentComponentIndex, bo kara
+// potrafi zbić wcześniejszy komponent poniżej 3/3, a wtedy model musi się
+// cofnąć razem z nim.
+function completedCount(build) {
+  let n = 0;
+  for (const comp of build.componentOrder) {
+    if ((build.progress[comp] || 0) >= PIECES_PER_COMPONENT) n++;
+    else break;
   }
+  return n;
+}
 
-  const done = build.currentComponentIndex >= build.componentOrder.length;
+// Wariant 2D — używany, gdy Three.js albo model się nie wczyta (offline,
+// niedostępny CDN, brakujący plik). Nadal pokazuje pełny stan, tylko paskami.
+function renderPcFallback(el, build, caption) {
   const rows = build.componentOrder.map((comp, i) => {
     const filled = build.progress[comp] || 0;
     const state = i === build.currentComponentIndex ? 'current' : (i > build.currentComponentIndex ? 'locked' : '');
@@ -712,12 +731,44 @@ function renderPcBuild() {
         <div class="pc-count">${filled}/${PIECES_PER_COMPONENT}</div>
       </div>`;
   }).join('');
+  el.innerHTML = `<h3 style="margin-bottom:10px">${i18next.t('notes.pcTitle')}</h3>
+    <p class="text2" style="margin-bottom:12px">${caption}</p>
+    ${rows}`;
+}
 
+// Widok stanu builda. Czyta wyłącznie to, co zwróci getPcBuild(), i nic nie
+// liczy — mechanika siedzi wyżej w tym pliku i ta funkcja jej nie dotyka.
+function renderPcBuild() {
+  const el = document.getElementById('pcbuild-view');
+  const build = getPcBuild();
+
+  if (!build) {
+    stopPcViewer();
+    el.innerHTML = `<h3 style="margin-bottom:10px">${i18next.t('notes.pcTitle')}</h3>
+      <p class="text2">${i18next.t('notes.pcNoBuild')}</p>`;
+    return;
+  }
+
+  const done = build.currentComponentIndex >= build.componentOrder.length;
   const caption = done
     ? i18next.t('notes.pcComplete')
     : i18next.t('notes.pcCurrent') + ': ' + i18next.t('notes.comp_' + build.componentOrder[build.currentComponentIndex]);
 
+  const completed = completedCount(build);
+  // Taca pokazuje postęp komponentu o indeksie `completed` — czyli tego
+  // aktualnie budowanego, jeszcze nieukończonego. Przy komplecie tacy nie ma.
+  const trayCount = completed >= PC_COMPONENT_COUNT
+    ? 0
+    : (build.progress[build.componentOrder[completed]] || 0);
+
   el.innerHTML = `<h3 style="margin-bottom:10px">${i18next.t('notes.pcTitle')}</h3>
     <p class="text2" style="margin-bottom:12px">${caption}</p>
-    ${rows}`;
+    <div class="pc-stage" id="pc-stage"></div>`;
+
+  showPcViewer(document.getElementById('pc-stage'), {
+    modelIndex: Math.max(1, completed),
+    trayCount,
+  }).then((ok) => {
+    if (!ok) renderPcFallback(el, build, caption);
+  });
 }

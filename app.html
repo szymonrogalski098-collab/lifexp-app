@@ -663,6 +663,11 @@
     }
     .todo-check.checked { border-color: var(--accent2); background: var(--accent2); color: #fff; cursor: default; }
 
+    /* Scena 3D budowy PC. Stała wysokość, bo canvas nie ma własnej — bez tego
+       ResizeObserver dostawałby 0 i renderer nie miałby czego skalować. */
+    .pc-stage { width: 100%; height: 320px; touch-action: none; }
+    @media (max-width: 700px) { .pc-stage { height: 260px; } }
+
     /* Pasek postępu komponentu: 3 kwadraciki 0-3. */
     .pc-comp { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .pc-comp:last-child { border-bottom: none; }
