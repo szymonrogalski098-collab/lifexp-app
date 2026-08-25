@@ -16,18 +16,19 @@ const LOADER_URL = 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoa
 const MODEL_PATH = (n) => `assets/pc/pc-${n}.glb`;
 const MODEL_COUNT = 6;
 
-// Kąt patrzenia: modele mają CELOWO otwartą przednią ścianę, więc kamera musi
-// zaglądać do środka. Azymut liczony wokół osi Y, elewacja nad poziomem —
-// wartości z testu użytkownika, trzymane tu jako stałe do dostrojenia.
-const CAM_AZIMUTH_DEG   = 180;
+// Kąt patrzenia: modele mają CELOWO otwartą jedną ściankę, więc kamera musi
+// zaglądać do środka. 270° wyznaczone renderem wszystkich czterech stron:
+// przy 90° widać płaską, zamkniętą blachę, przy 0/180° wąski bok, a dopiero
+// 270° pokazuje płytę główną, GPU, CPU i zasilacz. Azymut liczony wokół osi Y,
+// elewacja nad poziomem.
+const CAM_AZIMUTH_DEG   = 270;
 const CAM_ELEVATION_DEG = 10;
-// Dystans jako mnożnik promienia sfery otaczającej. 2.5 wynika z pomiaru:
-// wszystkie pc-N.glb mają IDENTYCZNY bbox 27×49×61 (wyznacza go obudowa,
-// komponenty siedzą w środku), czyli promień ≈ 41.5. Przy FOV 42° daje to
-// widoczne pół-pole ~40 w pionie i ~48 w poziomie nawet na wąskim telefonie —
-// model (pół-wysokość 24.5) mieści się z zapasem RAZEM z tacą obok.
-// Stały bbox ma miłą konsekwencję: kadr nie skacze, gdy model się rozrasta.
-const CAM_DISTANCE_MUL  = 2.5;
+// Zapas wokół treści przy dopasowaniu kadru. Dystans NIE jest stałym
+// mnożnikiem — liczymy go z obu połówek FOV (pionowej i poziomej), bo przy
+// wąskim kontenerze ciaśniejszy jest poziom, a sztywna odległość ucinała
+// obudowę. Promień bierzemy ze sfery otaczającej CAŁĄ treść (model + taca),
+// dzięki czemu obrót modelu nigdy niczego nie wytnie poza kadr.
+const FIT_MARGIN = 1.06;
 
 const IDLE_BEFORE_SPIN_MS = 4000;
 const AUTO_SPIN_SPEED     = 0.25;  // rad/s
@@ -58,6 +59,7 @@ let lastInteractionAt = 0;
 let yaw = 0, pitch = 0;
 let dragging = false, lastX = 0, lastY = 0;
 let currentModelIndex = null;
+let trayVisible = false;   // wpływa na kadrowanie: z tacą treść jest szersza
 let modelToken = 0;         // ubija wyścig, gdy postęp zmieni się w trakcie ładowania
 
 function deg(d) { return d * Math.PI / 180; }
@@ -87,31 +89,61 @@ function buildScene() {
 // Kamera ustawiana z bounding boxa WCZYTANEGO modelu, nie z zapieczonych
 // współrzędnych — pliki pc-N.glb rosną wraz z postępem, więc ich rozmiar się
 // zmienia i sztywna odległość albo by je przycinała, albo gubiła w oddali.
-let frameRadius = 60;
-let frameCenter = null;
+let modelRadius = 60;    // promień samego modelu — skaluje tacę
+let fitRadius = 60;      // promień treści (model + taca) — skaluje dystans
+let fitTarget = null;    // środek treści — kamera celuje TU, nie w (0,0,0)
 
 function frameObject(obj) {
   const box = new THREE.Box3().setFromObject(obj);
   if (box.isEmpty()) return;
   const sphere = box.getBoundingSphere(new THREE.Sphere());
-  frameRadius = sphere.radius || 60;
-  frameCenter = sphere.center.clone();
-  // Model przesuwamy tak, żeby jego środek był w (0,0,0) — obrót kamery wokół
-  // origin jest wtedy obrotem wokół modelu, bez dryfu.
-  obj.position.sub(frameCenter);
-  // Taca stoi OBOK modelu, nie w nim — ale wciąż w kadrze: przy mnożniku
-  // dystansu 2.5 poziome pół-pole to ~48 jednostek, a 0.85×promień ≈ 35.
-  trayRoot.position.set(frameRadius * 0.85, -frameRadius * 0.62, frameRadius * 0.35);
+  modelRadius = sphere.radius || 60;
+  // Model przesuwamy tak, żeby jego środek był w (0,0,0) — pozycje tacy liczą
+  // się wtedy wprost względem bryły.
+  obj.position.sub(sphere.center);
+  // Taca stoi OBOK modelu, nie w nim. Przy azymucie 270° kamera patrzy wzdłuż
+  // osi X, więc "w bok na ekranie" to oś Z — przesunięcie w X chowałoby tacę
+  // ZA obudową (tak było przy pierwszym podejściu). Model po wycentrowaniu
+  // sięga ±30.6 w Z i ±24.5 w Y, a widoczne pół-pole to ~64×40, więc
+  // 1.02×promień w Z i 0.68 w dół mieści tacę obok bryły, wciąż w kadrze.
+  trayRoot.position.set(0, -modelRadius * 0.62, modelRadius * 0.85);
+  // Obrót o 90° wokół Y: renderTray/makePiece układają tackę i bryły wzdłuż
+  // WŁASNEJ osi X, a przy kamerze patrzącej wzdłuż światowego X ta oś biegnie
+  // w głąb ekranu — bez obrotu kawałki ustawiałyby się jeden za drugim.
+  trayRoot.rotation.y = Math.PI / 2;
+}
+
+// Dystans dopasowany do MNIEJSZEGO z dwóch pól widzenia, więc treść mieści się
+// i w pionie, i w poziomie — niezależnie od proporcji kontenera. Wołane też z
+// resize(), bo zmiana szerokości zmienia aspect, a więc i wymagany dystans.
+// Kadr dopasowany do sfery otaczającej REALNĄ treść sceny, nie do samego
+// modelu — inaczej taca leżąca obok wypadała poza ekran, a kompozycja siadała
+// w rogu zamiast na środku.
+function fitView() {
+  const box = new THREE.Box3().expandByObject(modelRoot);
+  if (trayVisible) box.expandByObject(trayRoot);
+  if (box.isEmpty()) return;
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  fitTarget = sphere.center.clone();
+  fitRadius = (sphere.radius || 60) * FIT_MARGIN;
+}
+
+function fitDistance() {
+  const radius = fitRadius;
+  const fovV = camera.fov * Math.PI / 180;
+  const fovH = 2 * Math.atan(Math.tan(fovV / 2) * camera.aspect);
+  return Math.max(radius / Math.sin(fovV / 2), radius / Math.sin(fovH / 2));
 }
 
 function updateCamera() {
-  const r = frameRadius * CAM_DISTANCE_MUL;
+  const r = fitDistance();
+  const t = fitTarget || new THREE.Vector3();
   camera.position.set(
-    r * Math.sin(yaw) * Math.cos(pitch),
-    r * Math.sin(pitch),
-    r * Math.cos(yaw) * Math.cos(pitch),
+    t.x + r * Math.sin(yaw) * Math.cos(pitch),
+    t.y + r * Math.sin(pitch),
+    t.z + r * Math.cos(yaw) * Math.cos(pitch),
   );
-  camera.lookAt(0, 0, 0);
+  camera.lookAt(t);
 }
 
 // ── Taca z kawałkami ──
@@ -121,7 +153,7 @@ function updateCamera() {
 function makePiece(i) {
   const kinds = ['box', 'cyl', 'sphere', 'cone'];
   const kind = kinds[Math.floor(Math.random() * kinds.length)];
-  const s = frameRadius * 0.12;
+  const s = modelRadius * 0.12;
   let geo;
   if (kind === 'box')         geo = new THREE.BoxGeometry(s, s, s);
   else if (kind === 'cyl')    geo = new THREE.CylinderGeometry(s * 0.5, s * 0.5, s, 16);
@@ -144,15 +176,18 @@ function disposeGroup(group) {
 
 function renderTray(count) {
   disposeGroup(trayRoot);
-  if (count <= 0) return;
+  trayVisible = count > 0;
+  if (count <= 0) { fitView(); updateCamera(); return; }
 
-  const w = frameRadius * 0.75, d = frameRadius * 0.4;
+  const w = modelRadius * 0.75, d = modelRadius * 0.4;
   const base = new THREE.Mesh(
-    new THREE.BoxGeometry(w, frameRadius * 0.03, d),
+    new THREE.BoxGeometry(w, modelRadius * 0.03, d),
     new THREE.MeshStandardMaterial({ color: 0x2a2d3a, metalness: 0.1, roughness: 0.9 }),
   );
   trayRoot.add(base);
   for (let i = 0; i < count; i++) trayRoot.add(makePiece(i));
+  fitView();                      // taca zmieniła obrys treści
+  updateCamera();
 }
 
 async function loadModel(index) {
@@ -165,6 +200,7 @@ async function loadModel(index) {
   modelRoot.add(gltf.scene);
   frameObject(gltf.scene);
   currentModelIndex = index;
+  fitView();
   updateCamera();
 }
 
@@ -253,6 +289,7 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  updateCamera();                 // inny aspect = inny wymagany dystans
 }
 
 /**
