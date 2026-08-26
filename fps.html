@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FPS Prototype — CS2 lite</title>
+<!-- Gra jest jedynym miejscem w LifeXP, które ma się swobodnie obracać. Reszta
+     appki blokuje pion programowo, a blokada orientacji potrafi przetrwać
+     nawigację w obrębie tej samej sesji standalone — więc tutaj ją zdejmujemy.
+     Świadomie NIE wołamy lock(): poziom i pion mają być tu równie dozwolone.
+     Osobny, klasyczny skrypt zamiast wnętrza modułu niżej: moduł importuje
+     Three.js z CDN-u i gdy ten import padnie (offline), nie wykonałby się wcale,
+     a razem z nim ten unlock. -->
+<script>
+  if (screen.orientation && screen.orientation.unlock) {
+    try { screen.orientation.unlock(); } catch (e) { /* brak wsparcia — nieistotne */ }
+  }
+</script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0d0f14; }

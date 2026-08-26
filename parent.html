@@ -9,6 +9,11 @@
   <meta name="theme-color" content="#0e0f13">
   <link rel="apple-touch-icon" href="icon-192.png">
   <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+  <!-- Pion na sztywno. Manifest ma "orientation": "any" wyłącznie po to, żeby
+       fps.html mógł się obracać (w PWA manifest rządzi całym oknem, nie da się
+       tego ustawić per-strona), więc reszta appki blokuje pion sama. Obie
+       ścieżki błędu złapane: odrzucony Promise i synchroniczny throw. -->
+  <script>try { const r = screen.orientation?.lock?.('portrait'); if (r && r.catch) r.catch(() => {}); } catch (e) {}</script>
   <style>
     body { min-height: 100vh; }
     .wrap { max-width: 760px; margin: 0 auto; padding: 28px 16px; }
