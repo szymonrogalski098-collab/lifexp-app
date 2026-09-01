@@ -237,6 +237,24 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(r => { swRegistration = r; }).catch(e => console.warn('SW register failed', e));
 }
 
+/* Blokada pionu dla właściwej aplikacji.
+ *
+ * manifest.json ma "orientation": "any" WYŁĄCZNIE po to, żeby fps.html mógł się
+ * obracać — w zainstalowanej PWA manifest rządzi całym oknem systemowym, więc
+ * nie da się tego ustawić per-strona. Dashboard, Notatnik, Money Tracker itd. są
+ * projektowane tylko pod pion, więc odbieramy sobie tę swobodę z powrotem tutaj,
+ * programowo. fps.html robi odwrotnie: woła unlock() na starcie.
+ *
+ * Dwie ścieżki błędu, obie nieistotne i obie muszą być złapane, żeby nie wysadzić
+ * reszty bootstrapu: część przeglądarek zwraca odrzucony Promise (np. gdy strona
+ * nie jest w trybie fullscreen/standalone), a część rzuca synchronicznie, bo
+ * w ogóle nie implementuje lock() mimo obecnego screen.orientation.
+ * Na iOS Safari to i tak zwykle nie zadziała — to ograniczenie platformy. */
+try {
+  const lockResult = screen.orientation?.lock?.('portrait');
+  if (lockResult && typeof lockResult.catch === 'function') lockResult.catch(() => {});
+} catch (e) { /* brak wsparcia dla lock() — ignorujemy */ }
+
 export let currentUser = null;
 export let userProfile = null;
 
