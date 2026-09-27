@@ -1,6 +1,7 @@
 # LifeXP v2 — audyt i plan architektury
 
 Status: **plan do akceptacji, zero implementacji**. Stan repo: `main` @ `3250146` (2026-09-01).
+Rewizja 2: kod Cloud Functions nieodnaleziony → backend Ex-us odtwarzany od nowa (6.12).
 Baseline testów (Playwright, lokalnie w sandboxie): **43/50 zielonych**. 7 failujących to wyłącznie FPS
 (timeouty WebGL w headless Chromium). Testy logiki LifeXP (punkty, Money, obowiązki) nie istnieją.
 
@@ -40,7 +41,7 @@ Spis treści
    i punktów), mieszanie dat UTC i lokalnych, Service Worker cache-first dla modułów JS (stare JS po deployu,
    martwy start offline), zadania z Ex-us zapisywane do `plannerTasks`, którego nic nie wyświetla,
    **usunięte workflowy GitHub Actions** (push, raport tygodniowy i CI nie działają od 19.08),
-   **brak kodu Cloud Functions w repo**.
+   **brak kodu Cloud Functions w repo** (decyzja: odtwarzamy tylko nowy backend v2, stare funkcje działają dalej dla v1 — 6.12).
 
 ---
 
@@ -495,7 +496,7 @@ Zakazy egzekwowane lintem: `domain` nie importuje `data`/`features`/`ui`; `ui` n
 │        ├─ reports/      # zgłoszenia, historia aktualizacji, broadcasty (admin)
 │        ├─ settings/  parent/  games/
 │        └─ exus/         # engine: parser/, pipeline.ts, registry.ts, undo.ts, context.ts, api.ts, ui/
-├─ functions/             # Cloud Functions (do odzyskania lub odtworzenia) — exusTurn + dotychczasowe
+├─ functions/             # Cloud Functions odtworzone od nowa, osobny codebase — exusTurn, weryfikacja rodzica (6.12)
 ├─ tests/                 # e2e v2 + istniejące testy gier
 ├─ docs/v2/               # ten plan + decyzje (ADR)
 └─ .github/workflows/     # test.yml, deploy.yml, notify.yml, weekly-report.yml
@@ -632,7 +633,8 @@ Plik `CLAUDE.md` w katalogu głównym (treść do przygotowania w etapie 1):
 | `fcmTokens` | Zachować | Po cutover nowe tokeny z SW v2; martwe czyści skrypt push |
 | `bugReports`, `bugReportsConfig`, `broadcasts` | Zachować | Wiadomości przez `arrayUnion` |
 | `aiTestAccess`, `aiUsageGlobal`, `aiSettings` | Zachować | Obsługiwane przez backend |
-| Ex-us: historia czatu | Nowe, lokalnie (IndexedDB per uid) | Backend i tak trzyma swoją historię rozmowy; lokalnie tylko do wyświetlenia |
+| Ex-us: historia czatu | Nowe, lokalnie (IndexedDB per uid) | Jedyne źródło historii; backend `exusTurn` jest bezstanowy (6.9) |
+| Ex-us: zużycie tokenów | Nowe: `aiUsage/{uid}_{data}`, `aiUsageGlobalV2/{data}` | Top-level, zapis tylko z funkcji (6.12) |
 
 ### 5.3 Legacy kształty, które konwertery muszą obsłużyć
 
@@ -912,21 +914,26 @@ w kliencie, dało się go podmienić i używać Gemini na koszt właściciela do
 
 ### 6.9 Backend: `exusTurn`
 
+Funkcja jest **bezstanowa**: nie przechowuje rozmów. Klient wysyła ostatnie tury z własnej historii
+(już ją ma lokalnie), więc znika `conversationId` i cała kolekcja rozmów po stronie serwera.
+
 ```
-exusTurn({ message, conversationId?, context, clientVersion })
-  → auth wymagany; sprawdzenie aiTestAccess / aiSettings / dzienny limit (istniejące mechanizmy)
-  → historia rozmowy (ostatnie N tur) + system prompt + kontekst
-  → JEDNO wywołanie Gemini z responseSchema
-  → walidacja odpowiedzi po stronie serwera (enum komend, kształt)
-  ← { reply, actions[], conversationId, usage: { tokensUsedToday, tokensLimitDaily, remainingPercent } }
+exusTurn({ message, history: [{role, text}] (ostatnie ≤ 8 tur, ucięte), context, lang, clientVersion })
+  → auth wymagany
+  → dostęp: aiTestAccess/{uid} istnieje (ten sam allowlist co dziś)
+  → limit: dzienny budżet tokenów usera + globalny bezpiecznik (transakcja na liczniku)
+  → system prompt + kontekst + history + message
+  → JEDNO wywołanie Gemini z wymuszonym schematem odpowiedzi
+  → walidacja odpowiedzi po stronie serwera (enum komend, kształt args)
+  → zapis zużycia tokenów
+  ← { reply, actions[], usage: { tokensUsedToday, tokensLimitDaily, remainingPercent } }
 ```
 
 - `usage` w odpowiedzi → pasek limitu bez osobnego `aiAssistantPing`.
 - Backend **nie zapisuje** danych LifeXP (koniec duplikacji logiki celów/zadań po stronie funkcji).
 - Stare callable (`aiClassifyIntent`, `aiAssistantChat`, `aiConfirmTask`, `aiConfirmGoal`, `aiAssistantPing`)
-  zostają wdrożone, dopóki działa v1; kasowane w etapie 8.
-- Warunek wstępny: kod funkcji w repo (`functions/`). Jeśli oryginał zaginął — odtworzenie jest małe
-  (jedna funkcja + prompt + limit), bo logika biznesowa przechodzi do klienta.
+  **nie są odtwarzane** — wdrożone wersje działają dalej bez kodu źródłowego i obsługują v1 do cutover;
+  kasowane w etapie 8. Szczegóły odtworzenia backendu: 6.12.
 
 ### 6.10 UI Ex-us
 
@@ -936,12 +943,94 @@ exusTurn({ message, conversationId?, context, clientVersion })
   jako edytowalny formularz, „Wykonaj” / „Pomiń”), wynik (tekst + „Cofnij”).
 - Pole wpisywania przyklejone do dołu z `100dvh` i `env(safe-area-inset-bottom)`; na iOS reakcja na
   `visualViewport` (klawiatura nie zasłania pola).
-- Historia: IndexedDB per uid, czyszczona przy wylogowaniu; „Nowa rozmowa” zeruje `conversationId`.
+- Historia: IndexedDB per uid, czyszczona przy wylogowaniu; „Nowa rozmowa” czyści lokalną historię
+  (backend jest bezstanowy, więc nic więcej nie trzeba resetować).
 
 ### 6.11 Usunięcie Siri-ous
 
 v2 po prostu go nie zawiera. Przy cutover migracja lokalna usuwa klucze `lifexp-aichat-*`. Moduł `aichat`
 w `enabledModules` mapowany na `exus`.
+
+### 6.12 Odtworzenie backendu (Cloud Functions)
+
+Decyzja: kod funkcji jest nieodnaleziony → **odtwarzamy**, ale tylko to, czego potrzebuje v2.
+
+**Dlaczego nie trzeba odtwarzać pięciu starych funkcji.** Wdrożona funkcja żyje w Google Cloud niezależnie
+od tego, czy jej kod gdzieś leży. v1 dalej woła `aiClassifyIntent`/`aiAssistantChat`/… i będą one działać aż
+do cutover. v2 ich nie używa. Odtwarzamy więc wyłącznie nowe rzeczy:
+
+| Funkcja | Etap | Zakres |
+|---|---|---|
+| `exusTurn` | 5b | 6.9 — jedno wywołanie Gemini, limit, allowlist |
+| `sendParentEmailCode`, `verifyParentEmailCode` | 6 | Kod generowany i sprawdzany na serwerze (koniec B12) |
+| (opcjonalnie) wysyłka raportu i push jako funkcje harmonogramowane | 6 | Zamiast GitHub Actions — do decyzji, skrypty w `scripts/` też wystarczą |
+
+**Co wiemy o starych funkcjach (kontrakt odczytany z klienta i reguł):**
+
+| Element | Znany kształt | Źródło |
+|---|---|---|
+| `aiClassifyIntent` | `{message}` → `{intent: 'task'\|'goal'\|'chat', proposal?, note?}` | `assistants.js:607-622` |
+| `aiAssistantChat` | `{message, conversationId?}` → `{reply, conversationId}` | `assistants.js:585-596` |
+| `aiAssistantPing` | `()` → `{tokensUsedToday, tokensLimitDaily, remainingPercent}` | `assistants.js:514-528`, `630-636` |
+| `aiConfirmTask` | `{title, time, durationMin, type}` → zapis do `plannerTasks` | `assistants.js:678-680` |
+| `aiConfirmGoal` | `{name, type, amount}` → zapis do `users.goals` | `assistants.js:726-728` |
+| Allowlist | `aiTestAccess/{uid}` — dokument istnieje = dostęp | `firestore.rules:114-117` |
+| Ustawienia per user | `users/{uid}.aiSettings` (np. `advancedEnabled`), zapis tylko z serwera | `firestore.rules:39-46` |
+| Globalny licznik | `aiUsageGlobal/{date}`, klient bez dostępu | `firestore.rules:121-123` |
+
+**Czego nie wiemy (zginęło razem z kodem):** treść obecnego system promptu, nazwa modelu Gemini,
+wartości limitów tokenów, format dokumentów `aiUsageGlobal`, miejsce przechowywania rozmów, nazwa sekretu
+z kluczem API. Nowy backend definiuje te rzeczy od nowa i jawnie — nie próbuje zgadywać starego formatu.
+
+**Opcjonalny skrót przed odtwarzaniem (5 minut, bez ryzyka):** Google przechowuje źródła wdrożonych funkcji.
+Konsola Google Cloud → projekt `faiobaj4` → Cloud Functions (albo Cloud Run functions) → np.
+`aiAssistantChat` → zakładka „Źródło” → „Pobierz ZIP”. Jeśli archiwum jest dostępne, służy wyłącznie jako
+materiał referencyjny (prompt, limity, model) — nowy kod i tak powstaje według 6.9.
+
+**Struktura `functions/`:**
+
+```
+functions/
+├─ package.json            # firebase-functions v2 (onCall), firebase-admin, @google/genai, zod
+├─ tsconfig.json
+└─ src/
+   ├─ index.ts             # eksport: exusTurn (+ później funkcje rodzica)
+   ├─ exus/
+   │  ├─ turn.ts           # handler: auth → allowlist → limit → Gemini → walidacja → usage
+   │  ├─ prompt.ts         # system prompt (wersjonowany, 6.8)
+   │  ├─ schema.gen.json   # enum komend + JSON Schema args — GENEROWANE z rejestru v2 przy buildzie
+   │  └─ quota.ts          # liczniki w transakcji
+   └─ shared/admin.ts
+```
+
+**Dane backendu (nowe, bez kolizji ze starymi):**
+
+| Ścieżka | Zawartość | Reguły |
+|---|---|---|
+| `aiUsage/{uid}_{YYYY-MM-DD}` | `{tokens, calls}` | `read, write: if false` — top-level, bo reguła wildcard w `users/{uid}/{col}` daje ownerowi zapis każdej podkolekcji i user mógłby wyzerować sobie licznik |
+| `aiUsageGlobalV2/{YYYY-MM-DD}` | `{tokens, calls}` | `if false` |
+| `users/{uid}.aiSettings.exusDailyTokens` | opcjonalny limit per user | pole już chronione regułami |
+
+**Sekrety i konfiguracja:** nowy klucz Gemini z Google AI Studio zapisany jako sekret
+(`firebase functions:secrets:set GEMINI_API_KEY`, w kodzie `defineSecret`). Model i limity jako parametry
+(`defineInt`/`defineString`), nie w kodzie. Region: taki sam jak lokalizacja bazy Firestore (do odczytania
+w konsoli) — klient v2 podaje go jawnie w `getFunctions(app, region)`.
+
+**Bezpieczny deploy — najważniejsza pułapka.** `firebase deploy --only functions` porównuje lokalny kod
+z wdrożonymi funkcjami i proponuje **usunięcie** tych, których lokalnie nie ma. Gdyby nowy `functions/`
+wdrożyć w tym samym codebase co stare funkcje, deploy zaproponowałby skasowanie pięciu funkcji, na których
+stoi Ex-us w v1. Zabezpieczenia:
+
+1. Osobny codebase w `firebase.json` (np. `"codebase": "lifexp-v2"`) — CLI zarządza wtedy tylko funkcjami
+   z tego codebase i nie dotyka starych.
+2. Deploy wyłącznie celowany: `firebase deploy --only functions:lifexp-v2` (skrypt npm, nigdy ręcznie
+   „wszystko”).
+3. Stare funkcje usuwane jawnie w etapie 8: `firebase functions:delete aiClassifyIntent …`.
+
+**Testy backendu:** Vitest + emulator Functions/Firestore; Gemini podmieniony fałszywym klientem
+(stała odpowiedź zgodna ze schematem). Testy: brak auth → błąd, brak na allowliście → błąd, przekroczony
+limit → błąd z czytelnym komunikatem, niepoprawna odpowiedź modelu (zła komenda/args) → odfiltrowana akcja
+zamiast awarii, licznik rośnie o zużycie z odpowiedzi modelu.
 
 ---
 
@@ -1122,7 +1211,7 @@ Rozmiar: S ≈ 1-2 PR, M ≈ 3-5 PR, L ≈ 6+ PR.
 
 | Etap | Zakres | Definition of Done | Rozmiar |
 |---|---|---|---|
-| **0. Siatka bezpieczeństwa** | Przywrócenie `.github/workflows` (test + decyzja o notify/weekly), kod Cloud Functions do `functions/`, eksport/backup Firestore, konfiguracja emulatorów, skrypt inwentaryzacji kształtów, tabele golden (8.2), przełącznik `?emulator=1` w v1 | CI zielone na v1 (poza znanymi FPS), backup istnieje, raport inwentaryzacji w `docs/v2/` | M |
+| **0. Siatka bezpieczeństwa** | Przywrócenie `.github/workflows` (test + decyzja o notify/weekly), szkielet `functions/` jako osobny codebase (TS, emulator, bez wdrażania) + opcjonalne pobranie starych źródeł z konsoli jako referencji, eksport/backup Firestore, konfiguracja emulatorów, skrypt inwentaryzacji kształtów, tabele golden (8.2), przełącznik `?emulator=1` w v1 | CI zielone na v1 (poza znanymi FPS), backup istnieje, raport inwentaryzacji w `docs/v2/` | M |
 | **1. Fundament** | Scaffold Vite+TS+Preact w `v2/`, deploy Actions na Pages (`/` = v1, `/v2/` = v2), tokens + base CSS, AppShell z sidebarem i drawerem, router, i18n (port słownika), Toast/Dialog/Sheet, logowanie/rejestracja/Google/weryfikacja/wylogowanie, bramy boot, SW v2 (scope `/v2/`), `CLAUDE.md` | Logowanie prawdziwym kontem na telefonie; drawer spełnia 7.4; testy layoutu zielone; Lighthouse PWA/perf ≥ 90 na mobile | L |
 | **2. Dane + domena (read-only)** | Konwertery wszystkich kolekcji, repozytoria, stores, domena z golden testami, ekran „Dziś” tylko do odczytu, Statystyki/Historia read-only | Liczby na „Dziś” v2 = v1 na prawdziwym koncie; zero zapisów z v2 | M |
 | **3a. Zadania + Notatki** | CRUD, budowa PC, kary, Markdown, archiwum, usuwanie zadań | Parytet 8.3; e2e na telefonie | M |
@@ -1133,7 +1222,7 @@ Rozmiar: S ≈ 1-2 PR, M ≈ 3-5 PR, L ≈ 6+ PR.
 | **3f. Offline** | Kolejka szkiców kompatybilna z v1, przegląd, zatwierdzanie przez serwisy | Szkice utworzone w v1 zatwierdzane w v2 | S |
 | **4. Ustawienia + Zgłoszenia** | Wszystkie sekcje ustawień, M3 (moduły), tryb konta, email rodzica (na razie jak v1), zgłoszenia + admin + broadcasty + historia aktualizacji, „Sprawdź spójność” | Parytet; Notatnik widoczny dla kont sprzed 24.08 | L |
 | **5a. Ex-us lokalnie** | Parser, rejestr, pipeline, karty, undo, paleta `/`, `/help`, `/today`, wszystkie komendy z 6.5 | Każda komenda ma testy tabelaryczne; zero wywołań backendu dla `/...` | L |
-| **5b. Ex-us AI** | `exusTurn` (1 wywołanie, function calling, usage w odpowiedzi), prompt, kontekst, historia per uid | Pomiar: dokładnie 1 wywołanie na wiadomość; akcje z AI przechodzą ten sam pipeline | M |
+| **5b. Ex-us AI** | `exusTurn` od zera (6.9, 6.12): bezstanowy, 1 wywołanie Gemini ze schematem, limity, allowlist, sekret; generowanie schematu komend z rejestru; celowany deploy osobnego codebase | Pomiar: dokładnie 1 wywołanie na wiadomość; akcje z AI przechodzą ten sam pipeline; stare funkcje nadal wdrożone i v1 działa | M |
 | **6. Rodzic, raport, push** | Route `#/parent` na wspólnej domenie, poprawiony skrypt raportu (cele z profilu, kursy z profilu, transakcje), weryfikacja emaila rodzica w Cloud Function, przygotowanie push w SW v2 | Raport testowy wysłany na własny adres z poprawnymi liczbami | M |
 | **7. Cutover** | v2 w katalogu głównym, `sw.js` = SW v2 (przejmuje zainstalowane PWA, czyści `lifexp-shell-v*`), `app.html`/`verify.html`/`parent.html` jako przekierowania na route'y, v1 pod `/v1/`, push w v2, M4 (lokalne klucze dni), sprzątanie localStorage Siri-ous, gry jako lazy moduł | Zainstalowana PWA na telefonie sama przechodzi na v2; link z powiadomienia i powrót z FPS działają | M |
 | **8. Sprzątanie** | Usunięcie v1 po okresie próbnym, upgrade Firebase SDK, reguły Firestore (walidacja pól, notatki bez dostępu rodzica — do decyzji) + testy reguł, usunięcie starych callable, decyzje o `plannerTasks`/`purchases`/`moneyGoals`, opcjonalnie M6 | Repo bez v1; testy reguł zielone | M |
@@ -1155,7 +1244,7 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | R6 | Konflikt cache IndexedDB między wersjami SDK; v1 i v2 otwarte w dwóch kartach naraz | Niskie przy pinie | Błędy persistence; druga karta działa bez cache offline (single-tab manager) | SDK 10.12.x w v2 do etapu 8; jedna karta naraz |
 | R7 | Podwójne powiadomienia push | Średnie | Irytacja | Push tylko w v1 do cutover |
 | R8 | Zmiana klucza dni (UTC → lokalny) | Niskie | Wpisy z 0:00-2:00 w dniu przełączenia liczone inaczej | Tylko przy cutover, flaga w profilu, jawna notka w changelogu |
-| R9 | Brak kodu Cloud Functions | **Wysokie** | Blokada 5b i poprawek weryfikacji rodzica | Etap 0: odzyskać albo odtworzyć; 5a (lokalne komendy) nie zależy od backendu |
+| R9 | Brak kodu Cloud Functions → odtwarzanie backendu | Pewne | Nieznany stary prompt/limity; ryzyko przypadkowego skasowania starych funkcji przy deployu | Odtwarzamy tylko `exusTurn` i funkcje rodzica; osobny codebase + celowany deploy (6.12); 5a nie zależy od backendu |
 | R10 | Workflowy usunięte — push/raport/CI nie działają już dziś | Pewne | Brak przypomnień i raportów od 19.08 | Etap 0: przywrócić `test.yml`; notify/weekly po poprawie danych (etap 6) |
 | R11 | Zmiana sposobu deployu (Pages ze źródła „branch” na „GitHub Actions”) | Średnie | Wymaga zmiany w ustawieniach repo; upload przez przeglądarkę przestaje wystarczać | Jednorazowa zmiana w Settings → Pages; opis w `CLAUDE.md` |
 | R12 | Legacy kształty danych, których nie przewidziano | Średnie | Crash albo złe liczby | Inwentaryzacja na eksporcie produkcji przed etapem 2 |
@@ -1206,7 +1295,7 @@ Uzasadnienie techniczne:
 
 | # | Decyzja | Rekomendacja | Blokuje |
 |---|---|---|---|
-| D1 | Gdzie jest kod Cloud Functions (`aiAssistantChat` itd.)? | Wrzucić do `functions/` w tym repo; jeśli zaginął — odtworzyć w etapie 5b | Etap 0 (inwentaryzacja), 5b, 6 |
+| D1 | ~~Gdzie jest kod Cloud Functions?~~ **Rozstrzygnięte**: nieodnaleziony → odtwarzamy nowy backend (6.12) | — | — |
 | D2 | Czy usunięcie workflowów 19.08 było celowe? | Przywrócić `test.yml` od razu; `notify`/`weekly-report` po etapie 6 | Etap 0 |
 | D3 | Akceptacja build stepu i deployu przez GitHub Actions (zmiana źródła Pages) | Tak (plan A) | Etap 1 |
 | D4 | Które motywy zostają (dark/light/gold) i czy wybór fontu zostaje | Dark + light na start, gold jako zestaw tokenów; wybór fontu z leniwym ładowaniem | Etap 1 |
