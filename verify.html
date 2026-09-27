@@ -78,12 +78,19 @@
   <script src="firebase-config.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    // Tylko testy na localhost (?emulator=1) — patrz LIFEXP_EMULATOR w firebase-config.js.
+    // typeof: stary firebase-config.js z cache Service Workera nie ma tej stałej.
+    const EMU = typeof LIFEXP_EMULATOR !== 'undefined' ? LIFEXP_EMULATOR : null;
+    if (EMU) {
+      connectAuthEmulator(auth, `http://${EMU.host}:${EMU.authPort}`, { disableWarnings: true });
+      connectFirestoreEmulator(db, EMU.host, EMU.firestorePort);
+    }
 
     // EmailJS — reuse the existing service; create a NEW template with {{code}}.
     const SERVICE_ID = 'service_417sg11';

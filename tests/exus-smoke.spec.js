@@ -1,10 +1,12 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/hermetic');
 
 // Drives tests/fixtures/exus-harness.html, which inlines the EXACT CSS/HTML/JS
 // extracted from app.html for the Siri-ous/Ex-us toggle (see that file's header
 // comment for why: app.html's real module script imports Firebase directly from
 // gstatic.com, which this sandbox's egress policy blocks, so the full app can't
 // boot here). httpsCallable/functions are stubbed via window.__exusMock.
+// All external requests are aborted (tests/support/hermetic.js), so marked and
+// DOMPurify only exist where a test stubs them — on CI and in the sandbox alike.
 
 test('Ex-us chat UI: structure, toggle, theme reactivity, send flow', async ({ page }) => {
   const errors = [];

@@ -12,7 +12,11 @@
 // browser navigation, not a mock), the static page content renders even
 // though its module script fails to execute, and the added "back to LifeXP"
 // link actually returns to app.html.
-const { test, expect } = require('@playwright/test');
+//
+// External requests are aborted for this spec (tests/support/hermetic.js).
+// Without that, on CI the Firebase SDK loads, finds no signed-in user and
+// redirects app.html to index.html before the games page can be inspected.
+const { test, expect } = require('./support/hermetic');
 
 test('Games menu: FPS Prototype tile navigates to fps.html and back', async ({ page }) => {
   const errors = [];
@@ -27,7 +31,11 @@ test('Games menu: FPS Prototype tile navigates to fps.html and back', async ({ p
   // means window.showPage (defined inside that failed module) never runs, so
   // #page-games never gets its real .active class. Add it manually here to
   // make the games page visible, same effect showPage('games') would have.
+  // The same failed module is what would hide #boot-overlay (hideBootOverlay in
+  // core.js). The overlay is static markup covering the whole viewport, so it
+  // stays up and intercepts every click; hide it the way core.js does.
   await page.evaluate(() => {
+    document.getElementById('boot-overlay').hidden = true;
     document.getElementById('page-games').classList.add('active');
     window.LifeXPGames.showMenu();
   });

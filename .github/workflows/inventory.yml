@@ -1,0 +1,28 @@
+name: Data inventory
+
+# Read-only scan of production Firestore that reports SHAPES only: collection
+# paths, field names, types and counts. No values, document ids or tokens —
+# this repo is public and the report lands in the job summary.
+# See scripts/inventory.js. Run manually from the Actions tab.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Scan Firestore (schema only)
+        run: node scripts/inventory.js --out inventory.md
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: cat inventory.md >> "$GITHUB_STEP_SUMMARY"
