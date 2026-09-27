@@ -1,8 +1,9 @@
 # LifeXP v2 — audyt i plan architektury
 
-Status: **plan do akceptacji, zero implementacji**. Stan repo: `main` @ `3250146` (2026-09-01).
+Status: **etap 0 zrobiony (9.1); etapy 1+ czekają na akceptację**. Audyt robiony na `main` @ `3250146` (2026-09-01).
 Rewizja 2: kod Cloud Functions nieodnaleziony → backend Ex-us odtwarzany od nowa (6.12).
 Rewizja 3: decyzje z benchmarku podobnych aplikacji (`RESEARCH.md`, oznaczenia U1-U15) naniesione na sekcje 6 i 7.
+Rewizja 4 (2026-09-27): wyniki inwentaryzacji produkcji (`INVENTORY.md`) naniesione na 1.5, 1.11 i 5.2-5.4.
 Baseline testów (Playwright, lokalnie w sandboxie): **43/50 zielonych**. 7 failujących to wyłącznie FPS
 (timeouty WebGL w headless Chromium). Testy logiki LifeXP (punkty, Money, obowiązki) nie istnieją.
 
@@ -41,7 +42,8 @@ Spis treści
 6. **Najważniejsze znalezione problemy** (szczegóły w 2.3): zapisy wielodokumentowe bez transakcji (dryf salda
    i punktów), mieszanie dat UTC i lokalnych, Service Worker cache-first dla modułów JS (stare JS po deployu,
    martwy start offline), zadania z Ex-us zapisywane do `plannerTasks`, którego nic nie wyświetla,
-   **usunięte workflowy GitHub Actions** (push, raport tygodniowy i CI nie działają od 19.08),
+   **push i raport tygodniowy nie działają od 25.07** (nieważny klucz konta serwisowego), a od 19.08 nie ma też
+   workflowów GitHub Actions ani CI,
    **brak kodu Cloud Functions w repo** (decyzja: odtwarzamy tylko nowy backend v2, stare funkcje działają dalej dla v1 — 6.12).
 
 ---
@@ -147,7 +149,7 @@ zapisywalna przez użytkownika, więc brama jest kosmetyczna. Admin = twardo zak
 | `enabledModules[]`, `onboardingDone`, `accountMode`, `lang` | | |
 | `parentEmail`, `parentEmailVerifiedAt`, `pendingParentEmail`, `parentEmailCode`, `parentEmailCodeExpiry` | | Kod weryfikacyjny leży w dokumencie czytelnym dla usera |
 | `autoReport`, `lastReportSent`, `notifHours[]`, `games[]`, `lastBugReportAt`, `emailVerified` | | |
-| `aiSettings` | map | Zapisywalne tylko przez Cloud Function |
+| `aiSettings` | `{lastResetDate, tokensUsedToday}` | Zapisywalne tylko przez Cloud Function |
 
 Podkolekcje `users/{uid}/…`:
 
@@ -161,18 +163,21 @@ Podkolekcje `users/{uid}/…`:
 | `chores` | `{choreId, choreName, choreEmoji, points, dateISO, monthKey, createdAt}` | `dateISO` **lokalne**; kasowane przy rozliczeniu |
 | `choreDefs/{id}` | `{name, desc, emoji, points, oneTime, order}` | |
 | `chorePayouts` | `{points, amountPln, fromISO, toISO, createdAt}` | Trwała historia wypłat |
-| `money/settings`, `money/balance` | `{monthlyLimit, currency}`, `{current}` | Saldo zdenormalizowane |
+| `money/settings`, `money/balance` | `{monthlyLimit, currency}`, `{current}` | Saldo zdenormalizowane; w części kont legacy `pendingPoints` (usunięte „Wypłać punkty”) |
 | `moneyTransactions` | `{type, amount, category (NAZWA), note, date, source, pointsCost, createdAt}` | `source`: `manual`\|`chore_payout` |
 | `moneyCategories` | `{name, color, icon}` | Transakcje wskazują kategorię **po nazwie** |
 | `moneyLoans` | `{person, amount, repaidAmount, direction, note, date, createdAt, completedAt}` | Ruszają saldo **bez** wpisu w transakcjach |
 | `notes` | `{title, content, icon, color, createdAt (ISO), archived}` | |
 | `todos` | `{text, size, dueDate, done, createdAt (ISO), penaltyApplied}` | |
 | `fcmTokens/{token}` | `{token, createdAt, ua}` | |
-| `plannerTasks` | `{title, time, durationMin, type, points, day, done, activityId}` | **Osierocone**: UI usunięte 24.08, ale `aiConfirmTask` nadal tu pisze |
+| `plannerTasks` | `{title, time, durationMin, type, points, dateISO, done, activityId: null, createdAt}` | **Osierocone**: UI usunięte 24.08, ale `aiConfirmTask` nadal tu pisze |
+| `aiConversations` | `{messages[{role, text}], updatedAt}` | Historia czatu Ex-us zapisywana przez backend (klient v1 jej nie czyta); rodzic ma do niej odczyt przez regułę `{col}/{docId}` |
 | `moneyGoals` | legacy | Czytane tylko przez skrypt raportu |
 
-Top-level: `bugReports`, `bugReportsConfig/keywords`, `broadcasts`, `aiTestAccess/{uid}`, `aiUsageGlobal/{date}`.
-Plus nieznane kolekcje backendu Ex-us (rozmowy `aiAssistantChat`), bo kodu funkcji nie ma w repo.
+Top-level: `bugReports`, `bugReportsConfig/keywords`, `broadcasts`, `aiTestAccess/{uid}`, `aiUsageGlobal/{date}` (`{totalTokens}`).
+W produkcji jest też `aiTestAccces/{uid}` (literówka, 1 dokument): ani reguły, ani backend jej nie czytają,
+więc to konto nie ma dostępu testowego AI, chyba że jest też w `aiTestAccess`. Stan faktyczny policzony
+na produkcji: `INVENTORY.md`.
 
 ### 1.6 Operacje CRUD
 
@@ -265,10 +270,12 @@ wiadomość usera
 - **Cloud Functions nie ma w repo.** `firebase.json` wskazuje `functions/`, katalog nie istnieje; historia gita
   go nigdy nie zawierała. Wdrożone funkcje: `aiClassifyIntent`, `aiAssistantChat`, `aiAssistantPing`,
   `aiConfirmTask`, `aiConfirmGoal` (+ prawdopodobnie zarządzanie `aiTestAccess`/`aiSettings`).
+- **Klucz konta serwisowego w sekrecie `FIREBASE_SERVICE_ACCOUNT` był nieważny od 2026-07-25**: od tego dnia
+  każde uruchomienie `notify.yml` (push reminders) kończyło się błędem uwierzytelnienia (`16 UNAUTHENTICATED`),
+  a `weekly-report.yml` używał tego samego sekretu. Klucz odnowiony 2026-09-27.
 - **`.github/workflows` usunięte** w commicie `d841f58` (2026-08-19, seria „Delete … / Add files via upload”).
   Z wysokim prawdopodobieństwem przypadkowo (upload przez przeglądarkę pomija katalogi zaczynające się od
-  kropki). Skutek: od 19.08 **nie działają** push reminders (`notify.yml`), raport tygodniowy
-  (`weekly-report.yml`) ani CI (`test.yml`).
+  kropki). Skutek: od 19.08 nie uruchamiają się ani push i raport (i tak już zepsute kluczem), ani CI (`test.yml`).
 - Skrypt raportu jest i tak nieaktualny: czyta legacy `moneyGoals` i `purchases`, liczy PLN jako `/10`
   na sztywno (`scripts/send-weekly-report.js:54,132,146`).
 - EmailJS: publiczny klucz w kliencie, szablony `template_f2b4jeo` (kod), `template_jztwowz` (raport).
@@ -630,7 +637,9 @@ Plik `CLAUDE.md` w katalogu głównym (treść do przygotowania w etapie 1):
 | `notes`, `todos` | Zachować | `todos` = moduł Tasks. Nowe opcjonalne: `doneAt` |
 | `users.pcBuild` | Zachować | |
 | `plannerTasks` | Nie ruszać | Opcjonalny import niezrobionych do `todos` (M5, decyzja usera) |
-| `moneyGoals` | Nie ruszać | Po poprawie raportu nieużywane |
+| `moneyGoals` | Nie ruszać | W produkcji brak dokumentów; skrypt raportu przestaje ją czytać (etap 6) |
+| `aiConversations` | Nie ruszać, v2 nie czyta | Historia backendu v1. Nie importujemy do lokalnej historii v2; dostęp rodzica — D7 |
+| `aiTestAccces` (literówka) | Nie ruszać | Właściciel sprawdza w konsoli, czy ten uid ma być w `aiTestAccess` |
 | `fcmTokens` | Zachować | Po cutover nowe tokeny z SW v2; martwe czyści skrypt push |
 | `bugReports`, `bugReportsConfig`, `broadcasts` | Zachować | Wiadomości przez `arrayUnion` |
 | `aiTestAccess`, `aiUsageGlobal`, `aiSettings` | Zachować | Obsługiwane przez backend |
@@ -639,29 +648,40 @@ Plik `CLAUDE.md` w katalogu głównym (treść do przygotowania w etapie 1):
 
 ### 5.3 Legacy kształty, które konwertery muszą obsłużyć
 
-| Encja | Wariant | Obsługa |
-|---|---|---|
-| Profil | brak `points`, brak `enabledModules`/`accountMode`/`lang` | Domyślne jak w v1 (`core.js:450-453`, `83-86`) |
-| Profil | legacy `goalName/goalType/goalAmount/goalCelebrated` | Migracja M1 (ta sama co `dashboard.js:54-67`) |
-| Aktywność | `type: '__generated__'` + `typeName`; `timestamp` jako Timestamp albo string | Nazwa z `typeName`; oba formaty daty |
-| Aktywność | `type` wskazujący skasowaną definicję | Etykieta zastępcza z i18n zamiast surowego id |
-| Obowiązek | brak `monthKey` | Wyliczenie z `dateISO` |
-| Transakcja | brak `pointsCost`, brak `source` | `0`, `'manual'` |
-| Notatka / zadanie | `createdAt` jako ISO string | Normalizacja do `Date` w pamięci, zapis w tym samym formacie co v1 |
-| Pożyczka | brak `repaidAmount`/`completedAt` | `0`, `null` |
+Zweryfikowane na produkcji 2026-09-27 (`INVENTORY.md`: 6 kont, sam schemat bez wartości). Kolumna „Produkcja”
+mówi, ile dokumentów ma dany wariant; wariant nieobecny dziś zostaje obsłużony, jeśli kosztuje jedną linię
+wartości domyślnej, bo v1 wciąż zapisuje dane w okresie równoległym.
 
-Przed etapem 2 skrypt inwentaryzacji (read-only, Admin SDK albo emulator z importem) zliczy faktyczne kształty
-pól we wszystkich kolekcjach — tabela powyżej zostanie zweryfikowana na prawdziwych danych, nie na założeniach.
+| Encja | Wariant | Produkcja | Obsługa |
+|---|---|---|---|
+| Profil | brak `enabledModules`/`accountMode`/`onboardingDone` | 1/6 kont | Domyślne jak w v1 (`core.js:450-453`, `83-86`), także dla `points` (dziś 6/6) |
+| Profil | brak `lang`, `dailyLimit`, kursów `pointsRate*` | 3-4/6 kont | Domyślne jak w v1 (150, 1 zł/10 pkt, 0,45 zł/1 pkt) |
+| Profil | `parentEmail: ''` | 5/6 kont | Pusty string = brak |
+| Profil | legacy `goalName/goalType/goalAmount/goalCelebrated` | 0/6 | Brak konwersji; M1 skreślona (v1 już tych pól nie zapisuje) |
+| Cel | brak `saved` | 1/3 celów | `0` |
+| Aktywność | `type: '__generated__'` + `typeName` | 3/37 | Nazwa z `typeName` |
+| Aktywność | `type` spoza seedów (własna albo skasowana definicja) | 20/37 | Nazwa z `activityDefs`; gdy definicji brak, etykieta zastępcza z i18n zamiast surowego id |
+| Aktywność | `timestamp` jako string | 0/37 (Timestamp 37/37) | Tolerancja zostaje (jedna gałąź w konwerterze) |
+| Aktywność | `desc: ''` | 33/37 | Pusty string = brak opisu |
+| Obowiązek | `choreId` wskazujący nieistniejącą definicję | 2/14 (wszystkie 36 definicji to seedy) | Nazwa i emoji ze zdenormalizowanych `choreName`/`choreEmoji` (14/14) |
+| Obowiązek | brak `monthKey` | 0/14 | Wyliczenie z `dateISO` zostaje jako fallback |
+| Wypłata / zakup | `amountPln` / `amount` raz int, raz float | float: 4/6 wypłat, 1/2 zakupów | Zwykła liczba; zaokrąglanie jak w v1 (`round2`) |
+| Money | legacy `pendingPoints` w `money/*` | 2/12 | Ignorowane, nie wyświetlane, nie kasowane |
+| Transakcja | brak `pointsCost`, brak `source` | 0/5 | `0`, `'manual'` |
+| Transakcja | wypłata obowiązków bez transakcji `chore_payout` | 6 wypłat, 0 takich transakcji | Saldo nie jest odtwarzalne z historii transakcji — „Sprawdź spójność” (5.5) pokazuje różnicę, nie poprawia |
+| Notatka / zadanie | `createdAt` jako ISO string | 8/8, 7/7 | Normalizacja do `Date` w pamięci, zapis w tym samym formacie co v1 |
+| Zgłoszenie | `createdAt` Timestamp, `messages[].at` ISO string | 4/4 | Oba formaty w jednym dokumencie |
+| Pożyczka | brak `repaidAmount`/`completedAt` | brak pożyczek w produkcji | `0`, `null` |
 
 ### 5.4 Migracje
 
 | Id | Kiedy | Co robi | Odwracalność |
 |---|---|---|---|
-| M1 | Etap 3d | Legacy pola celu → `goals[]` (jeśli konto nigdy nie otworzyło dashboardu v1 po zmianie) | Stare pola kasowane dokładnie jak w v1 |
-| M2 | Etap 3c | Backfill `moneyIncomeAllTime` (identycznie jak `money.js:73-83`) | Idempotentna |
+| ~~M1~~ | — | ~~Legacy pola celu → `goals[]`~~ Skreślona: inwentaryzacja pokazała 0/6 kont z legacy polami | — |
+| M2 | Etap 3c | Backfill `moneyIncomeAllTime` (identycznie jak `money.js:73-83`). Dziś pole ma 6/6 kont, więc M2 dotyczy tylko kont, które nigdy nie otworzyły Money | Idempotentna |
 | M3 | Etap 4 | `disabledModules` = moduły istniejące w dniu zapisu `enabledModules` minus `enabledModules`. `notes` włączone, jeśli `planner` był włączony. `enabledModules` dalej zapisywane dla v1 | Tylko nowe pole |
 | M4 | Cutover | `dayKeyMode: 'local'` — nowe wpisy do `dailyLog` pod lokalną datą. Historia bez zmian (różnica dotyczy wyłącznie okna 0:00-2:00) | Flaga |
-| M5 | Opcjonalnie | Import niezrobionych `plannerTasks` jako `todos` (termin = `day`) | Źródło nietknięte |
+| M5 | Opcjonalnie | Import niezrobionych `plannerTasks` jako `todos` (termin = `dateISO`) | Źródło nietknięte |
 | M6 | Po wyłączeniu v1 | Ledger Money: wpłaty na cele i pożyczki zaczynają tworzyć wpisy z nowymi `source` (`goal_deposit`, `goal_refund`, `loan_*`) + wpis „saldo otwarcia”. Dzięki temu saldo da się przeliczyć z historii i zweryfikować | Nowe dokumenty, filtrowane w UI |
 
 ### 5.5 Ochrona przed utratą danych
@@ -1242,7 +1262,8 @@ W CI (GitHub Actions) `gstatic.com` jest osiągalny, więc v1 w testach działa 
 
 ### 8.4 Dane produkcyjne
 
-- Inwentaryzacja kształtów (5.3) na eksporcie produkcji zaimportowanym do emulatora.
+- Inwentaryzacja kształtów (5.3): zrobiona na produkcji read-only (`INVENTORY.md`); powtarzana workflowem
+  „Data inventory” przed etapem 2 i przed cutover.
 - Dry-run każdej migracji na tej kopii + diff.
 - Narzędzie „Sprawdź spójność” (5.5) uruchamiane na koncie produkcyjnym po każdym etapie z zapisami.
 
@@ -1266,7 +1287,7 @@ Rozmiar: S ≈ 1-2 PR, M ≈ 3-5 PR, L ≈ 6+ PR.
 | **3a. Zadania + Notatki** | CRUD, budowa PC, kary, Markdown, archiwum, usuwanie zadań | Parytet 8.3; e2e na telefonie | M |
 | **3b. Obowiązki** | Definicje, wpisy, dziś/wczoraj, kalendarz, rozliczenie w jednym batchu → Money | Parytet; test „rozliczenie przerwane w połowie” nie zostawia niespójności | M |
 | **3c. Money** | Transakcje, kategorie, pożyczki, limit, archiwum, M2 | Parytet; saldo zgodne po serii operacji z dwóch kart | M |
-| **3d. Cele** | Cele punktowe/pieniężne, wpłaty, zwroty, M1, osobny ekran `#/goals` | Parytet | S |
+| **3d. Cele** | Cele punktowe/pieniężne, wpłaty, zwroty, osobny ekran `#/goals` | Parytet | S |
 | **3e. XP / aktywności** | Log aktywności/grania, cap, historia z paginacją kursorem, statystyki, generator, osiągnięcia, streak (freeze zapisywany w serwisie, nie w renderze) | Parytet; historia ładuje się w stałym czasie niezależnie od liczby wpisów | M |
 | **3f. Offline** | Kolejka szkiców kompatybilna z v1, przegląd, zatwierdzanie przez serwisy | Szkice utworzone w v1 zatwierdzane w v2 | S |
 | **4. Ustawienia + Zgłoszenia** | Wszystkie sekcje ustawień, M3 (moduły), tryb konta, email rodzica (na razie jak v1), zgłoszenia + admin + broadcasty + historia aktualizacji, „Sprawdź spójność” | Parytet; Notatnik widoczny dla kont sprzed 24.08 | L |
@@ -1292,13 +1313,17 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | Prawdziwe v1 w testach | CDN (Firebase 10.12.0, i18next, EmailJS) serwowane z `node_modules` — koniec zależności od kopii kodu w harnessach (B19) |
 | Charakteryzacja | `tests/emulator/v1-characterization.spec.js` — 4 przypadki e2e; pełne tabele w `GOLDEN.md` |
 | `functions/` | Pusty codebase `lifexp-v2` (TS, kompiluje się, emulator go wczytuje); deploy tylko `functions:lifexp-v2` |
-| Inwentaryzacja | `scripts/inventory.js` + workflow „Data inventory” (tylko schemat; test na emulatorze sprawdza brak wycieku wartości) |
+| Inwentaryzacja | `scripts/inventory.js` + workflow „Data inventory” (tylko schemat; test na emulatorze sprawdza brak wycieku wartości). Uruchomiona na produkcji 2026-09-27 → `INVENTORY.md`, wnioski w 5.3. Błędy klucza są opisywane bez cytowania sekretu |
+| Sekret `FIREBASE_SERVICE_ACCOUNT` | Nieważny od 25.07; odnowiony 2026-09-27 |
 | Backup | Instrukcja w `BACKUP.md` |
 
 **Do zrobienia przez właściciela** (wymaga dostępu do Google Cloud / ustawień GitHub):
-1. Scalić zmiany do `main` (workflow „Data inventory” da się uruchomić tylko z domyślnej gałęzi).
+1. ~~Scalić zmiany do `main`~~ (PR #12).
 2. Backup wg `BACKUP.md` (PITR + harmonogram + pierwszy eksport).
-3. Uruchomić „Data inventory” w zakładce Actions; raport trafia do podsumowania joba → przenieść do `docs/v2/INVENTORY.md`.
+3. ~~Uruchomić „Data inventory”~~ (2026-09-27, `INVENTORY.md`).
+4. Usunąć stary klucz konta serwisowego: najpierw wyłączyć, po dniu bez błędów usunąć.
+5. Sprawdzić w konsoli `aiTestAccces` (literówka): czy ten uid ma być w `aiTestAccess`.
+6. Decyzje D3 i D4 (blokują etap 1).
 
 ---
 
@@ -1315,9 +1340,9 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | R7 | Podwójne powiadomienia push | Średnie | Irytacja | Push tylko w v1 do cutover |
 | R8 | Zmiana klucza dni (UTC → lokalny) | Niskie | Wpisy z 0:00-2:00 w dniu przełączenia liczone inaczej | Tylko przy cutover, flaga w profilu, jawna notka w changelogu |
 | R9 | Brak kodu Cloud Functions → odtwarzanie backendu | Pewne | Nieznany stary prompt/limity; ryzyko przypadkowego skasowania starych funkcji przy deployu | Odtwarzamy tylko `exusTurn` i funkcje rodzica; osobny codebase + celowany deploy (6.12); 5a nie zależy od backendu |
-| R10 | Workflowy usunięte — push/raport/CI nie działają już dziś | Pewne | Brak przypomnień i raportów od 19.08 | Etap 0: przywrócić `test.yml`; notify/weekly po poprawie danych (etap 6) |
+| R10 | Push/raport/CI nie działają już dziś | Pewne | Brak przypomnień i raportów od 25.07 (klucz), brak CI od 19.08 | Etap 0: `test.yml` przywrócony, klucz odnowiony; notify/weekly po poprawie danych (etap 6) |
 | R11 | Zmiana sposobu deployu (Pages ze źródła „branch” na „GitHub Actions”) | Średnie | Wymaga zmiany w ustawieniach repo; upload przez przeglądarkę przestaje wystarczać | Jednorazowa zmiana w Settings → Pages; opis w `CLAUDE.md` |
-| R12 | Legacy kształty danych, których nie przewidziano | Średnie | Crash albo złe liczby | Inwentaryzacja na eksporcie produkcji przed etapem 2 |
+| R12 | Legacy kształty danych, których nie przewidziano | Niskie | Crash albo złe liczby | Inwentaryzacja produkcji zrobiona (5.3); ponowne uruchomienie przed etapem 2 i cutover |
 | R13 | Regresja UX: nawigacja drawerem wymaga dodatkowego tapnięcia | Średnie | Wolniejszy dostęp do modułów | Metadane w drawerze, szybkie akcje na „Dziś”, komendy Ex-us, gest krawędziowy |
 | R14 | Niespójność kodu pisanego przez AI między sesjami | Średnie | Erozja architektury | `CLAUDE.md`, lint warstw, typy, małe PR-y, testy wymagane w DoD |
 | R15 | Rozrost zakresu (nowe funkcje w trakcie rewrite) | Wysokie | Opóźnienie cutover | Parytet najpierw; nowe funkcje (np. usuwanie zadań) tylko jeśli trywialne i opisane |
@@ -1371,5 +1396,5 @@ Uzasadnienie techniczne:
 | D4 | Które motywy zostają (dark/light/gold) i czy wybór fontu zostaje | Dark + light na start, gold jako zestaw tokenów; wybór fontu z leniwym ładowaniem | Etap 1 |
 | D5 | Gry i FPS w v2 | Zostają jako moduł lazy (silnik bez zmian), FPS jako osobna strona | Etap 7 |
 | D6 | `plannerTasks` (zadania dodane przez Ex-us, dziś niewidoczne) | Jednorazowy import niezrobionych do `todos` (M5) | Etap 3a |
-| D7 | Czy rodzic ma widzieć notatki i zadania | Notatki: nie (prywatne); zadania: tak | Etap 8 |
+| D7 | Czy rodzic ma widzieć notatki, zadania i rozmowy z Ex-us (`aiConversations`) | Notatki i rozmowy: nie (prywatne); zadania: tak | Etap 8 |
 | D8 | Czy dodać usuwanie zadań (v1 go nie ma) | Tak, trywialne i oczekiwane | Etap 3a |

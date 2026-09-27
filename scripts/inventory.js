@@ -185,8 +185,11 @@ class Inventory {
   }
 }
 
+// Klasy typu "<other>" i "__generated__" jako kod: bez tego markdown GitHuba
+// traktuje pierwsze jak znacznik HTML (znika), a drugie jak pogrubienie.
 function fmtCounts(map) {
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ×${n}`).join(', ');
+  const label = (k) => (/^[<_]/.test(k) ? `\`${k}\`` : k);
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${label(k)} ×${n}`).join(', ');
 }
 
 async function scanCollection(inv, colRef, pattern) {
