@@ -25,10 +25,12 @@ module.exports = defineConfig({
   },
   projects: [
     { name: 'app', testIgnore: [/fps-gameplay\.spec\.js/, /[\\/]emulator[\\/]/] },
-    // The FPS scene renders through software WebGL in headless Chromium. Several
-    // copies at once starve each other of CPU and the frame-counted waits time
-    // out; one at a time they pass reliably. Only this project is serialised.
-    { name: 'fps-gameplay', testMatch: /fps-gameplay\.spec\.js/, workers: 1 },
+    // The FPS scene renders through software WebGL in headless Chromium at a few
+    // fps, and its tests wait in FRAMES (see the spec header), so wall-clock time
+    // depends on the machine: locally the heaviest take ~28 s, a CI runner is
+    // slower. Hence one worker (parallel copies starve each other of CPU) and a
+    // longer per-test timeout. CI runs this project in its own job.
+    { name: 'fps-gameplay', testMatch: /fps-gameplay\.spec\.js/, workers: 1, timeout: 120000 },
     // Real v1 app against the Firebase emulators. Needs them running, so it is
     // started through `npm run test:emulator` (firebase emulators:exec), not `npm test`.
     // Service workers are blocked: sw.js caching is not what these tests check.

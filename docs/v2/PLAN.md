@@ -1286,7 +1286,7 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | Element | Wynik |
 |---|---|
 | Testy deterministyczne | 5 porażek starego CI (Ex-us ×4, menu FPS) wynikało z zależności od sieci; fixture `tests/support/hermetic.js` blokuje ruch zewnętrzny. Test FPS naprawiony po dodaniu ekranu ładowania. `fps-gameplay` w osobnym projekcie z 1 workerem. Lokalnie 50/50 |
-| CI | `.github/workflows/test.yml` przywrócony: jobs „App and games”, „Cloud Functions build”, „v1 against Firebase emulators” |
+| CI | `.github/workflows/test.yml` przywrócony: jobs „App”, „FPS gameplay” (osobno: renderowanie WebGL w software, limit 120 s na test), „Cloud Functions build”, „v1 against Firebase emulators” |
 | Emulatory | `firebase.emulators.json` (projekt `demo-lifexp`, osobno od `firebase.json`), `npm run test:emulator` |
 | Przełącznik `?emulator=1` w v1 | Tylko localhost; `typeof`-guard na stary config z cache SW; cache SW podbity do v55 |
 | Prawdziwe v1 w testach | CDN (Firebase 10.12.0, i18next, EmailJS) serwowane z `node_modules` — koniec zależności od kopii kodu w harnessach (B19) |
