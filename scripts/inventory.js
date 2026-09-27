@@ -204,12 +204,37 @@ async function buildInventory(db) {
   return inv;
 }
 
+// Błędy są wypisywane w PUBLICZNYM logu Actions, więc nigdy nie mogą zawierać
+// fragmentu sekretu. Stąd własne komunikaty zamiast np. oryginalnego błędu
+// JSON.parse, który cytuje początek parsowanego tekstu.
+function parseServiceAccount(raw) {
+  let sa;
+  try { sa = JSON.parse(raw); } catch (e) { sa = null; }
+  if (!sa || sa.type !== 'service_account' || !sa.private_key || !sa.project_id) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT nie zawiera klucza konta serwisowego. Sekret musi mieć CAŁĄ '
+      + 'zawartość pliku JSON pobranego przez "Generate new private key" (zaczyna się od "{" i zawiera '
+      + '"type": "service_account"), a nie fragment kodu z konsoli Firebase.');
+  }
+  return sa;
+}
+
+function explain(e) {
+  if (e && e.code === 16) {
+    return 'Google odrzucił klucz (UNAUTHENTICATED): klucz w FIREBASE_SERVICE_ACCOUNT został usunięty albo '
+      + 'wyłączony. Wygeneruj nowy klucz (Firebase Console → Project settings → Service accounts) i podmień sekret.';
+  }
+  if (e && e.code === 7) {
+    return 'Brak uprawnień (PERMISSION_DENIED): konto serwisowe z sekretu nie ma dostępu do Firestore tego projektu.';
+  }
+  return (e && e.message) || String(e);
+}
+
 async function main() {
   const { initializeApp, cert } = require('firebase-admin/app');
   const { getFirestore } = require('firebase-admin/firestore');
   let projectId = process.env.GCLOUD_PROJECT;
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    const sa = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT);
     projectId = sa.project_id;
     initializeApp({ credential: cert(sa), projectId });
   } else {
@@ -224,7 +249,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((e) => { console.error(e.message); process.exit(1); });
+  main().catch((e) => { console.error(explain(e)); process.exit(1); });
 }
 
-module.exports = { buildInventory, classifyId, typeOf };
+module.exports = { buildInventory, classifyId, typeOf, parseServiceAccount, explain };
