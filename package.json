@@ -2,13 +2,21 @@
   "name": "lifexp-app",
   "private": true,
   "version": "1.0.0",
-  "description": "LifeXP — static PWA, no build step. This package.json exists only for the test suite.",
+  "description": "LifeXP \u2014 static PWA, no build step. This package.json exists only for tests and tooling.",
   "scripts": {
-    "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test": "playwright test --project=app --project=fps-gameplay",
+    "test:emulator": "firebase emulators:exec --config firebase.emulators.json --project demo-lifexp --only auth,firestore \"playwright test --project=emulator\"",
+    "test:all": "npm test && npm run test:emulator",
+    "test:ui": "playwright test --ui",
+    "emulators": "firebase emulators:start --config firebase.emulators.json --project demo-lifexp --only auth,firestore"
   },
   "devDependencies": {
+    "@emailjs/browser": "4.4.1",
     "@playwright/test": "^1.61.1",
+    "firebase": "10.12.0",
+    "firebase-admin": "14.5.0",
+    "firebase-tools": "15.31.0",
+    "i18next": "23.16.8",
     "three": "0.160.0"
   }
 }

@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
 import {
-  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager, connectFirestoreEmulator,
   doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
   collection, addDoc, query, where, orderBy, limit, getDocs, increment, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -30,6 +30,16 @@ export const db = initializeFirestore(app, {
 });
 export const messaging = getMessaging(app);
 export const functions = getFunctions(app);
+// Tylko testy na localhost (?emulator=1) — patrz LIFEXP_EMULATOR w firebase-config.js.
+// Podłączenie musi nastąpić przed pierwszym użyciem auth/db/functions. typeof, bo
+// stary firebase-config.js z cache Service Workera nie ma tej stałej.
+const EMU = typeof LIFEXP_EMULATOR !== 'undefined' ? LIFEXP_EMULATOR : null;
+if (EMU) {
+  const { host, authPort, firestorePort, functionsPort } = EMU;
+  connectAuthEmulator(auth, `http://${host}:${authPort}`, { disableWarnings: true });
+  connectFirestoreEmulator(db, host, firestorePort);
+  connectFunctionsEmulator(functions, host, functionsPort);
+}
 
 // ── System modułów (personalizacja interfejsu) ─────────
 // Jedyne źródło prawdy "co jest modułem" — ankieta pierwszego uruchomienia,

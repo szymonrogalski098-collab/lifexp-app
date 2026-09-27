@@ -175,12 +175,19 @@
   <script src="firebase-config.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, updateProfile, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    // Tylko testy na localhost (?emulator=1) — patrz LIFEXP_EMULATOR w firebase-config.js.
+    // typeof: stary firebase-config.js z cache Service Workera nie ma tej stałej.
+    const EMU = typeof LIFEXP_EMULATOR !== 'undefined' ? LIFEXP_EMULATOR : null;
+    if (EMU) {
+      connectAuthEmulator(auth, `http://${EMU.host}:${EMU.authPort}`, { disableWarnings: true });
+      connectFirestoreEmulator(db, EMU.host, EMU.firestorePort);
+    }
     const googleProvider = new GoogleAuthProvider();
 
     // Redirect if already logged in
