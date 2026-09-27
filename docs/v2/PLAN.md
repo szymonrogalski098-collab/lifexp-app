@@ -2,6 +2,7 @@
 
 Status: **plan do akceptacji, zero implementacji**. Stan repo: `main` @ `3250146` (2026-09-01).
 Rewizja 2: kod Cloud Functions nieodnaleziony → backend Ex-us odtwarzany od nowa (6.12).
+Rewizja 3: decyzje z benchmarku podobnych aplikacji (`RESEARCH.md`, oznaczenia U1-U15) naniesione na sekcje 6 i 7.
 Baseline testów (Playwright, lokalnie w sandboxie): **43/50 zielonych**. 7 failujących to wyłącznie FPS
 (timeouty WebGL w headless Chromium). Testy logiki LifeXP (punkty, Money, obowiązki) nie istnieją.
 
@@ -769,7 +770,13 @@ export function fillSlots(tokens: string[], slots: SlotDef<unknown>[], ctx: Pars
 ```
 
 UI parsera: wpisanie `/` otwiera paletę komend (lista tekstowa, filtrowana na bieżąco, ↑↓/Enter, na telefonie
-tap). Po wyborze komendy — podpowiedź składni pod polem (`/create-task <treść> <termin> [S|M|L]`).
+tap). Rozpoznane fragmenty są podświetlane w polu na żywo, jak w Todoist Quick Add (U9): data, kwota, rozmiar
+dostają kolor semantyczny, a karta podglądu pokazuje, co z nich wynika.
+
+Reguły palety (U11, wzorce Linear/Raycast): pusta paleta pokazuje ostatnie i najczęstsze komendy; wyniki
+w grupach „Komendy / Ekrany / Ostatnie”; dokładny prefiks nazwy albo aliasu zawsze przed dopasowaniem
+rozmytym; każdy wiersz = nazwa + moduł + składnia; brak wyników nigdy nie kończy się ślepą uliczką —
+ostatnia pozycja to „Zapytaj Ex-us: <wpisany tekst>”. Placeholder pola: „Napisz do Ex-us albo wpisz /”. Po wyborze komendy — podpowiedź składni pod polem (`/create-task <treść> <termin> [S|M|L]`).
 Ta sama paleta działa globalnie (Ctrl/Cmd+K na desktopie).
 
 ### 6.4 Command registry
@@ -784,7 +791,7 @@ export interface CommandDef<A> {
   schema: z.ZodType<A>;           // walidacja + JSON Schema dla Gemini (z.toJSONSchema)
   risk: 'read' | 'write' | 'destructive';
   aiExposed: boolean;             // czy model może ją proponować
-  preview(args: A, s: Stores): PreviewModel;               // treść karty potwierdzenia
+  preview(args: A, s: Stores): PreviewModel;               // treść karty + effects: skutki, np. 'Saldo: 312,50 → 262,50 zł' (U8)
   execute(args: A, svc: Services): Promise<CommandResult>; // wywołuje TEN SAM serwis co formularz w UI
   undo?(result: CommandResult, svc: Services): Promise<void>;
 }
@@ -807,6 +814,7 @@ max 3 cele, max 30 zadań itd. egzekwowane w jednym miejscu).
 | `/go` | `/idz` | `<ekran>` | read | tak | router |
 | `/undo` | `/cofnij` | — | write | — | stos undo |
 | `/new-chat` | `/nowy` | — | read | — | czat |
+| `edit-pending` | — | `<ref karty> <zmienione args>` | read | tak (tylko AI) | aktualizuje niezatwierdzoną kartę (U10) |
 | **XP / aktywności** | | | | | |
 | `/log-activity` | `/aktywnosc` | `<typ> <czas> [opis]` | write | tak | `activity.log` |
 | `/log-gaming` | `/granie` | `<gra> <czas> [data]` | write | tak | `gaming.log` |
@@ -861,7 +869,17 @@ Komendy admina (broadcast, moderacja zgłoszeń) celowo **nie** są wystawione d
 ### 6.6 Wykonanie, potwierdzenia, undo
 
 - Pipeline jest jeden dla slash-komend i akcji z AI; różni się tylko źródłem `ParsedCommand`.
-- Akcje z AI: max 3 na turę; każda jako osobna karta; nic nie wykonuje się bez tapnięcia (poza `read`).
+- Polityka potwierdzeń zależy od ryzyka **i źródła** (U7):
+
+  | Źródło | `read` | `write` | `destructive` |
+  |---|---|---|---|
+  | Komenda wpisana ręcznie (`/...`), wszystkie wymagane sloty rozpoznane | wykonaj | wykonaj + toast „Cofnij” | dialog ze skutkami |
+  | Komenda z brakującymi/niepewnymi slotami | wykonaj | karta-formularz | dialog ze skutkami |
+  | Akcja zaproponowana przez AI | wykonaj | karta „Wykonaj / Pomiń” | dialog ze skutkami |
+
+  Jawnie wpisana komenda to już intencja użytkownika — drugie pytanie byłoby zmęczeniem potwierdzeniami.
+  Propozycja AI to domysł modelu, więc zawsze przechodzi przez kartę.
+- Akcje z AI: max 3 na turę; każda jako osobna karta ze skutkami (`effects`).
 - `undo`: stos ostatnich 10 wykonanych komend w sesji; handler deklaruje odwrotność (np. `create-task` →
   usuń utworzony dokument; `add-money` → usuń transakcję z cofnięciem salda). Komendy bez sensownej
   odwrotności (`settle-chores`) mają `risk: 'destructive'` i nie trafiają na stos.
@@ -887,11 +905,16 @@ Encje dostają krótkie refy (`g1`, `t3`, `c2`) zamiast id Firestore: mniej toke
   "chores": { "defs": [{ "ref": "c1", "name": "Zmywarka", "points": 15 }], "unsettledPts": 85 },
   "activityTypes": [{ "ref": "a1", "name": "Nauka", "ptsPerHour": 40 }],
   "categories": ["jedzenie", "gry", "szkoła"],
-  "recentActions": [{ "command": "create-task", "status": "executed" }]
+  "recentActions": [{ "command": "create-task", "status": "executed" }],
+  "pendingActions": [{ "ref": "p1", "command": "create-task", "args": { "text": "Mleko", "due": "2026-10-04" } }]
 }
 ```
 
 Budżet: ~1-2 tys. tokenów (limity z v1: max 3 cele, 30 zadań; treści ucinane do 80 znaków).
+
+`pendingActions` (U10, wzorzec Todoist Ramble): niezatwierdzone karty z poprzedniej tury. Wiadomość typu
+„zmień termin na piątek” zwraca akcję `edit-pending` z refem karty — klient aktualizuje istniejącą kartę
+zamiast dokładać nową.
 Każdy moduł dokłada swój fragment przez `FeatureDef.exusContext`.
 
 ### 6.8 System prompt
@@ -1055,7 +1078,7 @@ zamiast awarii, licznik rośnie o zużycie z odpowiedzi modelu.
 | Spacing | Siatka 4 px: 4, 8, 12, 16, 20, 24, 32, 40, 56 |
 | Kolor | Skala neutralna (10 stopni), jeden akcent jako rampa, semantyczne: `positive`, `negative`, `warning`. Motywy: dark (domyślny), light, gold |
 | Kształt | Promienie 8 / 12 / 16 / 999 |
-| Elewacja | 0 (płaskie karty z 1 px obramowaniem), 1 (sheet, drawer), 2 (dialog) |
+| Elewacja | 0 (płaskie karty z 1 px obramowaniem), 1 (sheet, drawer), 2 (dialog). Rozmycie tła (`backdrop-filter`) wyłącznie w top barze — jedna warstwa nawigacji nad treścią, jak zaleca Apple HIG; nigdy na kartach (v1: spadki FPS) (U5) |
 | Z-index | `topbar 100 < drawer 200 < sheet 300 < dialog 400 < toast 500` — jedyne dozwolone warstwy |
 | Ruch | 150 / 200 / 250 ms, `cubic-bezier(.2,.8,.2,1)`, `prefers-reduced-motion` → 0 |
 
@@ -1064,31 +1087,44 @@ zamiast awarii, licznik rośnie o zużycie z odpowiedzi modelu.
 | Klasa szerokości | Zakres | Nawigacja | Treść |
 |---|---|---|---|
 | compact | < 600 px | Drawer wysuwany z lewej + top bar | 1 kolumna, marginesy 16 px |
-| medium | 600-1023 px | Drawer (jak compact) | 1-2 kolumny kart, max 720 px |
-| expanded | ≥ 1024 px | Stały sidebar 264 px (zwijany do wąskiego paska z inicjałami sekcji) | 2-3 kolumny, max 1100 px |
+| medium | 600-839 px | Drawer (jak compact) | 1-2 kolumny kart, max 720 px |
+| expanded | ≥ 840 px | Stały sidebar 264 px (zwijany do wąskiego paska z inicjałami sekcji) | 2-3 kolumny, max 1100 px |
+
+Progi 600/840 to klasy szerokości Material 3 (U4). Drawer zamiast dolnego paska jest zgodny z M3:
+dolny pasek mieści 3-5 celów, LifeXP ma ich 8+ (v1 miał 8 pozycji w dolnym pasku, co łamało tę regułę).
 
 Shell to CSS grid: `grid-template-columns: [nav] auto [main] 1fr`. Tylko shell zna `position: fixed`
 i safe-area; strony nigdy (koniec FAB-ów i łatek `padding-bottom`).
 
 ### 7.4 Sidebar mobilny — specyfikacja zachowania (jak ChatGPT)
 
-**Top bar** (56 px + `safe-area-inset-top`): po lewej przycisk Menu (min. 44×44), na środku tytuł ekranu,
-po prawej jedna akcja kontekstowa tekstem („Dodaj”, „Nowa”, „Rozlicz”). Top bar przyklejony, przy scrollu
-w dół lekko się kompaktuje.
+**Top bar** (56 px + `safe-area-inset-top`): po lewej przycisk z napisem **„Menu”** (U1; min. 44×44 — tekst
+zamiast ikony hamburgera, bo goła ikona jest słabiej odkrywalna wg NN/g, a UI i tak jest bez ikon), na środku
+tytuł ekranu, po prawej jedna akcja kontekstowa tekstem („Dodaj”, „Nowa”, „Rozlicz”). Top bar przyklejony,
+półprzezroczysty z rozmyciem tła, przy scrollu w dół lekko się kompaktuje.
+
+**Kompensata ukrytej nawigacji** (NN/g: ukryte menu obniża odkrywalność mniej więcej o połowę): ekran Dziś
+zawiera bezpośrednie wejścia do modułów (7.6), pole Ex-us/komend daje dostęp do wszystkiego z każdego ekranu,
+a metadane w drawerze („2 po terminie”) dają powód, żeby go otwierać. Plan awaryjny, gdyby testy
+z użytkownikiem wykazały problem: hybryda jak w Monarch (3-4 najczęstsze moduły w dolnym pasku + drawer).
 
 **Otwieranie:**
 - tap w Menu;
 - przeciągnięcie od lewej krawędzi (strefa 0-24 px) — tylko w trybie standalone PWA; w Safari w przeglądarce
   lewa krawędź należy do systemowego „wstecz”, więc tam gest jest wyłączony;
-- drawer podąża za palcem (`pointermove`, `transform: translateX`), po puszczeniu decyduje próg 40% szerokości
-  albo prędkość > 0,5 px/ms.
+- karta treści podąża za palcem 1:1 (`pointermove`, bez animacji w trakcie); po puszczeniu decyduje pęd:
+  krótkie, szybkie machnięcie otwiera/zamyka, wolne przeciągnięcie osiada po stronie progu 50%; przerwany gest
+  (`pointercancel`) wraca do najbliższego stanu (U3).
 
-**Wygląd w ruchu:** drawer `min(85vw, 320px)`, treść przesuwa się razem z nim (push, jak ChatGPT) i dostaje
-scrim, którego krycie rośnie proporcjonalnie do postępu przeciągania (0 → 0,4). Animowane tylko
-`transform` i `opacity` (kompozytor GPU, 60 fps na słabszych telefonach).
+**Wygląd w ruchu (model ChatGPT, U2):** to **karta treści** jest obiektem, który się przesuwa — odjeżdża
+w prawo o ok. 82% szerokości ekranu (bez skalowania), dostaje zaokrągloną lewą krawędź (28 px) i cień.
+Menu leży pod spodem: startuje z `translateX(-10%)` i krycia 0,55 i dojeżdża do pozycji docelowej, więc
+wygląda, jakby „było tam cały czas”. Brak przyciemniającego scrimu na całym ekranie — odsłonięty pasek
+karty sam jest celem zamknięcia. Czas ~300-450 ms z miękkim wygaszeniem; `prefers-reduced-motion` →
+natychmiastowe przełączenie. Animowane tylko `transform`, `opacity`, `border-radius` (kompozytor GPU).
 
-**Zamykanie:** tap w scrim, przeciągnięcie w lewo, wybór pozycji, `Esc`, systemowe „wstecz” (otwarcie
-dokłada wpis historii).
+**Zamykanie:** tap w odsłoniętą kartę, przeciągnięcie karty w lewo, wybór pozycji, `Esc`, systemowe „wstecz”
+(otwarcie dokłada wpis historii).
 
 **Dostępność:** otwarty drawer = `role="dialog" aria-modal="true"`, treść pod spodem `inert`, fokus na pierwszej
 pozycji, po zamknięciu powrót fokusu na Menu, `aria-expanded` na przycisku. Blokada scrolla treści
@@ -1129,13 +1165,26 @@ danger), `TextField`, `NumberField` i `MoneyField` (polski przecinek, grosze), `
 jeden komponent), `ConfirmDialog`, `Toast` (kolejka, `aria-live`, wielowierszowy), `EmptyState` (tekst + jedna
 akcja), `Skeleton`, `Markdown` (lazy, sanityzowany), `CommandInput` (z paletą `/`).
 
+Reguły komponentów z benchmarku:
+- `Sheet` (U12): zawsze tekstowy przycisk „Zamknij” w nagłówku (uchwyt tylko jako dodatek), jeden arkusz
+  na akcję — nigdy arkusz otwierany z arkusza; przy fokusie pola z klawiaturą arkusz rośnie do pełnej
+  wysokości (`visualViewport`); zamknięcie gestem z pędem, wolne przeciągnięcie wraca.
+- `MoneyField` (U13): `inputmode="decimal"` (klawiatura z przecinkiem, bez spinnerów `type="number"`),
+  kwota prezentowana dużą cyfrą, pod polem podgląd skutku („Saldo po operacji: 262,50 zł”).
+
 ### 7.6 Wzorce ekranów
 
-- **Dziś**: powitanie + data; rząd metryk (Punkty z ekwiwalentem PLN, Dziś X/limit z cienkim paskiem, Seria);
-  „Na dziś” (zadania z terminem dziś/zaległe, odhaczanie w miejscu); Cele (≤ 3, kompaktowo); Obowiązki
-  (do wypłaty + „Dodaj”); pole Ex-us. Osiągnięcia, TOP, ciekawostki → ekran Statystyki (odciążenie).
-- **Pieniądze**: saldo jako bohater, „W celach”, alert limitu tekstem; lista transakcji z grupowaniem po dniach;
-  pożyczki jako podsekcja `#/money/loans`.
+- **Dziś** (U6, tryb skupienia jak Today w Things 3): kolejność według listy priorytetów z `RESEARCH.md` §3 —
+  zadania na dziś i zaległe (odhaczanie w miejscu) → pole Ex-us/komend → stan dnia (punkty dziś / limit,
+  seria z informacją, czy dzisiejszy dzień już się liczy) → szybkie akcje (obowiązek, aktywność, transakcja)
+  → cele (ile brakuje) → saldo i do wypłaty → wejścia do pozostałych modułów. Poziom, osiągnięcia, TOP,
+  ciekawostki i wykresy → ekran Statystyki (przestroga Habitica: grywalizacja nie może zagracać głównego
+  przepływu).
+- **Pieniądze** (U14, wzorce Copilot i Revolut Vaults): saldo jako bohater z podziałem „Dostępne / W celach”;
+  „Ten miesiąc vs poprzedni do tego samego dnia” (wydatki i wpływy); alert limitu tekstem; transakcje
+  grupowane po dniach; pożyczki jako podsekcja `#/money/loans`.
+- **Seria** (U15, Duolingo i Finch): jasna reguła dnia („dzień liczy się, gdy zdobędziesz co najmniej 1 pkt”);
+  po przerwanej serii komunikat zachęcający do powrotu, bez tonu straty; użyte zamrożenie opisane wprost.
 - **Obowiązki**: do wypłaty + „Rozlicz”; kalendarz miesiąca (siatka liczb, dni z wpisami podświetlone
   akcentem); lista wpisów dnia; dodawanie przez Sheet z listą definicji.
 - **Formularze**: zawsze w `Sheet`, jedna kolumna, primary na dole w strefie kciuka, walidacja inline.
@@ -1151,7 +1200,7 @@ akcja), `Skeleton`, `Markdown` (lazy, sanityzowany), `CommandInput` (z paletą `
 | `position: fixed` tylko w shellu i warstwach (drawer, sheet, dialog, toast) | Lint (zakaz w `features/`) |
 | Pola formularzy ≥ 16 px → brak auto-zoomu iOS → zoom użytkownika z powrotem włączony | Stylelint |
 | Cele dotyku ≥ 44×44 px | Test e2e |
-| Brak poziomego scrolla na każdym route | Test e2e: `scrollWidth ≤ innerWidth` dla 360/390/768/1280 px |
+| Brak poziomego scrolla na każdym route | Test e2e: `scrollWidth ≤ innerWidth` dla 360/390/768/839/840/1280 px |
 
 ---
 
@@ -1164,7 +1213,7 @@ akcja), `Skeleton`, `Markdown` (lazy, sanityzowany), `CommandInput` (z paletą `
 | Domena | Vitest | Wszystkie czyste funkcje: punkty/cap, poziom, streak+freeze, osiągnięcia, obowiązki (dziś/wczoraj, rozliczenie), Money (saldo ≥ 0, koszt w pkt, pożyczki), cele (wpłata/zwrot/zmiana typu), budowa PC, daty, kwoty | Każdy commit |
 | Parser / komendy | Vitest | Tabele wejście → `ParsedCommand`; rozpoznawacze; rozmyte dopasowanie encji; pipeline z fałszywymi serwisami | Każdy commit |
 | Konwertery / repozytoria | Vitest + Firestore Emulator | Legacy kształty (5.3), round-trip, transakcje, reguły bezpieczeństwa | Każdy PR |
-| E2E | Playwright + Emulator (Auth + Firestore) | Krytyczne ścieżki każdego modułu na profilach iPhone 13 i Pixel 7 + desktop | Każdy PR |
+| E2E | Playwright + Emulator (Auth + Firestore) | Krytyczne ścieżki każdego modułu na profilach iPhone 13 i Pixel 7 + desktop; budżety tapnięć z `RESEARCH.md` §2 jako asercje | Każdy PR |
 | Wizualne | Playwright screenshots | Każdy route × 360/390/768/1280 × dark/light × drawer otwarty/zamknięty | Każdy PR (diff do akceptacji) |
 | Layout | Playwright | Brak poziomego overflow, cele dotyku, fokus w drawerze | Każdy PR |
 | Parytet v1↔v2 | Playwright + Emulator | 8.3 | Przed oznaczeniem modułu jako gotowy |
