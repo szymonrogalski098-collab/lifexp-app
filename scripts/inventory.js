@@ -78,12 +78,13 @@ function typeOf(v) {
 
 class Inventory {
   constructor() {
-    this.collections = new Map(); // pattern -> { docs, ids: Map, fields: Map(path -> Map(type -> n)), enums: Map(path -> Map(value -> n)) }
+    // pattern -> { docs, ids: Map, fields: Map(path -> Map(type -> n)), present: Map(path -> n), enums: Map(path -> Map(value -> n)) }
+    this.collections = new Map();
   }
 
   bucket(pattern) {
     if (!this.collections.has(pattern)) {
-      this.collections.set(pattern, { docs: 0, ids: new Map(), fields: new Map(), enums: new Map() });
+      this.collections.set(pattern, { docs: 0, ids: new Map(), fields: new Map(), present: new Map(), enums: new Map() });
     }
     return this.collections.get(pattern);
   }
@@ -98,6 +99,12 @@ class Inventory {
   }
 
   note(b, path, type, seen) {
+    // Obecność liczona osobno od typów: pole z różnymi typami w różnych
+    // dokumentach (np. kwota int/float) jest obecne w sumie tych dokumentów.
+    if (!seen.has(path)) {
+      seen.add(path);
+      b.present.set(path, (b.present.get(path) || 0) + 1);
+    }
     const key = `${path}\u0000${type}`;
     if (seen.has(key)) return;
     seen.add(key);
@@ -163,8 +170,8 @@ class Inventory {
       lines.push('|---|---:|---|');
       for (const path of [...b.fields.keys()].sort()) {
         const types = b.fields.get(path);
-        const present = path.includes('[]') ? '—' : Math.max(...types.values());
-        lines.push(`| \`${path}\` | ${present === '—' ? '—' : `${present}/${b.docs}`} | ${fmtCounts(types)} |`);
+        const present = path.includes('[]') ? '—' : `${b.present.get(path)}/${b.docs}`;
+        lines.push(`| \`${path}\` | ${present} | ${fmtCounts(types)} |`);
       }
       if (b.enums.size) {
         lines.push('');
@@ -252,4 +259,4 @@ if (require.main === module) {
   main().catch((e) => { console.error(explain(e)); process.exit(1); });
 }
 
-module.exports = { buildInventory, classifyId, typeOf, parseServiceAccount, explain };
+module.exports = { Inventory, buildInventory, classifyId, typeOf, parseServiceAccount, explain };
