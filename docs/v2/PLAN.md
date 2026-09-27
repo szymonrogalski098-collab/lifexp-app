@@ -1279,6 +1279,27 @@ Rozmiar: S ≈ 1-2 PR, M ≈ 3-5 PR, L ≈ 6+ PR.
 Kolejność 3a → 3e jest celowa: od modułów izolowanych do tych, które piszą do punktów i salda. Moduł, który
 nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 
+### 9.1 Stan realizacji
+
+**Etap 0 (2026-09-27)** — zrobione w repo:
+
+| Element | Wynik |
+|---|---|
+| Testy deterministyczne | 5 porażek starego CI (Ex-us ×4, menu FPS) wynikało z zależności od sieci; fixture `tests/support/hermetic.js` blokuje ruch zewnętrzny. Test FPS naprawiony po dodaniu ekranu ładowania. `fps-gameplay` w osobnym projekcie z 1 workerem. Lokalnie 50/50 |
+| CI | `.github/workflows/test.yml` przywrócony: jobs „App and games”, „Cloud Functions build”, „v1 against Firebase emulators” |
+| Emulatory | `firebase.emulators.json` (projekt `demo-lifexp`, osobno od `firebase.json`), `npm run test:emulator` |
+| Przełącznik `?emulator=1` w v1 | Tylko localhost; `typeof`-guard na stary config z cache SW; cache SW podbity do v55 |
+| Prawdziwe v1 w testach | CDN (Firebase 10.12.0, i18next, EmailJS) serwowane z `node_modules` — koniec zależności od kopii kodu w harnessach (B19) |
+| Charakteryzacja | `tests/emulator/v1-characterization.spec.js` — 4 przypadki e2e; pełne tabele w `GOLDEN.md` |
+| `functions/` | Pusty codebase `lifexp-v2` (TS, kompiluje się, emulator go wczytuje); deploy tylko `functions:lifexp-v2` |
+| Inwentaryzacja | `scripts/inventory.js` + workflow „Data inventory” (tylko schemat; test na emulatorze sprawdza brak wycieku wartości) |
+| Backup | Instrukcja w `BACKUP.md` |
+
+**Do zrobienia przez właściciela** (wymaga dostępu do Google Cloud / ustawień GitHub):
+1. Scalić zmiany do `main` (workflow „Data inventory” da się uruchomić tylko z domyślnej gałęzi).
+2. Backup wg `BACKUP.md` (PITR + harmonogram + pierwszy eksport).
+3. Uruchomić „Data inventory” w zakładce Actions; raport trafia do podsumowania joba → przenieść do `docs/v2/INVENTORY.md`.
+
 ---
 
 ## 10. Ryzyka
@@ -1345,7 +1366,7 @@ Uzasadnienie techniczne:
 | # | Decyzja | Rekomendacja | Blokuje |
 |---|---|---|---|
 | D1 | ~~Gdzie jest kod Cloud Functions?~~ **Rozstrzygnięte**: nieodnaleziony → odtwarzamy nowy backend (6.12) | — | — |
-| D2 | Czy usunięcie workflowów 19.08 było celowe? | Przywrócić `test.yml` od razu; `notify`/`weekly-report` po etapie 6 | Etap 0 |
+| D2 | ~~Czy usunięcie workflowów 19.08 było celowe?~~ **Rozstrzygnięte w etapie 0**: `test.yml` przywrócony; `notify`/`weekly-report` wracają w etapie 6 (skrypt raportu czyta nieaktualne dane) | — | — |
 | D3 | Akceptacja build stepu i deployu przez GitHub Actions (zmiana źródła Pages) | Tak (plan A) | Etap 1 |
 | D4 | Które motywy zostają (dark/light/gold) i czy wybór fontu zostaje | Dark + light na start, gold jako zestaw tokenów; wybór fontu z leniwym ładowaniem | Etap 1 |
 | D5 | Gry i FPS w v2 | Zostają jako moduł lazy (silnik bez zmian), FPS jako osobna strona | Etap 7 |
