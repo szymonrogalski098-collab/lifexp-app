@@ -81,7 +81,7 @@ przydatne przy pojedynczym zepsutym saldzie.
 
 | Element | Stan |
 |---|---|
-| PITR włączony | do zrobienia (krok 1) |
-| Harmonogram backupów | do zrobienia (krok 1) |
-| Bucket na eksporty | do zrobienia (krok 2) |
-| Ostatni eksport przed etapem z zapisami | — |
+| PITR włączony | zrobione 2026-09-29 |
+| Harmonogram backupów | zrobione 2026-09-29 (codziennie, retencja 14 dni) |
+| Bucket na eksporty | `gs://faiobaj4-firestore-backups` (EU) |
+| Ostatni eksport przed etapem z zapisami | `2026-09-29-0850/` |

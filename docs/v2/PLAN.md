@@ -1319,7 +1319,7 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 
 **Do zrobienia przez właściciela** (wymaga dostępu do Google Cloud / ustawień GitHub):
 1. ~~Scalić zmiany do `main`~~ (PR #12).
-2. Backup wg `BACKUP.md` (PITR + harmonogram + pierwszy eksport).
+2. ~~Backup wg `BACKUP.md`~~ (2026-09-29: PITR, codzienny backup, eksport `2026-09-29-0850/`).
 3. ~~Uruchomić „Data inventory”~~ (2026-09-27, `INVENTORY.md`).
 4. Usunąć stary klucz konta serwisowego: najpierw wyłączyć, po dniu bez błędów usunąć.
 5. Sprawdzić w konsoli `aiTestAccces` (literówka): czy ten uid ma być w `aiTestAccess`.
