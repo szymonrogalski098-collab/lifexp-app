@@ -40,8 +40,15 @@
   --radius-pill: 999px;
   --card-radius: var(--radius-lg);
   --card-border-width: 1px;
+  --card-shadow: none;
   --button-radius: var(--radius-pill);
   --field-radius: var(--radius-md);
+  /* Filled accents (the "+" button, hero surfaces); themes may make it a gradient. */
+  --gradient-accent: linear-gradient(var(--color-accent), var(--color-accent));
+
+  /* Icons (PLAN.md 7.1, D9): always next to a text label */
+  --icon-size: 22px;
+  --icon-stroke: 2;
 
   /* Layers: the only allowed z-index values */
   --z-topbar: 100;
@@ -66,6 +73,7 @@
 
   /* Shell */
   --topbar-height: 56px;
+  --tabbar-height: 64px;
   --sidebar-width: 264px;
   --touch-target: 44px;
   --content-max-width: 1100px;
@@ -108,27 +116,35 @@
   --shadow-2: 0 16px 48px rgb(0 0 0 / 50%);
 }
 
+/* Light = the owner's reference style (2026-09-29): white cards floating on a pale
+   blue-grey, soft shadows instead of borders, the blue of the LifeXP icon. Text
+   colors keep >= 4.5:1 on white and on the background. */
 [data-theme='lifexp'][data-mode='light'] {
   color-scheme: light;
-  --color-bg: #f5f5fa;
-  --color-nav-bg: #ebebf3;
+  --card-radius: 20px;
+  --card-border-width: 0px;
+  --card-shadow: 0 6px 20px rgb(16 24 40 / 6%);
+  --button-radius: 14px;
+  --gradient-accent: linear-gradient(135deg, #2f9bf5 0%, #1668e3 100%);
+  --color-bg: #f5f7fb;
+  --color-nav-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-raised: #eef0f6;
-  --color-border: #dfe1ea;
-  --color-separator: #dfe1ea;
-  --color-text: #15161c;
-  --color-text-secondary: #5c6078;
-  --color-text-tertiary: #8a8ea3;
-  --color-accent: #5a51e6;
+  --color-surface-raised: #eef2f8;
+  --color-border: #e3e8f0;
+  --color-separator: #e8ecf3;
+  --color-text: #111827;
+  --color-text-secondary: #5f6b7a;
+  --color-text-tertiary: #98a2b3;
+  --color-accent: #1668e3;
   --color-on-accent: #ffffff;
-  --color-accent-soft: rgb(90 81 230 / 12%);
-  --color-positive: #16875f;
-  --color-negative: #d43f3f;
-  --color-warning: #a86b00;
-  --color-focus: #5a51e6;
-  --color-topbar: rgb(245 245 250 / 78%);
-  --shadow-1: 0 8px 24px rgb(21 22 28 / 10%);
-  --shadow-2: 0 16px 48px rgb(21 22 28 / 18%);
+  --color-accent-soft: rgb(22 104 227 / 10%);
+  --color-positive: #15803d;
+  --color-negative: #d92d20;
+  --color-warning: #b45309;
+  --color-focus: #1668e3;
+  --color-topbar: rgb(245 247 251 / 82%);
+  --shadow-1: 0 8px 24px rgb(16 24 40 / 8%);
+  --shadow-2: 0 16px 48px rgb(16 24 40 / 14%);
 }
 
 /* ── iOS ────────────────────────────────────────────────────────────────── */

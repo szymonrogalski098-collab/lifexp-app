@@ -20,7 +20,19 @@
     "exus": "Ex-us",
     "gallery": "Components",
     "account": "Account",
-    "signOut": "Log out"
+    "signOut": "Log out",
+    "tabBar": "Shortcuts",
+    "add": "Add"
+  },
+  "add": {
+    "title": "Add",
+    "intro": "Adding in the new version arrives with each module. Until then, add everything in the current version of LifeXP.",
+    "task": "Task",
+    "chore": "Chore",
+    "expense": "Expense",
+    "note": "Note",
+    "comingIn": "Here from stage {{stage}}",
+    "openV1": "Add in the current version"
   },
   "auth": {
     "boot": "Starting LifeXP…",

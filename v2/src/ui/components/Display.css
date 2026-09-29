@@ -14,6 +14,37 @@
   color: var(--color-warning);
 }
 
+/* ── Icon tile: icon on a soft square tinted with its tone ── */
+
+.ui-icon-tile {
+  --tile-color: var(--color-accent);
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tile-color) 12%, transparent);
+  color: var(--tile-color);
+}
+
+.ui-icon-tile svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+.tone-bg-positive {
+  --tile-color: var(--color-positive);
+}
+
+.tone-bg-negative {
+  --tile-color: var(--color-negative);
+}
+
+.tone-bg-warning {
+  --tile-color: var(--color-warning);
+}
+
 /* ── Metric ── */
 
 .ui-metric {

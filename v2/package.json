@@ -17,6 +17,7 @@
     "@preact/signals": "2.11.2",
     "firebase": "10.12.0",
     "i18next": "26.4.2",
+    "lucide-preact": "1.48.0",
     "preact": "10.29.8"
   },
   "devDependencies": {

@@ -58,6 +58,7 @@
   border: var(--card-border-width) solid var(--color-border);
   border-radius: var(--card-radius);
   background: var(--color-surface);
+  box-shadow: var(--card-shadow);
 }
 
 .ui-card--pad-md {

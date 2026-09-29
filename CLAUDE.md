@@ -59,7 +59,9 @@ ui (design system) i i18n nie znają domeny ani danych
 - Zero inline `style` (wyjątek: zmienne CSS, np. `style={{ '--progress': x }}`), zero `innerHTML`/
   `dangerouslySetInnerHTML` poza komponentem Markdown, zero globali na `window`.
 - Każdy tekst przez i18n, każda kwota przez `formatMoney`, każda data przez `lib/dates` (od etapu 1/2).
-- UI bez ikon: tekst, typografia, karty (PLAN.md 7.1). Motywy: LifeXP ciemny/jasny, iOS, Gold (PLAN.md 4.9).
+- Ikony tylko obok tekstu, nigdy zamiast niego (D9): `lucide-preact`, w `ui` przez `IconTile` albo jako `svg` z
+  `aria-hidden`. Telefon: dolny pasek + drawer (D10). Motywy: LifeXP ciemny/jasny (jasny = styl referencyjny
+  właściciela), iOS, Gold (PLAN.md 4.9).
 - Firebase SDK w v2 przypięty do 10.12.x, dopóki działa v1. Jedna aplikacja Firebase (`data/firebase.ts`), ładowana
   leniwie; ta sama sesja logowania co v1. `?emulator=1` na localhost działa jak w v1 (`lib/emulator.ts`).
 - Testy przeglądarkowe v2 logują się na emulatorach (`tests/support/v2.js`: fixture `account`, `openSignedIn`).
