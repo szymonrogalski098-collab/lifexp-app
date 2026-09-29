@@ -1342,10 +1342,16 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 |---|---|---|
 | 1a | Szkielet `v2/` (Vite 8, TypeScript 5.9 strict, Preact), lint architektury z testami (warstwy 4.2, zakazy 7.7), `scripts/build-site.js` (v1 bez zmian + v2 pod `/v2/`, kontrola plików v1), workflow „Deploy”, job CI „v2 checks and site build”, `CLAUDE.md` | scalone (#14) |
 | 1b | Tokeny i motywy (LifeXP ciemny/jasny, iOS, Gold; migracja `lifexp-theme` z v1; skrypt przed pierwszym renderem), `base.css`, AppShell z sidebarem i drawerem (7.4), hash router, rejestr modułów z ekranami „W budowie”, i18n (typowane klucze pl/en), testy przeglądarkowe powłoki | scalone (#15); płynniejsze otwieranie drawera po teście na telefonie (#16) |
-| 1c | Komponenty `ui/`: Page, Section, Card, Stack, Metric, List/ListRow, ProgressBar, EmptyState, Skeleton, Button, pola (tekst, liczba, kwota w groszach, data, select), SegmentedControl, FilterChip; `lib/money` (grosze); moduły ładowane leniwie; galeria `#/ui` z przełącznikiem motywu | w toku |
-| 1d | Warstwy na natywnym `<dialog>`: Sheet (bottom sheet < 600 px / dialog ≥ 600 px, przeciąganie w dół, nad klawiaturą), ConfirmDialog, Toast (kolejka, akcja „Cofnij”, dwa regiony live); wspólne: „wstecz” zamyka, animacja wyjścia, blokada przewijania | w toku |
-| 1e | Firebase 10.12.x z npm, logowanie/rejestracja/Google/weryfikacja/wylogowanie, bramy boot, e2e na emulatorze | — |
+| 1c | Komponenty `ui/`: Page, Section, Card, Stack, Metric, List/ListRow, ProgressBar, EmptyState, Skeleton, Button, pola (tekst, liczba, kwota w groszach, data, select), SegmentedControl, FilterChip; `lib/money` (grosze); moduły ładowane leniwie; galeria `#/ui` z przełącznikiem motywu | scalone (#17) |
+| 1d | Warstwy na natywnym `<dialog>`: Sheet (bottom sheet < 600 px / dialog ≥ 600 px, przeciąganie w dół, nad klawiaturą), ConfirmDialog, Toast (kolejka, akcja „Cofnij”, dwa regiony live); wspólne: „wstecz” zamyka, animacja wyjścia, blokada przewijania | scalone (#18) |
+| 1e | Firebase 10.12.0 z npm (ta sama sesja co v1), logowanie e-mailem i Google, wylogowanie, bramy startu w kolejności v1, język z profilu; rejestracja, weryfikacja e-maila i pierwsza konfiguracja odsyłają do v1 (niżej); testy przeglądarkowe v2 na emulatorach z logowaniem | w toku |
 | 1f | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | — |
+
+Zakres 1e (2026-09-29): v2 w etapie 1 niczego nie zapisuje. W v1 każdy krok po zalogowaniu coś zapisuje
+(rejestracja tworzy profil, `verify.html` ustawia `emailVerified`, wybór trybu konta i ankieta modułów zapisują
+ustawienia), więc v2 sprawdza te same bramy tylko do odczytu i przy brakach odsyła do v1: brak profilu, trybu
+konta albo modułów → `app.html`, niepotwierdzony e-mail → `verify.html`, rejestracja → `index.html`. Konto jest
+potwierdzone, gdy mówi to profil albo Firebase Auth (Google), jak w v1. Te ekrany przejdą do v2 przed cutoverem.
 
 Źródło Pages przełączone na „GitHub Actions” 2026-09-29 (D3). Do czasu SW v2 (1f)
 stronami `/v2/` zarządza SW v1 (scope `./`): online bez wpływu; offline `/v2/` otworzy się tylko z wcześniejszej

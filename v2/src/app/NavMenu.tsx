@@ -3,12 +3,19 @@
 import { t } from '@/i18n';
 import { featureHref, navItems, type FeatureDef, type ModuleId } from './registry';
 
+export interface Account {
+  name: string;
+  email: string;
+}
+
 interface NavMenuProps {
   activeId: ModuleId;
   onSelect: (path: string) => void;
+  account: Account;
+  onSignOut: () => void;
 }
 
-export function NavMenu({ activeId, onSelect }: NavMenuProps) {
+export function NavMenu({ activeId, onSelect, account, onSignOut }: NavMenuProps) {
   const item = (feature: FeatureDef) => (
     <li key={feature.id}>
       <a
@@ -41,6 +48,13 @@ export function NavMenu({ activeId, onSelect }: NavMenuProps) {
       <ul class="nav__list">{navItems('main').map(item)}</ul>
       <hr class="nav__divider" />
       <ul class="nav__list">{navItems('secondary').map(item)}</ul>
+      <section class="nav__account" aria-label={t('nav.account')}>
+        <p class="nav__account-name">{account.name}</p>
+        {account.email && <p class="nav__account-email">{account.email}</p>}
+        <button type="button" class="nav__sign-out" onClick={onSignOut}>
+          {t('nav.signOut')}
+        </button>
+      </section>
     </div>
   );
 }

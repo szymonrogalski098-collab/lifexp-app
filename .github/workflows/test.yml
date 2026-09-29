@@ -67,21 +67,33 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             v2/package-lock.json
+      # The browser tests sign in on the Firebase emulators; Firestore's is a Java program.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
       - run: npm ci --prefix v2
       # typecheck, architecture lint, unit tests
       - run: npm run check --prefix v2
       - run: npm run build --prefix v2
       # Same assembly as the Deploy workflow, so a missing v1 file fails here, not in production.
       - run: node scripts/build-site.js --out _site
-      # App shell in a real browser: drawer, sidebar, themes, layout (tests/v2).
+      # The app in a real browser, signed in on the emulators: login and boot
+      # gates, drawer, sidebar, themes, layout (tests/v2). Rebuilds v2 (seconds).
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --project=v2
+      - run: npm run test:v2
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-v2-results
-          path: test-results/
+          path: |
+            test-results/
+            firestore-debug.log
           retention-days: 7
 
   functions:

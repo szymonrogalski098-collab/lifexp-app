@@ -35,7 +35,8 @@ module.exports = defineConfig({
     // started through `npm run test:emulator` (firebase emulators:exec), not `npm test`.
     // Service workers are blocked: sw.js caching is not what these tests check.
     { name: 'emulator', testMatch: /[\\/]emulator[\\/].*\.spec\.js/, use: { serviceWorkers: 'block' } },
-    // v2 app shell against the built app (v2/dist): run `npm run build --prefix v2` first.
+    // v2, built (v2/dist) and signed in on the Firebase emulators: run it through
+    // `npm run test:v2`, which builds v2 and starts them.
     { name: 'v2', testMatch: /[\\/]v2[\\/].*\.spec\.js/ },
   ],
   webServer: {

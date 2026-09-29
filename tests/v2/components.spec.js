@@ -1,16 +1,15 @@
 // ui/ components through the #/ui gallery (docs/v2/PLAN.md 7.5, 7.7): behaviour
 // that unit tests cannot see — themes switching live, amount entry, touch
-// targets and iOS-safe font sizes. Runs against the built app (v2/dist).
-const { test, expect } = require('../support/hermetic');
-
-const GALLERY = '/v2/dist/index.html#/ui';
+// targets and iOS-safe font sizes. Runs against the built app (v2/dist), signed in
+// on the Firebase emulators (tests/support/v2.js).
+const { test, expect, openSignedIn } = require('../support/v2');
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-async function openGallery(page) {
+async function openGallery(page, account) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(GALLERY);
+  await openSignedIn(page, account, '#/ui');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Komponenty');
   await expect(page.getByRole('heading', { name: 'Pola' })).toBeVisible(); // lazy chunk loaded
   return errors;
@@ -19,17 +18,17 @@ async function openGallery(page) {
 // The fields demo; the gallery's sheet has its own "Kwota" field.
 const fields = (page) => page.locator('.ui-section', { has: page.getByRole('heading', { name: 'Pola' }) });
 
-test('the gallery loads as its own chunk without errors', async ({ page }) => {
+test('the gallery loads as its own chunk without errors', async ({ page, account }) => {
   const scripts = [];
   page.on('request', (r) => r.resourceType() === 'script' && scripts.push(new URL(r.url()).pathname));
-  const errors = await openGallery(page);
+  const errors = await openGallery(page, account);
   expect(errors).toEqual([]);
   expect(scripts.some((s) => /GalleryPage-.*\.js$/.test(s))).toBe(true);
 });
 
-test('theme switch applies at once and is remembered', async ({ page }) => {
+test('theme switch applies at once and is remembered', async ({ page, account }) => {
   await page.emulateMedia({ colorScheme: 'light' });
-  await openGallery(page);
+  await openGallery(page, account);
   const html = page.locator('html');
 
   await page.getByRole('radio', { name: 'iOS' }).check();
@@ -49,8 +48,8 @@ test('theme switch applies at once and is remembered', async ({ page }) => {
   await expect(html).toHaveAttribute('data-mode', 'light');
 });
 
-test('amount field: decimal keypad, grouping and comma accepted, normalised on blur', async ({ page }) => {
-  await openGallery(page);
+test('amount field: decimal keypad, grouping and comma accepted, normalised on blur', async ({ page, account }) => {
+  await openGallery(page, account);
   const amount = fields(page).getByLabel('Kwota');
   await expect(amount).toHaveAttribute('inputmode', 'decimal');
 
@@ -68,21 +67,21 @@ test('amount field: decimal keypad, grouping and comma accepted, normalised on b
   await expect(fields(page).getByRole('alert')).toHaveCount(0);
 });
 
-test('number field keeps digits only', async ({ page }) => {
-  await openGallery(page);
+test('number field keeps digits only', async ({ page, account }) => {
+  await openGallery(page, account);
   const minutes = fields(page).getByLabel('Czas');
   await minutes.fill('');
   await minutes.pressSequentially('4a5-');
   await expect(minutes).toHaveValue('45');
 });
 
-test('progress bar exposes its value', async ({ page }) => {
-  await openGallery(page);
+test('progress bar exposes its value', async ({ page, account }) => {
+  await openGallery(page, account);
   await expect(page.getByRole('progressbar', { name: 'Postęp celu' })).toHaveAttribute('aria-valuenow', '27');
 });
 
-test('controls are at least 44 px tall and inputs at least 16 px (no iOS zoom)', async ({ page }) => {
-  await openGallery(page);
+test('controls are at least 44 px tall and inputs at least 16 px (no iOS zoom)', async ({ page, account }) => {
+  await openGallery(page, account);
   // :visible skips controls inside the gallery's closed sheet and dialog.
   const targets = page.locator(
     '.ui-page button:visible, .ui-page input:not([type=radio]):visible, .ui-page select:visible, .ui-segmented__label:visible',

@@ -18,7 +18,49 @@
     "reports": "Zgłoszenia i aktualizacje",
     "settings": "Ustawienia",
     "exus": "Ex-us",
-    "gallery": "Komponenty"
+    "gallery": "Komponenty",
+    "account": "Konto",
+    "signOut": "Wyloguj"
+  },
+  "auth": {
+    "boot": "Uruchamianie LifeXP…",
+    "title": "Zaloguj się",
+    "intro": "To samo konto i te same dane co w obecnej wersji LifeXP.",
+    "email": "E-mail",
+    "password": "Hasło",
+    "submit": "Zaloguj się",
+    "or": "albo",
+    "google": "Kontynuuj z Google",
+    "noAccount": "Nie masz konta?",
+    "register": "Załóż je w obecnej wersji",
+    "errors": {
+      "fillAll": "Wypełnij wszystkie pola.",
+      "userNotFound": "Nie znaleziono konta z tym adresem e-mail.",
+      "wrongPassword": "Nieprawidłowe hasło.",
+      "invalidCredential": "Nieprawidłowy e-mail lub hasło.",
+      "invalidEmail": "Nieprawidłowy format adresu e-mail.",
+      "popupClosed": "Okno logowania zostało zamknięte.",
+      "popupBlocked": "Przeglądarka zablokowała okno logowania Google. Zezwól na wyskakujące okna i spróbuj ponownie.",
+      "tooManyRequests": "Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.",
+      "network": "Brak połączenia z internetem.",
+      "unknown": "Wystąpił błąd. Spróbuj ponownie.",
+      "signOutFailed": "Nie udało się wylogować. Sprawdź połączenie i spróbuj ponownie."
+    },
+    "verify": {
+      "title": "Potwierdź adres e-mail",
+      "body": "Konto {{email}} czeka na potwierdzenie kodem z e-maila. Zrobisz to w obecnej wersji LifeXP, potem ta wersja otworzy się normalnie.",
+      "action": "Potwierdź e-mail"
+    },
+    "finishSetup": {
+      "title": "Dokończ konfigurację konta",
+      "body": "Wybierz tryb konta i moduły w obecnej wersji LifeXP. Ta wersja przejmie te ustawienia sama.",
+      "action": "Dokończ konfigurację"
+    },
+    "failed": {
+      "title": "Nie udało się uruchomić LifeXP",
+      "body": "Sprawdź połączenie z internetem i spróbuj ponownie.",
+      "retry": "Spróbuj ponownie"
+    }
   },
   "comingSoon": {
     "overline": "W budowie",

@@ -1,0 +1,82 @@
+/* Login and gate screens: one centred column, no shell around it. */
+
+.auth {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: calc(var(--space-8) + env(safe-area-inset-top)) var(--space-4)
+    calc(var(--space-8) + env(safe-area-inset-bottom));
+  background: var(--color-bg);
+}
+
+.auth__panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth__wordmark {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.auth__title {
+  margin-top: var(--space-8);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.auth__intro {
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.auth__error {
+  color: var(--color-negative);
+  font-weight: var(--font-weight-medium);
+}
+
+/* "albo" between two rules. */
+.auth__or {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.auth__or::before,
+.auth__or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--color-separator);
+}
+
+.auth__footer {
+  margin-top: var(--space-6);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.auth__footer a {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+.auth__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}

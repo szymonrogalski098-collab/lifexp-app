@@ -4,9 +4,11 @@ import '@/ui/base.css';
 import '@/app/shell.css';
 import { render } from 'preact';
 import { App } from '@/app/App';
+import { startLanguageSync } from '@/app/language';
 import { startRouter } from '@/app/router';
 import { startThemeSync } from '@/app/theme';
 import { initI18n, pickLanguage, V1_LANG_STORAGE_KEY } from '@/i18n';
+import { startSession } from '@/stores/session';
 
 function storedLanguage(): string | null {
   try {
@@ -16,11 +18,12 @@ function storedLanguage(): string | null {
   }
 }
 
-const language = pickLanguage(storedLanguage());
-initI18n(language);
-document.documentElement.lang = language;
+// This device's language first; the profile's replaces it once it loads.
+initI18n(pickLanguage(storedLanguage()));
+startLanguageSync();
 startThemeSync();
 startRouter();
+void startSession();
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app root element');

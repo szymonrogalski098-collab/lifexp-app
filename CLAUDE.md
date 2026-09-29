@@ -10,7 +10,7 @@ v2 powstaje obok v1, na tych samych danych. Pełny plan i decyzje: `docs/v2/PLAN
 | katalog główny (`*.html`, `*.js`, `style.css`, `sw.js`) | **v1 — produkcja.** Vanilla ES modules, Firebase SDK 10.12.0 z CDN, bez build stepu |
 | `v2/` | **v2 w budowie.** Vite + TypeScript strict + Preact; publikowane pod `/v2/` |
 | `functions/` | Nowy backend (Cloud Functions, codebase `lifexp-v2`), na razie pusty szkielet |
-| `tests/` | Playwright: v1 (`app`, `fps-gameplay`) i v1 na emulatorach Firebase (`emulator`) |
+| `tests/` | Playwright: v1 (`app`, `fps-gameplay`), v1 na emulatorach Firebase (`emulator`), v2 na emulatorach (`v2`) |
 | `scripts/` | Skrypty Node: składanie strony, inwentaryzacja danych, stare skrypty push/raportu |
 | `docs/v2/` | Plan, benchmark UI (`RESEARCH.md`), zachowania v1 (`GOLDEN.md`), dane (`INVENTORY.md`), backup |
 
@@ -21,7 +21,7 @@ npm test                      # testy v1 (Playwright, bez sieci)
 npm run test:emulator         # v1 na emulatorach Auth + Firestore (wymaga Javy 21)
 npm run check --prefix v2     # v2: typecheck + lint architektury + testy jednostkowe
 npm run build --prefix v2     # v2: build do v2/dist
-npm run test:v2               # v2: build + testy powłoki w przeglądarce (drawer, motywy, layout)
+npm run test:v2               # v2: build + testy w przeglądarce na emulatorach (logowanie, powłoka; Java 21)
 node scripts/build-site.js    # składa stronę Pages (v1 + v2/dist) w _site i sprawdza pliki v1
 ```
 
@@ -60,7 +60,9 @@ ui (design system) i i18n nie znają domeny ani danych
   `dangerouslySetInnerHTML` poza komponentem Markdown, zero globali na `window`.
 - Każdy tekst przez i18n, każda kwota przez `formatMoney`, każda data przez `lib/dates` (od etapu 1/2).
 - UI bez ikon: tekst, typografia, karty (PLAN.md 7.1). Motywy: LifeXP ciemny/jasny, iOS, Gold (PLAN.md 4.9).
-- Firebase SDK w v2 przypięty do 10.12.x, dopóki działa v1.
+- Firebase SDK w v2 przypięty do 10.12.x, dopóki działa v1. Jedna aplikacja Firebase (`data/firebase.ts`), ładowana
+  leniwie; ta sama sesja logowania co v1. `?emulator=1` na localhost działa jak w v1 (`lib/emulator.ts`).
+- Testy przeglądarkowe v2 logują się na emulatorach (`tests/support/v2.js`: fixture `account`, `openSignedIn`).
 
 ## Praca
 

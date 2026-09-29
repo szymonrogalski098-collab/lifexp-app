@@ -256,6 +256,59 @@
   border-top: 1px solid var(--color-separator);
 }
 
+/* Who is signed in, at the bottom of the menu. */
+.nav__account {
+  margin-top: auto;
+  padding: var(--space-4) var(--space-4) 0;
+  border-top: 1px solid var(--color-separator);
+}
+
+.nav__account-name {
+  overflow: hidden;
+  font-weight: var(--font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav__account-email {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav__sign-out {
+  min-height: var(--touch-target);
+  margin: var(--space-2) 0 0 calc(-1 * var(--space-3));
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+.nav__sign-out:hover {
+  background: var(--color-accent-soft);
+}
+
+/* ── Boot screen ────────────────────────────────────────────────────────── */
+
+.boot {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
+
+.boot__wordmark {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+  animation: ui-fade-in var(--duration-slow) var(--ease-standard);
+}
+
 /* ── Page frame and the "coming soon" stand-in ──────────────────────────── */
 
 .page {
