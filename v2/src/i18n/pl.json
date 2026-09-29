@@ -20,7 +20,19 @@
     "exus": "Ex-us",
     "gallery": "Komponenty",
     "account": "Konto",
-    "signOut": "Wyloguj"
+    "signOut": "Wyloguj",
+    "tabBar": "Na skróty",
+    "add": "Dodaj"
+  },
+  "add": {
+    "title": "Dodaj",
+    "intro": "Dodawanie w nowej wersji przychodzi razem z modułami. Do tego czasu dodasz wszystko w obecnej wersji LifeXP.",
+    "task": "Zadanie",
+    "chore": "Obowiązek",
+    "expense": "Wydatek",
+    "note": "Notatka",
+    "comingIn": "Tutaj od etapu {{stage}}",
+    "openV1": "Dodaj w obecnej wersji"
   },
   "auth": {
     "boot": "Uruchamianie LifeXP…",

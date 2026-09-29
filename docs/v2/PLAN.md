@@ -1092,6 +1092,10 @@ zamiast awarii, licznik rośnie o zużycie z odpowiedzi modelu.
 
 ### 7.1 Zasady
 
+> **Zmiana 2026-09-29 (D9, D10):** właściciel wybrał styl referencyjny — jasne tło, białe karty z miękkim
+> cieniem, niebieski akcent z ikony LifeXP, ikony **z podpisem**, dolny pasek z „+”. Ikony są dozwolone
+> obok tekstu (`lucide-preact`); pierwsza reguła poniżej obowiązuje w części „nigdy sama ikona”.
+
 - **Bez ikon jako nośnika znaczenia.** Nawigacja i akcje to tekst. Znaczenie niesie hierarchia
   typograficzna, położenie i kolor semantyczny. Jedyne znaki graficzne: kształt przycisku Menu (dwie kreski
   rysowane CSS), zamknięcie (×), chevron w listach (›), znacznik wykonania (✓) — jako znaki/CSS, nie font ikon.
@@ -1121,13 +1125,18 @@ zamiast awarii, licznik rośnie o zużycie z odpowiedzi modelu.
 | medium | 600-839 px | Drawer (jak compact) | 1-2 kolumny kart, max 720 px |
 | expanded | ≥ 840 px | Stały sidebar 264 px (zwijany do wąskiego paska z inicjałami sekcji) | 2-3 kolumny, max 1100 px |
 
-Progi 600/840 to klasy szerokości Material 3 (U4). Drawer zamiast dolnego paska jest zgodny z M3:
-dolny pasek mieści 3-5 celów, LifeXP ma ich 8+ (v1 miał 8 pozycji w dolnym pasku, co łamało tę regułę).
+Progi 600/840 to klasy szerokości Material 3 (U4). Dolny pasek mieści 3-5 celów, LifeXP ma ich 8+ (v1 miał
+8 pozycji w dolnym pasku, co łamało tę regułę). Dlatego od D10 (2026-09-29) pasek < 840 px ma tylko pięć
+pozycji: Dziś, Obowiązki, „+”, Pieniądze i „Menu”, które otwiera drawer z pełną listą. Pasek jest
+przyklejony do dołu karty treści (sticky), więc przesuwa się razem z nią przy otwieraniu drawera.
 
 Shell to CSS grid: `grid-template-columns: [nav] auto [main] 1fr`. Tylko shell zna `position: fixed`
 i safe-area; strony nigdy (koniec FAB-ów i łatek `padding-bottom`).
 
 ### 7.4 Sidebar mobilny — specyfikacja zachowania (jak ChatGPT)
+
+> Od D10 przycisk „Menu” jest w dolnym pasku, nie w top barze; top bar ma tytuł wyrównany do lewej.
+> Zachowanie drawera poniżej bez zmian.
 
 **Top bar** (56 px + `safe-area-inset-top`): po lewej przycisk z napisem **„Menu”** (U1; min. 44×44 — tekst
 zamiast ikony hamburgera, bo goła ikona jest słabiej odkrywalna wg NN/g, a UI i tak jest bez ikon), na środku
@@ -1344,8 +1353,12 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | 1b | Tokeny i motywy (LifeXP ciemny/jasny, iOS, Gold; migracja `lifexp-theme` z v1; skrypt przed pierwszym renderem), `base.css`, AppShell z sidebarem i drawerem (7.4), hash router, rejestr modułów z ekranami „W budowie”, i18n (typowane klucze pl/en), testy przeglądarkowe powłoki | scalone (#15); płynniejsze otwieranie drawera po teście na telefonie (#16) |
 | 1c | Komponenty `ui/`: Page, Section, Card, Stack, Metric, List/ListRow, ProgressBar, EmptyState, Skeleton, Button, pola (tekst, liczba, kwota w groszach, data, select), SegmentedControl, FilterChip; `lib/money` (grosze); moduły ładowane leniwie; galeria `#/ui` z przełącznikiem motywu | scalone (#17) |
 | 1d | Warstwy na natywnym `<dialog>`: Sheet (bottom sheet < 600 px / dialog ≥ 600 px, przeciąganie w dół, nad klawiaturą), ConfirmDialog, Toast (kolejka, akcja „Cofnij”, dwa regiony live); wspólne: „wstecz” zamyka, animacja wyjścia, blokada przewijania | scalone (#18) |
-| 1e | Firebase 10.12.0 z npm (ta sama sesja co v1), logowanie e-mailem i Google, wylogowanie, bramy startu w kolejności v1, język z profilu; rejestracja, weryfikacja e-maila i pierwsza konfiguracja odsyłają do v1 (niżej); testy przeglądarkowe v2 na emulatorach z logowaniem | w toku |
-| 1f | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | — |
+| 1e | Firebase 10.12.0 z npm (ta sama sesja co v1), logowanie e-mailem i Google, wylogowanie, bramy startu w kolejności v1, język z profilu; rejestracja, weryfikacja e-maila i pierwsza konfiguracja odsyłają do v1 (niżej); testy przeglądarkowe v2 na emulatorach z logowaniem | scalone (#19) |
+| 1g | Styl referencyjny właściciela (D9, D10): jasny motyw LifeXP pod referencję (białe karty z cieniem, akcent z ikony LifeXP, kontrast ≥ 4.5:1), ikony z podpisem (`lucide-preact`), dolny pasek z „+” i „Menu”, `IconTile`, arkusz „Dodaj” (do etapu 3 odsyła do v1) | w toku |
+| 1f | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | po 2a |
+
+Kolejność od 2026-09-29: 1g → 2a (ekran „Dziś” tylko do odczytu, pierwszy ekran z danymi) → 1f. Właściciel
+nie widział dotąd zmian w aplikacji, a 1f (offline, manifest) też jest niewidoczne, więc ekran z danymi idzie przed nim.
 
 Zakres 1e (2026-09-29): v2 w etapie 1 niczego nie zapisuje. W v1 każdy krok po zalogowaniu coś zapisuje
 (rejestracja tworzy profil, `verify.html` ustawia `emailVerified`, wybór trybu konta i ankieta modułów zapisują
@@ -1430,3 +1443,5 @@ Uzasadnienie techniczne:
 | D6 | `plannerTasks` (zadania dodane przez Ex-us, dziś niewidoczne) | Jednorazowy import niezrobionych do `todos` (M5) | Etap 3a |
 | D7 | Czy rodzic ma widzieć notatki, zadania i rozmowy z Ex-us (`aiConversations`) | Notatki i rozmowy: nie (prywatne); zadania: tak | Etap 8 |
 | D8 | Czy dodać usuwanie zadań (v1 go nie ma) | Tak, trywialne i oczekiwane | Etap 3a |
+| D9 | ~~Ikony?~~ **Rozstrzygnięte 2026-09-29** (styl referencyjny właściciela): ikony tak, **zawsze obok tekstu** — nigdy jedynym nośnikiem znaczenia. Jeden zestaw SVG (`lucide-preact`, ISC) w bundlu, bez fontu ikon. Bez podpisu tylko znaki uniwersalne (×, ›, ✓, „+” z nazwą dostępną). Zmienia 7.1 | — | — |
+| D10 | ~~Nawigacja na telefonie?~~ **Rozstrzygnięte 2026-09-29**: dolny pasek (Dziś, Obowiązki, „+”, Pieniądze, Menu) + dotychczasowy drawer z pełną listą modułów, otwierany przyciskiem „Menu” z paska. Desktop bez zmian (sidebar). Zmienia 7.3 i 7.4 | — | — |

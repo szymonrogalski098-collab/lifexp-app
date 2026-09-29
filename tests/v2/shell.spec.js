@@ -177,12 +177,79 @@ test.describe('phone: drawer', () => {
   });
 });
 
+test.describe('phone: tab bar', () => {
+  test.use({ viewport: PHONE });
+
+  const tabBar = (page) => page.getByRole('navigation', { name: 'Na skróty' });
+
+  test('holds Today, Chores, +, Money and Menu, each icon with its label; the current screen is marked', async ({
+    page,
+    account,
+  }) => {
+    await openApp(page, account, '#/today');
+    const bar = tabBar(page);
+    await expect(bar.getByRole('link')).toHaveText(['Dziś', 'Obowiązki', 'Pieniądze']);
+    await expect(bar.getByRole('button')).toHaveText(['', 'Menu']);
+    await expect(bar.getByRole('button', { name: 'Dodaj' })).toBeVisible();
+    for (const link of await bar.getByRole('link').all()) await expect(link.locator('svg')).toHaveCount(1);
+    await expect(bar.getByRole('link', { name: 'Dziś' })).toHaveAttribute('aria-current', 'page');
+
+    await bar.getByRole('link', { name: 'Pieniądze' }).click();
+    await expect(page).toHaveURL(/#\/money$/);
+    await expect(page.locator('.topbar__title')).toHaveText('Pieniądze');
+    await expect(bar.getByRole('link', { name: 'Pieniądze' })).toHaveAttribute('aria-current', 'page');
+    await expect(bar.getByRole('link', { name: 'Dziś' })).not.toHaveAttribute('aria-current', 'page');
+
+    for (const target of await bar.locator('a, button').all()) {
+      const box = await target.boundingBox();
+      expect(box.height, await target.getAttribute('aria-label') ?? await target.textContent()).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test('sits at the bottom edge and never covers the end of a long page', async ({ page, account }) => {
+    await openApp(page, account, '#/ui');
+    const bar = await tabBar(page).boundingBox();
+    expect(bar.y + bar.height).toBeCloseTo(PHONE.height, 0);
+
+    await page.locator('.shell__content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    const barAfterScroll = await tabBar(page).boundingBox();
+    expect(barAfterScroll.y).toBeCloseTo(bar.y, 0);
+    const lastBottom = await page
+      .locator('.shell__main')
+      .evaluate((main) => main.lastElementChild.getBoundingClientRect().bottom);
+    expect(lastBottom).toBeLessThanOrEqual(bar.y);
+  });
+
+  test('"+" opens the Add sheet, which hands over to v1 until the modules land', async ({ page, account }) => {
+    await openApp(page, account);
+    const add = tabBar(page).getByRole('button', { name: 'Dodaj' });
+    await add.click();
+    const sheet = page.getByRole('dialog', { name: 'Dodaj' });
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByText('Wydatek')).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'Dodaj w obecnej wersji' })).toHaveAttribute('href', '../app.html');
+
+    await sheet.getByRole('button', { name: 'Zamknij' }).click();
+    await expect(sheet).toBeHidden();
+    await expect(add).toBeFocused();
+  });
+
+  test('toasts appear above the tab bar', async ({ page, account }) => {
+    await openApp(page, account, '#/ui');
+    await page.getByRole('button', { name: 'Pokaż błąd' }).click();
+    const toast = await page.locator('.ui-toast').boundingBox();
+    const bar = await tabBar(page).boundingBox();
+    expect(toast.y + toast.height).toBeLessThanOrEqual(bar.y);
+  });
+});
+
 test.describe('desktop: sidebar', () => {
   test.use({ viewport: DESKTOP });
 
   test('the menu is a persistent sidebar, without a Menu button', async ({ page, account }) => {
     const errors = await openApp(page, account);
     await expect(menuButton(page)).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Na skróty' })).toHaveCount(0);
     await expect(drawer(page)).toBeVisible();
     await expect(drawer(page)).not.toHaveAttribute('role', 'dialog');
     expect((await drawer(page).boundingBox()).width).toBe(264);
@@ -252,7 +319,7 @@ test.describe('themes', () => {
     });
     await openApp(page, account);
     await expect(page.locator('html')).toHaveAttribute('data-mode', 'light');
-    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#f5f5fa');
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#f5f7fb');
   });
 
   test('the theme is set before the app script runs (no flash)', async ({ page, account }) => {

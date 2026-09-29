@@ -1,13 +1,16 @@
-// App shell (docs/v2/PLAN.md 7.3, 7.4). Below 840 px the navigation is a drawer
-// that behaves like ChatGPT's: the content card slides right and reveals the
-// menu underneath; it follows the finger and settles by momentum. From 840 px
-// the menu is a persistent sidebar. Only the shell uses position: fixed.
+// App shell (docs/v2/PLAN.md 7.3, 7.4). Below 840 px: a tab bar at the bottom
+// (Today, Chores, "+", Money, Menu; D10) and the full menu as a drawer that behaves
+// like ChatGPT's: the content card slides right and reveals the menu underneath;
+// it follows the finger and settles by momentum. From 840 px the menu is a
+// persistent sidebar and there is no tab bar. Only the shell uses position: fixed.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { t } from '@/i18n';
 import { ToastHost } from '@/ui/components/ToastHost';
 import { dragProgress, releaseVelocity, settlesOpen, TAP_SLOP, type DragSample } from '@/lib/gesture';
+import { AddSheet } from './AddSheet';
 import { NavMenu, type Account } from './NavMenu';
+import { TabBar } from './TabBar';
 import type { ModuleId } from './registry';
 import { navigate } from './router';
 import { isExpanded, isStandalone } from './viewport';
@@ -49,6 +52,7 @@ interface AppShellProps {
 export function AppShell({ title, activeId, path, account, onSignOut, children }: AppShellProps) {
   const drawerMode = !isExpanded.value;
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [standalone] = useState(isStandalone);
   const openRef = useRef(false);
   const wasOpen = useRef(false);
@@ -211,22 +215,21 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
 
       <div ref={contentRef} class="shell__content" inert={modal}>
         <header class="topbar">
-          {drawerMode && (
-            <button
-              ref={menuButtonRef}
-              type="button"
-              class="topbar__menu"
-              aria-expanded={open}
-              aria-controls="app-nav"
-              onClick={() => openDrawer()}
-            >
-              {t('nav.menu')}
-            </button>
-          )}
           <h1 class="topbar__title">{title}</h1>
         </header>
         <main class="shell__main">{children}</main>
+        {drawerMode && (
+          <TabBar
+            activeId={activeId}
+            onSelect={selectPath}
+            onAdd={() => setAddOpen(true)}
+            onMenu={() => openDrawer()}
+            menuOpen={open}
+            menuButtonRef={menuButtonRef}
+          />
+        )}
       </div>
+      <AddSheet open={addOpen} onClose={() => setAddOpen(false)} />
 
       {modal && (
         <button type="button" class="shell__closer" tabIndex={-1} aria-label={t('nav.closeMenu')} {...gestureHandlers} />

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import pl from '@/i18n/pl.json';
-import { DEFAULT_PATH, FEATURES, navItems, resolveRoute } from './registry';
+import { DEFAULT_PATH, FEATURES, navItems, resolveRoute, tabItems } from './registry';
 
 describe('module registry', () => {
   test('every route of PLAN.md 4.7 resolves to its module', () => {
@@ -36,6 +36,11 @@ describe('module registry', () => {
   test('menu order matches the drawer in PLAN.md 7.4', () => {
     expect(navItems('main').map((f) => f.id)).toEqual(['today', 'tasks', 'goals', 'chores', 'money', 'notes', 'stats', 'games']);
     expect(navItems('secondary').map((f) => f.id)).toEqual(['reports', 'settings']);
+  });
+
+  test('the phone tab bar holds Today, Chores and Money (D10); each also stays in the menu', () => {
+    expect(tabItems().map((f) => f.id)).toEqual(['today', 'chores', 'money']);
+    for (const feature of tabItems()) expect(feature.nav).not.toBeNull();
   });
 
   test('ids and labels are unique and translated', () => {

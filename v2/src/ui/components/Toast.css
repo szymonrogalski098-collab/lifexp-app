@@ -1,7 +1,8 @@
 .ui-toast-host {
   position: fixed;
   right: 0;
-  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  /* Above the phone tab bar when the shell has one (it sets --bottom-bar-height). */
+  bottom: calc(var(--space-4) + var(--bottom-bar-height, 0px) + env(safe-area-inset-bottom));
   left: 0;
   z-index: var(--z-toast);
   display: flex;

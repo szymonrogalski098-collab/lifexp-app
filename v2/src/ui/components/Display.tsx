@@ -1,10 +1,22 @@
 // Read-only building blocks (docs/v2/PLAN.md 7.5): big numbers as the heroes of a
-// screen, text lists instead of icon grids, progress, empty and loading states.
+// screen, lists, icon tiles, progress, empty and loading states.
 import type { ComponentChildren } from 'preact';
 import { t } from '@/i18n';
 import './Display.css';
 
 export type Tone = 'default' | 'positive' | 'negative' | 'warning';
+
+/**
+ * An icon on a soft tinted square (the reference style). Decorative: the text
+ * next to it carries the meaning (PLAN.md 7.1, D9), so it is hidden from screen readers.
+ */
+export function IconTile({ children, tone = 'default' }: { children: ComponentChildren; tone?: Tone }) {
+  return (
+    <span class={`ui-icon-tile tone-bg-${tone}`} aria-hidden="true">
+      {children}
+    </span>
+  );
+}
 
 interface MetricProps {
   /** Already formatted (formatMoney, points, …). */
@@ -35,6 +47,8 @@ export function List({ children, label }: { children: ComponentChildren; label?:
 }
 
 interface ListRowProps {
+  /** Before the text, e.g. an IconTile. The title stays the label (PLAN.md 7.1, D9). */
+  leading?: ComponentChildren;
   title: string;
   /** Secondary line under the title. */
   meta?: string;
@@ -47,10 +61,11 @@ interface ListRowProps {
   href?: string;
 }
 
-export function ListRow({ title, meta, value, valueTone = 'default', onClick, href }: ListRowProps) {
+export function ListRow({ leading, title, meta, value, valueTone = 'default', onClick, href }: ListRowProps) {
   const interactive = Boolean(onClick || href);
   const body = (
     <>
+      {leading}
       <span class="ui-list__text">
         <span class="ui-list__title user-text clamp-2">{title}</span>
         {meta && <span class="ui-list__meta user-text clamp-1">{meta}</span>}
