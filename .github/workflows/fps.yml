@@ -1,0 +1,55 @@
+name: FPS gameplay
+
+# The FPS game (fps.html) is self-contained: all of its code is inline and Three.js
+# comes from a CDN (served from node_modules in tests). Its gameplay tests run a
+# software-WebGL scene for ~8 minutes, so they run only when something they test
+# can change. The quick fps.html checks (tests/fps.spec.js) stay in "Tests" › App
+# on every change. Run it by hand from the Actions tab when in doubt.
+on:
+  push:
+    branches: [main]
+    paths:
+      - fps.html
+      - tests/fps-gameplay.spec.js
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - .github/workflows/fps.yml
+  pull_request:
+    paths:
+      - fps.html
+      - tests/fps-gameplay.spec.js
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - .github/workflows/fps.yml
+  workflow_dispatch:
+
+concurrency:
+  group: fps-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fps:
+    name: FPS gameplay
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Software-WebGL scenes; own workflow so they do not compete for CPU with the app tests.
+      - run: npx playwright test --project=fps-gameplay
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-fps-results
+          path: test-results/
+          retention-days: 7
