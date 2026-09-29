@@ -1,12 +1,10 @@
 // Modal layers and toasts (docs/v2/PLAN.md 7.5, U12) through the #/ui gallery:
 // every way out of a sheet, confirmation semantics, toast announcements.
-const { test, expect } = require('../support/hermetic');
-
-const GALLERY = '/v2/dist/index.html#/ui';
+const { test, expect, appUrl, openSignedIn } = require('../support/v2');
 const PHONE = { width: 390, height: 844 };
 
-async function openGallery(page) {
-  await page.goto(GALLERY);
+async function openGallery(page, account) {
+  await openSignedIn(page, account, '#/ui');
   await expect(page.getByRole('button', { name: 'Otwórz arkusz' })).toBeVisible();
 }
 
@@ -30,8 +28,8 @@ async function expectClosed(page) {
 test.describe('sheet on a phone', () => {
   test.use({ viewport: PHONE });
 
-  test('opens from the bottom as a modal; Zamknij closes and focus returns', async ({ page }) => {
-    await openGallery(page);
+  test('opens from the bottom as a modal; Zamknij closes and focus returns', async ({ page, account }) => {
+    await openGallery(page, account);
     await openSheet(page);
     const box = await sheet(page).boundingBox();
     expect(box.y + box.height).toBeCloseTo(PHONE.height, 0); // anchored to the bottom edge
@@ -42,8 +40,8 @@ test.describe('sheet on a phone', () => {
     await expect(page.getByRole('button', { name: 'Otwórz arkusz' })).toBeFocused();
   });
 
-  test('Escape and the system Back close it without leaving the screen', async ({ page }) => {
-    await openGallery(page);
+  test('Escape and the system Back close it without leaving the screen', async ({ page, account }) => {
+    await openGallery(page, account);
     await openSheet(page);
     await page.keyboard.press('Escape');
     await expectClosed(page);
@@ -54,12 +52,12 @@ test.describe('sheet on a phone', () => {
     await expect(page).toHaveURL(/#\/ui$/);
   });
 
-  test('closing with its button leaves no dead history entry behind', async ({ page, context }) => {
+  test('closing with its button leaves no dead history entry behind', async ({ page, context, account }) => {
     const reference = await context.newPage();
-    await reference.goto(GALLERY);
+    await reference.goto(appUrl('#/ui'));
     const baseline = await reference.evaluate(() => history.length);
 
-    await openGallery(page);
+    await openGallery(page, account);
     await openSheet(page);
     await sheet(page).getByRole('button', { name: 'Zamknij' }).click();
     await expectClosed(page);
@@ -69,8 +67,8 @@ test.describe('sheet on a phone', () => {
     expect(baseline).toBeGreaterThan(0);
   });
 
-  test('dragging the header: a short drag springs back, past a third closes', async ({ page }) => {
-    await openGallery(page);
+  test('dragging the header: a short drag springs back, past a third closes', async ({ page, account }) => {
+    await openGallery(page, account);
     await openSheet(page);
     const header = await sheet(page).locator('.ui-sheet__header').boundingBox();
     const x = header.x + 60;
@@ -95,8 +93,8 @@ test.describe('sheet on a phone', () => {
     await expectClosed(page);
   });
 
-  test('saving shows a toast with an undo action', async ({ page }) => {
-    await openGallery(page);
+  test('saving shows a toast with an undo action', async ({ page, account }) => {
+    await openGallery(page, account);
     await openSheet(page);
     const save = sheet(page).getByRole('button', { name: 'Zapisz' });
     await expect(save).toBeDisabled();
@@ -113,8 +111,8 @@ test.describe('sheet on a phone', () => {
 test.describe('sheet on a wide screen', () => {
   test.use({ viewport: { width: 1024, height: 768 } });
 
-  test('is a centred dialog', async ({ page }) => {
-    await openGallery(page);
+  test('is a centred dialog', async ({ page, account }) => {
+    await openGallery(page, account);
     await openSheet(page);
     const box = await sheet(page).boundingBox();
     expect(box.width).toBeLessThanOrEqual(560);
@@ -126,8 +124,8 @@ test.describe('sheet on a wide screen', () => {
 test.describe('confirmation and toasts', () => {
   test.use({ viewport: PHONE });
 
-  test('confirm dialog: cancel is the default, Escape cancels, confirm acts', async ({ page }) => {
-    await openGallery(page);
+  test('confirm dialog: cancel is the default, Escape cancels, confirm acts', async ({ page, account }) => {
+    await openGallery(page, account);
     const trigger = page.getByRole('button', { name: 'Usuń notatkę' });
     await trigger.click();
     const dialog = page.getByRole('alertdialog', { name: 'Usunąć notatkę?' });
@@ -145,9 +143,9 @@ test.describe('confirmation and toasts', () => {
     await expect(toastStatus(page)).toContainText('Usunięto notatkę');
   });
 
-  test('errors are announced assertively and leave on their own', async ({ page }) => {
+  test('errors are announced assertively and leave on their own', async ({ page, account }) => {
     await page.clock.install();
-    await openGallery(page);
+    await openGallery(page, account);
     await page.getByRole('button', { name: 'Pokaż błąd' }).click();
     const alert = page.locator('.ui-toast-host').getByRole('alert');
     await expect(alert).toContainText('Nie udało się zapisać');

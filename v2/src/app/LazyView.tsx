@@ -1,6 +1,6 @@
 // Loads a module's screen on first visit (its own JS chunk), with a skeleton while
 // it arrives and a retry if the network fails.
-import type { ComponentType } from 'preact';
+import type { ComponentChildren, ComponentType } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { t } from '@/i18n';
 import { Button } from '@/ui/components/Button';
@@ -9,7 +9,13 @@ import { Page } from '@/ui/components/Layout';
 
 type Loader = () => Promise<{ default: ComponentType }>;
 
-export function LazyView({ load }: { load: Loader }) {
+interface LazyViewProps {
+  load: Loader;
+  /** Shown while the chunk arrives; a skeleton page by default. */
+  fallback?: ComponentChildren;
+}
+
+export function LazyView({ load, fallback }: LazyViewProps) {
   const [View, setView] = useState<ComponentType | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -27,6 +33,7 @@ export function LazyView({ load }: { load: Loader }) {
   }, [load, attempt]);
 
   if (View) return <View />;
+  if (!failed && fallback) return <>{fallback}</>;
   return (
     <Page>
       {failed ? (

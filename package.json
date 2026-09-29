@@ -6,7 +6,7 @@
   "scripts": {
     "test": "playwright test --project=app --project=fps-gameplay",
     "test:emulator": "firebase emulators:exec --config firebase.emulators.json --project demo-lifexp --only auth,firestore \"playwright test --project=emulator\"",
-    "test:v2": "npm run build --prefix v2 && playwright test --project=v2",
+    "test:v2": "npm run build --prefix v2 && firebase emulators:exec --config firebase.emulators.json --project demo-lifexp --only auth,firestore \"playwright test --project=v2\"",
     "test:all": "npm test && npm run test:emulator && npm run test:v2",
     "test:ui": "playwright test --ui",
     "emulators": "firebase emulators:start --config firebase.emulators.json --project demo-lifexp --only auth,firestore"

@@ -18,7 +18,49 @@
     "reports": "Reports and updates",
     "settings": "Settings",
     "exus": "Ex-us",
-    "gallery": "Components"
+    "gallery": "Components",
+    "account": "Account",
+    "signOut": "Log out"
+  },
+  "auth": {
+    "boot": "Starting LifeXP…",
+    "title": "Log in",
+    "intro": "The same account and the same data as in the current version of LifeXP.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Log in",
+    "or": "or",
+    "google": "Continue with Google",
+    "noAccount": "No account yet?",
+    "register": "Create one in the current version",
+    "errors": {
+      "fillAll": "Fill in all fields.",
+      "userNotFound": "No account with this email address.",
+      "wrongPassword": "Wrong password.",
+      "invalidCredential": "Wrong email or password.",
+      "invalidEmail": "This email address is not valid.",
+      "popupClosed": "The sign-in window was closed.",
+      "popupBlocked": "The browser blocked the Google sign-in window. Allow pop-ups and try again.",
+      "tooManyRequests": "Too many attempts. Wait a moment and try again.",
+      "network": "No internet connection.",
+      "unknown": "Something went wrong. Try again.",
+      "signOutFailed": "Could not log out. Check your connection and try again."
+    },
+    "verify": {
+      "title": "Confirm your email",
+      "body": "The account {{email}} is waiting for the code from the confirmation email. Enter it in the current version of LifeXP, then this version opens as usual.",
+      "action": "Confirm email"
+    },
+    "finishSetup": {
+      "title": "Finish setting up your account",
+      "body": "Choose the account mode and modules in the current version of LifeXP. This version picks up those settings by itself.",
+      "action": "Finish setup"
+    },
+    "failed": {
+      "title": "LifeXP could not start",
+      "body": "Check your internet connection and try again.",
+      "retry": "Try again"
+    }
   },
   "comingSoon": {
     "overline": "Under construction",

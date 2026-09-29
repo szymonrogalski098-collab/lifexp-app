@@ -7,7 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { t } from '@/i18n';
 import { ToastHost } from '@/ui/components/ToastHost';
 import { dragProgress, releaseVelocity, settlesOpen, TAP_SLOP, type DragSample } from '@/lib/gesture';
-import { NavMenu } from './NavMenu';
+import { NavMenu, type Account } from './NavMenu';
 import type { ModuleId } from './registry';
 import { navigate } from './router';
 import { isExpanded, isStandalone } from './viewport';
@@ -41,10 +41,12 @@ interface AppShellProps {
   activeId: ModuleId;
   /** Current path; a change scrolls the new screen to the top. */
   path: string;
+  account: Account;
+  onSignOut: () => void;
   children: ComponentChildren;
 }
 
-export function AppShell({ title, activeId, path, children }: AppShellProps) {
+export function AppShell({ title, activeId, path, account, onSignOut, children }: AppShellProps) {
   const drawerMode = !isExpanded.value;
   const [open, setOpen] = useState(false);
   const [standalone] = useState(isStandalone);
@@ -195,7 +197,16 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
         aria-modal={modal ? 'true' : undefined}
         inert={drawerMode && !open}
       >
-        <NavMenu activeId={activeId} onSelect={selectPath} />
+        <NavMenu
+          activeId={activeId}
+          onSelect={selectPath}
+          account={account}
+          onSignOut={() => {
+            // Take the drawer's history entry with it; the login screen replaces the shell.
+            closeDrawer();
+            onSignOut();
+          }}
+        />
       </nav>
 
       <div ref={contentRef} class="shell__content" inert={modal}>
