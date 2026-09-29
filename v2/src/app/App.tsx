@@ -2,6 +2,7 @@ import { useEffect } from 'preact/hooks';
 import { t } from '@/i18n';
 import { AppShell } from './AppShell';
 import { ComingSoonPage } from './ComingSoonPage';
+import { LazyView } from './LazyView';
 import { DEFAULT_PATH, resolveRoute } from './registry';
 import { currentPath, navigate } from './router';
 
@@ -22,7 +23,7 @@ export function App() {
   if (!route) return null;
   return (
     <AppShell title={title} activeId={route.feature.id} path={path}>
-      <ComingSoonPage feature={route.feature} />
+      {route.feature.view ? <LazyView load={route.feature.view} /> : <ComingSoonPage feature={route.feature} />}
     </AppShell>
   );
 }

@@ -17,11 +17,80 @@
     "games": "Games",
     "reports": "Reports and updates",
     "settings": "Settings",
-    "exus": "Ex-us"
+    "exus": "Ex-us",
+    "gallery": "Components"
   },
   "comingSoon": {
     "overline": "Under construction",
     "body": "This screen arrives in stage {{stage}} of the rebuild. Until then, everything works in the current version of LifeXP.",
     "openV1": "Open the current version"
+  },
+  "ui": {
+    "loading": "Loading…",
+    "money": {
+      "currency": "zł",
+      "invalid": "Enter an amount, e.g. 12.50"
+    },
+    "loadFailed": "This screen could not be loaded. Check your connection.",
+    "retry": "Try again"
+  },
+  "gallery": {
+    "intro": "A preview of the v2 interface pieces in every theme. This page saves no data.",
+    "theme": "Theme",
+    "family": "Style",
+    "mode": "Mode",
+    "families": {
+      "lifexp": "LifeXP",
+      "ios": "iOS",
+      "gold": "Gold"
+    },
+    "modes": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "Match system"
+    },
+    "numbers": "Numbers",
+    "balance": "Balance",
+    "balanceDetail": "Available 912.50 zł · in goals 322.06 zł",
+    "today": "Points today",
+    "todayDetail": "of the 150 daily limit",
+    "goal": "Goal: bike",
+    "goalProgress": "Goal progress",
+    "list": "List",
+    "rowPocketMoney": "Pocket money",
+    "rowPocketMeta": "Income · 12 September",
+    "rowShopping": "Groceries",
+    "rowShoppingMeta": "Expense · 11 September",
+    "rowLoans": "Loans",
+    "rowLoansMeta": "2 open",
+    "buttons": "Buttons",
+    "primary": "Save",
+    "secondary": "Cancel",
+    "quiet": "All",
+    "danger": "Delete",
+    "busy": "Saving",
+    "addExpense": "Add expense",
+    "fields": "Fields",
+    "name": "Name",
+    "nameHint": "Visible only to you",
+    "minutes": "Time",
+    "minutesSuffix": "min",
+    "amount": "Amount",
+    "balanceAfter": "Balance afterwards: {{amount}}",
+    "date": "Date",
+    "category": "Category",
+    "categories": {
+      "food": "Food",
+      "transport": "Transport",
+      "fun": "Fun"
+    },
+    "filters": "Filters",
+    "filterIncome": "Income",
+    "filterExpense": "Expenses",
+    "filterMonth": "This month",
+    "states": "States",
+    "emptyTitle": "No tasks for today",
+    "emptyBody": "Add a task or tell Ex-us what you need to do.",
+    "emptyAction": "Add task"
   }
 }

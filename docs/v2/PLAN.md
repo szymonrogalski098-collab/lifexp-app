@@ -1340,13 +1340,14 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 
 | PR | Zakres | Stan |
 |---|---|---|
-| 1a | Szkielet `v2/` (Vite 8, TypeScript 5.9 strict, Preact), lint architektury z testami (warstwy 4.2, zakazy 7.7), `scripts/build-site.js` (v1 bez zmian + v2 pod `/v2/`, kontrola plików v1), workflow „Deploy”, job CI „v2 checks and site build”, `CLAUDE.md` | w PR |
-| 1b | Tokeny i motywy (LifeXP ciemny/jasny, iOS, Gold; migracja `lifexp-theme` z v1; skrypt przed pierwszym renderem), `base.css`, AppShell z sidebarem i drawerem (7.4), hash router, rejestr modułów z ekranami „W budowie”, i18n (typowane klucze pl/en, słownik rośnie z ekranami), testy przeglądarkowe powłoki i layoutu | w toku |
-| 1c | Komponenty `ui/` (Page, Card, Button, pola, Toast, Dialog, Sheet) | — |
-| 1d | Firebase 10.12.x z npm, logowanie/rejestracja/Google/weryfikacja/wylogowanie, bramy boot, e2e na emulatorze | — |
-| 1e | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | — |
+| 1a | Szkielet `v2/` (Vite 8, TypeScript 5.9 strict, Preact), lint architektury z testami (warstwy 4.2, zakazy 7.7), `scripts/build-site.js` (v1 bez zmian + v2 pod `/v2/`, kontrola plików v1), workflow „Deploy”, job CI „v2 checks and site build”, `CLAUDE.md` | scalone (#14) |
+| 1b | Tokeny i motywy (LifeXP ciemny/jasny, iOS, Gold; migracja `lifexp-theme` z v1; skrypt przed pierwszym renderem), `base.css`, AppShell z sidebarem i drawerem (7.4), hash router, rejestr modułów z ekranami „W budowie”, i18n (typowane klucze pl/en), testy przeglądarkowe powłoki | scalone (#15); płynniejsze otwieranie drawera po teście na telefonie (#16) |
+| 1c | Komponenty `ui/`: Page, Section, Card, Stack, Metric, List/ListRow, ProgressBar, EmptyState, Skeleton, Button, pola (tekst, liczba, kwota w groszach, data, select), SegmentedControl, FilterChip; `lib/money` (grosze); moduły ładowane leniwie; galeria `#/ui` z przełącznikiem motywu | w toku |
+| 1d | Warstwy: Sheet (bottom sheet / dialog), ConfirmDialog, Toast | — |
+| 1e | Firebase 10.12.x z npm, logowanie/rejestracja/Google/weryfikacja/wylogowanie, bramy boot, e2e na emulatorze | — |
+| 1f | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | — |
 
-Po scaleniu 1a właściciel przełącza Settings → Pages → Source na „GitHub Actions” (D3). Do czasu SW v2 (1e)
+Źródło Pages przełączone na „GitHub Actions” 2026-09-29 (D3). Do czasu SW v2 (1f)
 stronami `/v2/` zarządza SW v1 (scope `./`): online bez wpływu; offline `/v2/` otworzy się tylko z wcześniejszej
 wizyty online, inaczej SW v1 pokaże `app.html`.
 

@@ -40,6 +40,8 @@
   --radius-pill: 999px;
   --card-radius: var(--radius-lg);
   --card-border-width: 1px;
+  --button-radius: var(--radius-pill);
+  --field-radius: var(--radius-md);
 
   /* Layers: the only allowed z-index values */
   --z-topbar: 100;
@@ -137,6 +139,8 @@
   --font-family-base: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
   --card-radius: 10px;
   --card-border-width: 0px;
+  --button-radius: 12px;
+  --field-radius: 10px;
 }
 
 [data-theme='ios'][data-mode='light'] {

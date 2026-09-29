@@ -17,11 +17,80 @@
     "games": "Gry",
     "reports": "Zgłoszenia i aktualizacje",
     "settings": "Ustawienia",
-    "exus": "Ex-us"
+    "exus": "Ex-us",
+    "gallery": "Komponenty"
   },
   "comingSoon": {
     "overline": "W budowie",
     "body": "Ten ekran powstaje w etapie {{stage}} przebudowy. Do tego czasu wszystko działa w obecnej wersji LifeXP.",
     "openV1": "Otwórz obecną wersję"
+  },
+  "ui": {
+    "loading": "Wczytywanie…",
+    "money": {
+      "currency": "zł",
+      "invalid": "Wpisz kwotę, np. 12,50"
+    },
+    "loadFailed": "Nie udało się wczytać ekranu. Sprawdź połączenie.",
+    "retry": "Spróbuj ponownie"
+  },
+  "gallery": {
+    "intro": "Podgląd klocków interfejsu v2 we wszystkich motywach. Ta strona nie zapisuje żadnych danych.",
+    "theme": "Motyw",
+    "family": "Styl",
+    "mode": "Tryb",
+    "families": {
+      "lifexp": "LifeXP",
+      "ios": "iOS",
+      "gold": "Gold"
+    },
+    "modes": {
+      "dark": "Ciemny",
+      "light": "Jasny",
+      "system": "Jak system"
+    },
+    "numbers": "Liczby",
+    "balance": "Saldo",
+    "balanceDetail": "Dostępne 912,50 zł · w celach 322,06 zł",
+    "today": "Punkty dziś",
+    "todayDetail": "z 150 dziennego limitu",
+    "goal": "Cel: rower",
+    "goalProgress": "Postęp celu",
+    "list": "Lista",
+    "rowPocketMoney": "Kieszonkowe",
+    "rowPocketMeta": "Wpływ · 12 września",
+    "rowShopping": "Zakupy spożywcze",
+    "rowShoppingMeta": "Wydatek · 11 września",
+    "rowLoans": "Pożyczki",
+    "rowLoansMeta": "2 otwarte",
+    "buttons": "Przyciski",
+    "primary": "Zapisz",
+    "secondary": "Anuluj",
+    "quiet": "Wszystkie",
+    "danger": "Usuń",
+    "busy": "Zapisywanie",
+    "addExpense": "Dodaj wydatek",
+    "fields": "Pola",
+    "name": "Nazwa",
+    "nameHint": "Widoczna tylko dla Ciebie",
+    "minutes": "Czas",
+    "minutesSuffix": "min",
+    "amount": "Kwota",
+    "balanceAfter": "Saldo po operacji: {{amount}}",
+    "date": "Data",
+    "category": "Kategoria",
+    "categories": {
+      "food": "Jedzenie",
+      "transport": "Transport",
+      "fun": "Rozrywka"
+    },
+    "filters": "Filtry",
+    "filterIncome": "Wpływy",
+    "filterExpense": "Wydatki",
+    "filterMonth": "Ten miesiąc",
+    "states": "Stany",
+    "emptyTitle": "Brak zadań na dziś",
+    "emptyBody": "Dodaj zadanie albo napisz do Ex-us, co masz do zrobienia.",
+    "emptyAction": "Dodaj zadanie"
   }
 }

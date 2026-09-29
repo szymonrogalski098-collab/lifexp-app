@@ -203,7 +203,7 @@ test.describe('desktop: sidebar', () => {
 });
 
 test.describe('layout guarantees', () => {
-  const ROUTES = ['#/today', '#/tasks', '#/money', '#/settings', '#/reports'];
+  const ROUTES = ['#/today', '#/tasks', '#/money', '#/settings', '#/reports', '#/ui'];
   for (const width of [360, 390, 768, 839, 840, 1280]) {
     test(`no horizontal scroll at ${width} px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
