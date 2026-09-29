@@ -78,12 +78,13 @@ function typeOf(v) {
 
 class Inventory {
   constructor() {
-    this.collections = new Map(); // pattern -> { docs, ids: Map, fields: Map(path -> Map(type -> n)), enums: Map(path -> Map(value -> n)) }
+    // pattern -> { docs, ids: Map, fields: Map(path -> Map(type -> n)), present: Map(path -> n), enums: Map(path -> Map(value -> n)) }
+    this.collections = new Map();
   }
 
   bucket(pattern) {
     if (!this.collections.has(pattern)) {
-      this.collections.set(pattern, { docs: 0, ids: new Map(), fields: new Map(), enums: new Map() });
+      this.collections.set(pattern, { docs: 0, ids: new Map(), fields: new Map(), present: new Map(), enums: new Map() });
     }
     return this.collections.get(pattern);
   }
@@ -98,6 +99,12 @@ class Inventory {
   }
 
   note(b, path, type, seen) {
+    // Obecność liczona osobno od typów: pole z różnymi typami w różnych
+    // dokumentach (np. kwota int/float) jest obecne w sumie tych dokumentów.
+    if (!seen.has(path)) {
+      seen.add(path);
+      b.present.set(path, (b.present.get(path) || 0) + 1);
+    }
     const key = `${path}\u0000${type}`;
     if (seen.has(key)) return;
     seen.add(key);
@@ -163,8 +170,8 @@ class Inventory {
       lines.push('|---|---:|---|');
       for (const path of [...b.fields.keys()].sort()) {
         const types = b.fields.get(path);
-        const present = path.includes('[]') ? '—' : Math.max(...types.values());
-        lines.push(`| \`${path}\` | ${present === '—' ? '—' : `${present}/${b.docs}`} | ${fmtCounts(types)} |`);
+        const present = path.includes('[]') ? '—' : `${b.present.get(path)}/${b.docs}`;
+        lines.push(`| \`${path}\` | ${present} | ${fmtCounts(types)} |`);
       }
       if (b.enums.size) {
         lines.push('');
@@ -178,8 +185,11 @@ class Inventory {
   }
 }
 
+// Klasy typu "<other>" i "__generated__" jako kod: bez tego markdown GitHuba
+// traktuje pierwsze jak znacznik HTML (znika), a drugie jak pogrubienie.
 function fmtCounts(map) {
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ×${n}`).join(', ');
+  const label = (k) => (/^[<_]/.test(k) ? `\`${k}\`` : k);
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${label(k)} ×${n}`).join(', ');
 }
 
 async function scanCollection(inv, colRef, pattern) {
@@ -204,12 +214,37 @@ async function buildInventory(db) {
   return inv;
 }
 
+// Błędy są wypisywane w PUBLICZNYM logu Actions, więc nigdy nie mogą zawierać
+// fragmentu sekretu. Stąd własne komunikaty zamiast np. oryginalnego błędu
+// JSON.parse, który cytuje początek parsowanego tekstu.
+function parseServiceAccount(raw) {
+  let sa;
+  try { sa = JSON.parse(raw); } catch (e) { sa = null; }
+  if (!sa || sa.type !== 'service_account' || !sa.private_key || !sa.project_id) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT nie zawiera klucza konta serwisowego. Sekret musi mieć CAŁĄ '
+      + 'zawartość pliku JSON pobranego przez "Generate new private key" (zaczyna się od "{" i zawiera '
+      + '"type": "service_account"), a nie fragment kodu z konsoli Firebase.');
+  }
+  return sa;
+}
+
+function explain(e) {
+  if (e && e.code === 16) {
+    return 'Google odrzucił klucz (UNAUTHENTICATED): klucz w FIREBASE_SERVICE_ACCOUNT został usunięty albo '
+      + 'wyłączony. Wygeneruj nowy klucz (Firebase Console → Project settings → Service accounts) i podmień sekret.';
+  }
+  if (e && e.code === 7) {
+    return 'Brak uprawnień (PERMISSION_DENIED): konto serwisowe z sekretu nie ma dostępu do Firestore tego projektu.';
+  }
+  return (e && e.message) || String(e);
+}
+
 async function main() {
   const { initializeApp, cert } = require('firebase-admin/app');
   const { getFirestore } = require('firebase-admin/firestore');
   let projectId = process.env.GCLOUD_PROJECT;
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    const sa = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT);
     projectId = sa.project_id;
     initializeApp({ credential: cert(sa), projectId });
   } else {
@@ -224,7 +259,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((e) => { console.error(e.message); process.exit(1); });
+  main().catch((e) => { console.error(explain(e)); process.exit(1); });
 }
 
-module.exports = { buildInventory, classifyId, typeOf };
+module.exports = { Inventory, buildInventory, classifyId, typeOf, parseServiceAccount, explain };

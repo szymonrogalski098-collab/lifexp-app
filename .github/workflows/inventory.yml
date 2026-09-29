@@ -26,3 +26,7 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       - run: cat inventory.md >> "$GITHUB_STEP_SUMMARY"
+      # Same schema-only report in the job log: the summary is not readable
+      # through the GitHub API, the log is.
+      - name: Print report
+        run: cat inventory.md

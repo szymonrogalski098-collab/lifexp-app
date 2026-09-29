@@ -4,7 +4,7 @@
 // none of the values.
 const { test, expect } = require('@playwright/test');
 const { db } = require('../support/emulator');
-const { buildInventory } = require('../../scripts/inventory');
+const { Inventory, buildInventory } = require('../../scripts/inventory');
 
 const SECRETS = {
   email: 'jan.kowalski.secret@example.com',
@@ -54,4 +54,14 @@ test('inventory reports schema and legacy shapes without leaking any values', as
   for (const secret of [...Object.values(SECRETS), uid]) {
     expect(md).not.toContain(secret);
   }
+});
+
+test('a field with different types in different documents counts every document it is in', () => {
+  const inv = new Inventory();
+  inv.addDoc('payouts/{id}', 'a', { amountPln: 18 });
+  inv.addDoc('payouts/{id}', 'b', { amountPln: 4.5 });
+  inv.addDoc('payouts/{id}', 'c', { amountPln: 0.45 });
+  inv.addDoc('payouts/{id}', 'd', {});
+  const md = inv.toMarkdown({ generatedAt: 'test', projectId: 'demo-lifexp' });
+  expect(md).toContain('| `amountPln` | 3/4 | float ×2, int ×1 |');
 });
