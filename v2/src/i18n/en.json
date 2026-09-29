@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "LifeXP"
+  },
+  "nav": {
+    "label": "Navigation",
+    "menu": "Menu",
+    "closeMenu": "Close menu",
+    "askExus": "Ask Ex-us",
+    "today": "Today",
+    "tasks": "Tasks",
+    "goals": "Goals",
+    "chores": "Chores",
+    "money": "Money",
+    "notes": "Notes",
+    "stats": "Statistics",
+    "games": "Games",
+    "reports": "Reports and updates",
+    "settings": "Settings",
+    "exus": "Ex-us"
+  },
+  "comingSoon": {
+    "overline": "Under construction",
+    "body": "This screen arrives in stage {{stage}} of the rebuild. Until then, everything works in the current version of LifeXP.",
+    "openV1": "Open the current version"
+  }
+}

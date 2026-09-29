@@ -24,7 +24,7 @@ module.exports = defineConfig({
     ...(executablePath ? { launchOptions: { executablePath } } : {}),
   },
   projects: [
-    { name: 'app', testIgnore: [/fps-gameplay\.spec\.js/, /[\\/]emulator[\\/]/] },
+    { name: 'app', testIgnore: [/fps-gameplay\.spec\.js/, /[\\/]emulator[\\/]/, /[\\/]v2[\\/]/] },
     // The FPS scene renders through software WebGL in headless Chromium at a few
     // fps, and its tests wait in FRAMES (see the spec header), so wall-clock time
     // depends on the machine: locally the heaviest take ~28 s, a CI runner is
@@ -35,6 +35,8 @@ module.exports = defineConfig({
     // started through `npm run test:emulator` (firebase emulators:exec), not `npm test`.
     // Service workers are blocked: sw.js caching is not what these tests check.
     { name: 'emulator', testMatch: /[\\/]emulator[\\/].*\.spec\.js/, use: { serviceWorkers: 'block' } },
+    // v2 app shell against the built app (v2/dist): run `npm run build --prefix v2` first.
+    { name: 'v2', testMatch: /[\\/]v2[\\/].*\.spec\.js/ },
   ],
   webServer: {
     command: 'node tests/support/static-server.js',

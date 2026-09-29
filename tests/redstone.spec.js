@@ -421,9 +421,10 @@ test.describe('Clock', () => {
     await clickTool(page, 'lamp'); await tapCell(page, 1, 5);
     await page.waitForTimeout(50);
     for (let i = 0; i < 10; i++) {
-      const a = (await powerAt(page, 1, 0)) > 0;
-      const b = (await powerAt(page, 1, 5)) > 0;
-      expect(a).toBe(b);
+      // One snapshot per check: two powerAt() calls could straddle a tick.
+      const { power } = await dbg(page);
+      const lit = (x, y) => (power.find(([k]) => k === `${x},${y}`)?.[1] ?? 0) > 0;
+      expect(lit(1, 0)).toBe(lit(1, 5));
       await page.waitForTimeout(100);
     }
   });
