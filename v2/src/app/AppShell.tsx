@@ -5,7 +5,8 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { t } from '@/i18n';
-import { dragProgress, releaseVelocity, settlesOpen, TAP_SLOP, type DragSample } from './drawer-gesture';
+import { ToastHost } from '@/ui/components/ToastHost';
+import { dragProgress, releaseVelocity, settlesOpen, TAP_SLOP, type DragSample } from '@/lib/gesture';
 import { NavMenu } from './NavMenu';
 import type { ModuleId } from './registry';
 import { navigate } from './router';
@@ -136,7 +137,7 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
       startX: e.clientX,
       startProgress: openRef.current ? 1 : 0,
       offset: navRef.current?.getBoundingClientRect().width ?? 0,
-      samples: [{ x: e.clientX, t: e.timeStamp }],
+      samples: [{ pos: e.clientX, t: e.timeStamp }],
       moved: false,
     };
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -151,7 +152,7 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
       d.moved = true;
       shellRef.current?.classList.add('is-dragging');
     }
-    d.samples.push({ x: e.clientX, t: e.timeStamp });
+    d.samples.push({ pos: e.clientX, t: e.timeStamp });
     if (d.samples.length > 32) d.samples.shift();
     setProgress(dragProgress(d.startProgress, dx, d.offset));
   };
@@ -167,7 +168,7 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
       return;
     }
     // pointercancel carries no reliable position: use the last sample.
-    const lastX = d.samples[d.samples.length - 1]?.x ?? d.startX;
+    const lastX = d.samples[d.samples.length - 1]?.pos ?? d.startX;
     const progress = dragProgress(d.startProgress, lastX - d.startX, d.offset);
     const shouldOpen = cancelled ? progress >= 0.5 : settlesOpen(progress, releaseVelocity(d.samples));
     if (shouldOpen) openDrawer('settle');
@@ -220,6 +221,7 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
         <button type="button" class="shell__closer" tabIndex={-1} aria-label={t('nav.closeMenu')} {...gestureHandlers} />
       )}
       {drawerMode && !open && standalone && <div class="shell__edge" aria-hidden="true" {...gestureHandlers} />}
+      <ToastHost />
     </div>
   );
 }

@@ -1,0 +1,153 @@
+/* Sheet: bottom sheet < 600 px, centred dialog ≥ 600 px (PLAN.md 7.5, U12). */
+
+.ui-sheet {
+  --drag-offset: 0px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(calc(100dvh - 48px), calc(var(--visible-height, 100dvh) - 12px));
+  margin: auto 0 var(--keyboard-inset, 0px);
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-2);
+  transform: translateY(var(--drag-offset));
+  transition: transform var(--duration-base) var(--ease-standard);
+}
+
+.ui-sheet.is-dragging {
+  transition: none;
+}
+
+.ui-sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-sheet::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.ui-sheet[data-state='open'] {
+  animation: ui-sheet-in var(--duration-drawer) var(--ease-drawer);
+}
+
+.ui-sheet[data-state='closing'] {
+  animation: ui-sheet-out var(--duration-base) ease-in forwards;
+}
+
+.ui-sheet[data-state='open']::backdrop {
+  animation: ui-fade-in var(--duration-drawer) var(--ease-standard);
+}
+
+.ui-sheet[data-state='closing']::backdrop {
+  animation: ui-fade-out var(--duration-base) ease-in forwards;
+}
+
+@keyframes ui-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes ui-sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.ui-sheet__panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ui-sheet__header {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-3) var(--space-2) var(--space-5);
+  cursor: grab;
+  touch-action: none;
+}
+
+.ui-sheet__handle {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 36px;
+  height: 5px;
+  margin-left: -18px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+}
+
+.ui-sheet__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.ui-sheet__close {
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-sheet__close:hover {
+  background: var(--color-accent-soft);
+}
+
+.ui-sheet__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
+}
+
+.ui-sheet__footer {
+  padding: var(--space-3) var(--space-5) calc(var(--space-4) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-separator);
+  background: var(--color-surface);
+}
+
+.ui-sheet__body:has(+ .ui-sheet__footer) {
+  padding-bottom: var(--space-5);
+}
+
+@media (min-width: 600px) {
+  .ui-sheet {
+    width: min(560px, calc(100% - 48px));
+    max-height: min(85dvh, calc(var(--visible-height, 100dvh) - 48px));
+    margin: auto;
+    border-radius: var(--radius-lg);
+  }
+
+  .ui-sheet[data-state='open'] {
+    animation: ui-dialog-in var(--duration-slow) var(--ease-drawer);
+  }
+
+  .ui-sheet[data-state='closing'] {
+    animation: ui-dialog-out var(--duration-base) ease-in forwards;
+  }
+
+  .ui-sheet__handle {
+    display: none;
+  }
+
+  .ui-sheet__header {
+    padding-top: var(--space-4);
+    cursor: default;
+  }
+}

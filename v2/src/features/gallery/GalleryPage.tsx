@@ -17,7 +17,10 @@ import {
   Select,
   TextField,
 } from '@/ui/components/Fields';
+import { ConfirmDialog } from '@/ui/components/ConfirmDialog';
 import { Card, Page, Section, Stack } from '@/ui/components/Layout';
+import { Sheet } from '@/ui/components/Sheet';
+import { showToast } from '@/ui/toast';
 import './gallery.css';
 
 const SAMPLE_BALANCE = 123456; // grosze
@@ -92,6 +95,76 @@ function FieldsSection() {
   );
 }
 
+function LayersSection() {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [amount, setAmount] = useState<number | null>(null);
+  const [note, setNote] = useState('');
+
+  const save = () => {
+    setSheetOpen(false);
+    showToast({
+      message: t('gallery.saved', { amount: formatMoney(amount ?? 0) }),
+      tone: 'positive',
+      action: { label: t('gallery.undo'), onAction: () => showToast({ message: t('gallery.undone') }) },
+    });
+    setAmount(null);
+    setNote('');
+  };
+
+  return (
+    <Section title={t('gallery.layers')}>
+      <Card>
+        <div class="row gallery-buttons">
+          <Button variant="primary" onClick={() => setSheetOpen(true)}>
+            {t('gallery.openSheet')}
+          </Button>
+          <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+            {t('gallery.openConfirm')}
+          </Button>
+          <Button onClick={() => showToast({ message: t('gallery.errorMessage'), tone: 'negative' })}>
+            {t('gallery.showError')}
+          </Button>
+        </div>
+      </Card>
+
+      <Sheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={t('gallery.sheetTitle')}
+        footer={
+          <Button variant="primary" size="lg" block disabled={amount === null || amount === 0} onClick={save}>
+            {t('gallery.primary')}
+          </Button>
+        }
+      >
+        <Stack gap="sm">
+          <MoneyField
+            label={t('gallery.amount')}
+            value={amount}
+            onChange={setAmount}
+            hint={t('gallery.balanceAfter', { amount: formatMoney(SAMPLE_BALANCE - (amount ?? 0)) })}
+          />
+          <TextField label={t('gallery.note')} value={note} onInput={setNote} maxLength={80} />
+        </Stack>
+      </Sheet>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t('gallery.confirmTitle')}
+        body={t('gallery.confirmBody')}
+        confirmLabel={t('gallery.danger')}
+        danger
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          showToast({ message: t('gallery.deleted') });
+        }}
+      />
+    </Section>
+  );
+}
+
 export default function GalleryPage() {
   return (
     <Page>
@@ -138,6 +211,8 @@ export default function GalleryPage() {
         </Section>
 
         <FieldsSection />
+
+        <LayersSection />
 
         <Section title={t('gallery.states')}>
           <Card>

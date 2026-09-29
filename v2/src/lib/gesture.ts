@@ -1,9 +1,10 @@
-// Drag physics of the mobile drawer (docs/v2/PLAN.md 7.4, U3). Pure functions so
-// the "does it open?" decision is tested without a browser.
+// Drag physics shared by the drawer (PLAN.md 7.4, U3) and sheets (U12). Pure so
+// the "does it stay open?" decision is tested without a browser. Positions are
+// along the drag axis (x for the drawer, y for sheets).
 
 export interface DragSample {
-  /** Pointer x in px. */
-  x: number;
+  /** Pointer position along the drag axis, px. */
+  pos: number;
   /** Timestamp in ms. */
   t: number;
 }
@@ -34,7 +35,7 @@ export function releaseVelocity(samples: readonly DragSample[]): number {
     first = s;
   }
   const dt = last.t - first.t;
-  return dt > 0 ? (last.x - first.x) / dt : 0;
+  return dt > 0 ? (last.pos - first.pos) / dt : 0;
 }
 
 /**

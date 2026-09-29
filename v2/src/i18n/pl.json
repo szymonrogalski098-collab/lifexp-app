@@ -32,7 +32,9 @@
       "invalid": "Wpisz kwotę, np. 12,50"
     },
     "loadFailed": "Nie udało się wczytać ekranu. Sprawdź połączenie.",
-    "retry": "Spróbuj ponownie"
+    "retry": "Spróbuj ponownie",
+    "close": "Zamknij",
+    "cancel": "Anuluj"
   },
   "gallery": {
     "intro": "Podgląd klocków interfejsu v2 we wszystkich motywach. Ta strona nie zapisuje żadnych danych.",
@@ -91,6 +93,19 @@
     "states": "Stany",
     "emptyTitle": "Brak zadań na dziś",
     "emptyBody": "Dodaj zadanie albo napisz do Ex-us, co masz do zrobienia.",
-    "emptyAction": "Dodaj zadanie"
+    "emptyAction": "Dodaj zadanie",
+    "layers": "Okna",
+    "openSheet": "Otwórz arkusz",
+    "openConfirm": "Usuń notatkę",
+    "showError": "Pokaż błąd",
+    "sheetTitle": "Nowy wydatek",
+    "note": "Notatka",
+    "saved": "Zapisano wydatek {{amount}}",
+    "undo": "Cofnij",
+    "undone": "Cofnięto",
+    "confirmTitle": "Usunąć notatkę?",
+    "confirmBody": "Tej operacji nie da się cofnąć.",
+    "deleted": "Usunięto notatkę",
+    "errorMessage": "Nie udało się zapisać. Sprawdź połączenie i spróbuj ponownie."
   }
 }
