@@ -9,9 +9,13 @@ describe('profile converter', () => {
         email: 'ala@example.com',
         emailVerified: true,
         accountMode: 'solo',
-        enabledModules: ['chores'],
+        enabledModules: ['chores', 'money'],
         lang: 'en',
-        points: { total: 5 },
+        points: { total: 1234, earnedAllTime: 620, spentAllTime: 50 },
+        dailyLimit: 120,
+        pointsRateGeneralZl: 2,
+        pointsRateGeneralPts: 10,
+        streakFreezeLastUsed: '2026-09-20',
       }),
     ).toEqual({
       name: 'Ala',
@@ -19,7 +23,12 @@ describe('profile converter', () => {
       emailVerified: true,
       accountModeChosen: true,
       modulesChosen: true,
+      enabledModules: ['chores', 'money'],
       lang: 'en',
+      points: { total: 1234, earnedAllTime: 620, spentAllTime: 50 },
+      dailyLimit: 120,
+      rateGeneral: { zloty: 2, points: 10 },
+      streakFreezeLastUsed: '2026-09-20',
     });
   });
 
@@ -28,6 +37,7 @@ describe('profile converter', () => {
     const p = profileFromData({ name: 'Ola', email: 'o@example.com', emailVerified: true, points: {} });
     expect(p.accountModeChosen).toBe(false);
     expect(p.modulesChosen).toBe(false);
+    expect(p.enabledModules).toBeNull();
     expect(p.lang).toBeNull();
   });
 
@@ -35,14 +45,37 @@ describe('profile converter', () => {
     expect(profileFromData({ enabledModules: [] }).modulesChosen).toBe(true);
   });
 
+  // INVENTORY: pointsRateChoresZl is int or float; only 3 of 6 profiles set a limit or rate.
+  test('rates as int or float; absent limit and rates stay null (v1 defaults apply later)', () => {
+    const p = profileFromData({ pointsRateGeneralZl: 1.5, points: { total: 3 } });
+    expect(p.rateGeneral).toEqual({ zloty: 1.5, points: null });
+    expect(p.dailyLimit).toBeNull();
+    expect(p.points).toEqual({ total: 3, earnedAllTime: 0, spentAllTime: 0 });
+  });
+
   test('missing or odd values get v1 defaults', () => {
-    expect(profileFromData({ name: '  ', lang: 'de', emailVerified: 'yes' })).toEqual({
+    expect(
+      profileFromData({
+        name: '  ',
+        lang: 'de',
+        emailVerified: 'yes',
+        points: 'lots',
+        dailyLimit: 0,
+        streakFreezeLastUsed: 'yesterday',
+        enabledModules: ['chores', 7],
+      }),
+    ).toEqual({
       name: DEFAULT_NAME,
       email: '',
       emailVerified: false,
       accountModeChosen: false,
-      modulesChosen: false,
+      modulesChosen: true,
+      enabledModules: ['chores'],
       lang: null,
+      points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
+      dailyLimit: null,
+      rateGeneral: { zloty: null, points: null },
+      streakFreezeLastUsed: null,
     });
   });
 });

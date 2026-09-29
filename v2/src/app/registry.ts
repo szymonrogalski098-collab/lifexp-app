@@ -51,7 +51,16 @@ export interface FeatureDef {
 }
 
 export const FEATURES: readonly FeatureDef[] = [
-  { id: 'today', labelKey: 'nav.today', icon: House, paths: ['/today'], nav: { group: 'main', order: 10 }, tab: 1, stage: '2' },
+  {
+    id: 'today',
+    labelKey: 'nav.today',
+    icon: House,
+    paths: ['/today'],
+    nav: { group: 'main', order: 10 },
+    tab: 1,
+    stage: '2',
+    view: () => import('@/features/today/TodayPage'),
+  },
   { id: 'tasks', labelKey: 'nav.tasks', icon: ListTodo, paths: ['/tasks'], nav: { group: 'main', order: 20 }, stage: '3a' },
   { id: 'goals', labelKey: 'nav.goals', icon: Target, paths: ['/goals'], nav: { group: 'main', order: 30 }, stage: '3d' },
   { id: 'chores', labelKey: 'nav.chores', icon: ClipboardCheck, paths: ['/chores'], nav: { group: 'main', order: 40 }, tab: 2, stage: '3b' },

@@ -41,3 +41,8 @@ export function setLanguage(lng: Language): void {
 }
 
 export const t = i18next.t.bind(i18next);
+
+/** BCP 47 locale for Intl (numbers, dates, money) in the active language. */
+export function locale(): string {
+  return language.value === 'en' ? 'en-GB' : 'pl-PL';
+}

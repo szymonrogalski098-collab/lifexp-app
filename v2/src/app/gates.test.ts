@@ -10,7 +10,12 @@ const ready: Profile = {
   emailVerified: true,
   accountModeChosen: true,
   modulesChosen: true,
+  enabledModules: ['chores'],
   lang: 'pl',
+  points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
+  dailyLimit: null,
+  rateGeneral: { zloty: null, points: null },
+  streakFreezeLastUsed: null,
 };
 
 const signedIn = (profile: ProfileState, u: SessionUser = user) => sessionGate({ status: 'signedIn', user: u, profile });

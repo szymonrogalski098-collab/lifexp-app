@@ -1,0 +1,260 @@
+/* Today screen (stage 2a), in the owner's reference layout. */
+
+.today-greeting__date {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.today-greeting__date::first-letter {
+  text-transform: uppercase;
+}
+
+.today-greeting__hello {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.today-error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-negative) 12%, transparent);
+  color: var(--color-negative);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── Points hero: the dark card of the reference ── */
+
+.today-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--card-radius);
+  background: var(--gradient-hero);
+  color: #ffffff;
+  box-shadow: var(--shadow-1);
+}
+
+.today-hero__text {
+  min-width: 0;
+}
+
+.today-hero__label {
+  color: rgb(255 255 255 / 75%);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.today-hero__value {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.today-hero__unit {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: rgb(255 255 255 / 80%);
+}
+
+.today-hero__worth {
+  margin-top: var(--space-2);
+  color: rgb(255 255 255 / 75%);
+  font-weight: var(--font-weight-medium);
+}
+
+.today-hero__badge {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--gradient-accent);
+  color: var(--color-on-accent);
+  box-shadow: 0 0 0 6px rgb(255 255 255 / 8%);
+}
+
+.today-hero__badge svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+}
+
+/* ── Cards ── */
+
+.today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.today-row__start {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.today-card__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.today-card__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  text-align: right;
+}
+
+.today-row > div:first-child .today-card__meta,
+.today-split .today-card__meta {
+  text-align: left;
+}
+
+.today-card__number {
+  margin: var(--space-1) 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.today-card__bar {
+  margin-top: var(--space-4);
+}
+
+.today-card__note {
+  margin-top: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.today-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+/* ── Week of the streak: Mon … Sun ── */
+
+.today-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-week__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.today-week__mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-on-accent);
+}
+
+.today-week__mark svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 3;
+}
+
+.today-week__day--done .today-week__mark {
+  border-color: transparent;
+  background: var(--color-accent);
+}
+
+.today-week__day--today .today-week__mark {
+  border-color: var(--color-accent);
+}
+
+.today-week__day--future .today-week__mark {
+  opacity: 0.5;
+}
+
+.today-week__label {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Balance and shortcuts ── */
+
+.today-balance {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 64px;
+  padding: var(--space-3) var(--space-5);
+  border: var(--card-border-width) solid var(--color-border);
+  border-radius: var(--card-radius);
+  background: var(--color-surface);
+  box-shadow: var(--card-shadow);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.today-balance__label {
+  flex: 1;
+  font-weight: var(--font-weight-semibold);
+}
+
+.today-balance__value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.today-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 88px;
+  padding: var(--space-3) var(--space-1);
+  border: var(--card-border-width) solid var(--color-border);
+  border-radius: var(--card-radius);
+  background: var(--color-surface);
+  box-shadow: var(--card-shadow);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.today-shortcut__label {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

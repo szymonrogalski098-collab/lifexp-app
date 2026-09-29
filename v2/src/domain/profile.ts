@@ -21,5 +21,22 @@ export interface Profile {
   accountModeChosen: boolean;
   /** v1's first-run module survey (enabledModules) is done. */
   modulesChosen: boolean;
+  /** v1 module ids the person turned on (chores, money, notes, games, stats, aichat, …); null = not chosen. */
+  enabledModules: readonly string[] | null;
   lang: Language | null;
+  points: PointsTotals;
+  /** Daily points cap; null = v1's default (domain/points DAILY_LIMIT_DEFAULT). */
+  dailyLimit: number | null;
+  /** Złoty and points of the general rate; v1 uses them only when both are set. */
+  rateGeneral: { zloty: number | null; points: number | null };
+  /** UTC day key of the last streak freeze, if any (G3). */
+  streakFreezeLastUsed: string | null;
+}
+
+/** users.points — v1 keeps all three in step. */
+export interface PointsTotals {
+  /** Spendable balance. */
+  total: number;
+  earnedAllTime: number;
+  spentAllTime: number;
 }

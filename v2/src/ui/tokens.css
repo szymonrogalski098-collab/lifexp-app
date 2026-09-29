@@ -45,6 +45,8 @@
   --field-radius: var(--radius-md);
   /* Filled accents (the "+" button, hero surfaces); themes may make it a gradient. */
   --gradient-accent: linear-gradient(var(--color-accent), var(--color-accent));
+  /* The dark hero card (Today's points) in every theme; white text on it. */
+  --gradient-hero: linear-gradient(135deg, #0f1a2e 0%, #1c345c 100%);
 
   /* Icons (PLAN.md 7.1, D9): always next to a text label */
   --icon-size: 22px;
@@ -210,6 +212,7 @@
 [data-theme='gold'] {
   color-scheme: dark;
   --radius-lg: 10px;
+  --gradient-hero: linear-gradient(135deg, #16140c 0%, #2a2413 100%);
   --color-bg: #080807;
   --color-nav-bg: #111110;
   --color-surface: #111110;
