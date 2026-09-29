@@ -1,6 +1,7 @@
 // Module registry (docs/v2/PLAN.md 4.4). Navigation, routes and — later —
 // onboarding, the module list in Settings and Ex-us commands are generated from
 // this list: adding a module = one folder + one entry here.
+import type { ComponentType } from 'preact';
 import { matchPath, type RouteParams } from '@/lib/route-match';
 
 export type ModuleId =
@@ -14,7 +15,8 @@ export type ModuleId =
   | 'games'
   | 'reports'
   | 'settings'
-  | 'exus';
+  | 'exus'
+  | 'gallery';
 
 export interface FeatureDef {
   id: ModuleId;
@@ -25,6 +27,8 @@ export interface FeatureDef {
   nav: { group: 'main' | 'secondary'; order: number } | null;
   /** Stage of docs/v2/PLAN.md 9 that builds the module; shown until it exists. */
   stage: string;
+  /** The module's screen, loaded on first visit. Absent = "coming soon". */
+  view?: () => Promise<{ default: ComponentType }>;
 }
 
 export const FEATURES: readonly FeatureDef[] = [
@@ -39,6 +43,15 @@ export const FEATURES: readonly FeatureDef[] = [
   { id: 'reports', labelKey: 'nav.reports', paths: ['/reports'], nav: { group: 'secondary', order: 10 }, stage: '4' },
   { id: 'settings', labelKey: 'nav.settings', paths: ['/settings/:section?'], nav: { group: 'secondary', order: 20 }, stage: '4' },
   { id: 'exus', labelKey: 'nav.exus', paths: ['/exus'], nav: null, stage: '5' },
+  // Not in the menu: a preview of the ui/ components in every theme.
+  {
+    id: 'gallery',
+    labelKey: 'nav.gallery',
+    paths: ['/ui'],
+    nav: null,
+    stage: '1c',
+    view: () => import('@/features/gallery/GalleryPage'),
+  },
 ];
 
 export const DEFAULT_PATH = '/today';

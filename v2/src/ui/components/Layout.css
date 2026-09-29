@@ -1,0 +1,73 @@
+.ui-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) calc(var(--space-10) + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 840px) {
+  .ui-page {
+    max-width: var(--content-max-width);
+    padding: var(--space-8);
+  }
+}
+
+.ui-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-stack--sm {
+  gap: var(--space-3);
+}
+
+.ui-stack--md {
+  gap: var(--space-6);
+}
+
+.ui-stack--lg {
+  gap: var(--space-10);
+}
+
+.ui-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 24px;
+  padding: 0 var(--space-1);
+}
+
+.ui-section__title {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ui-card {
+  min-width: 0;
+  border: var(--card-border-width) solid var(--color-border);
+  border-radius: var(--card-radius);
+  background: var(--color-surface);
+}
+
+.ui-card--pad-md {
+  padding: var(--space-5);
+}
+
+.ui-card--pad-sm {
+  padding: var(--space-3) var(--space-4);
+}
+
+.ui-card--pad-none {
+  overflow: hidden;
+}
