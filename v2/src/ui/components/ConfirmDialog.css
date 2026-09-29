@@ -1,0 +1,50 @@
+.ui-confirm {
+  box-sizing: border-box;
+  width: min(400px, calc(100% - 32px));
+  margin: auto;
+  padding: var(--space-6);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-2);
+}
+
+.ui-confirm::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.ui-confirm[data-state='open'] {
+  animation: ui-dialog-in var(--duration-slow) var(--ease-drawer);
+}
+
+.ui-confirm[data-state='closing'] {
+  animation: ui-dialog-out var(--duration-base) ease-in forwards;
+}
+
+.ui-confirm[data-state='open']::backdrop {
+  animation: ui-fade-in var(--duration-slow) var(--ease-standard);
+}
+
+.ui-confirm[data-state='closing']::backdrop {
+  animation: ui-fade-out var(--duration-base) ease-in forwards;
+}
+
+.ui-confirm__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.ui-confirm__body {
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.ui-confirm__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}

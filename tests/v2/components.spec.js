@@ -12,9 +12,12 @@ async function openGallery(page) {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(GALLERY);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Komponenty');
-  await expect(page.getByLabel('Kwota')).toBeVisible(); // lazy chunk loaded
+  await expect(page.getByRole('heading', { name: 'Pola' })).toBeVisible(); // lazy chunk loaded
   return errors;
 }
+
+// The fields demo; the gallery's sheet has its own "Kwota" field.
+const fields = (page) => page.locator('.ui-section', { has: page.getByRole('heading', { name: 'Pola' }) });
 
 test('the gallery loads as its own chunk without errors', async ({ page }) => {
   const scripts = [];
@@ -48,26 +51,26 @@ test('theme switch applies at once and is remembered', async ({ page }) => {
 
 test('amount field: decimal keypad, grouping and comma accepted, normalised on blur', async ({ page }) => {
   await openGallery(page);
-  const amount = page.getByLabel('Kwota');
+  const amount = fields(page).getByLabel('Kwota');
   await expect(amount).toHaveAttribute('inputmode', 'decimal');
 
   await amount.fill('1 234,5');
-  await expect(page.getByText('Saldo po operacji: 0,06 zł')).toBeVisible();
+  await expect(fields(page).getByText('Saldo po operacji: 0,06 zł')).toBeVisible();
   await amount.blur();
   await expect(amount).toHaveValue('1234,50');
 
   await amount.fill('12,345');
   await amount.blur();
-  await expect(page.getByRole('alert')).toHaveText('Wpisz kwotę, np. 12,50');
+  await expect(fields(page).getByRole('alert')).toHaveText('Wpisz kwotę, np. 12,50');
   await expect(amount).toHaveAttribute('aria-invalid', 'true');
 
   await amount.fill('7.5');
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(fields(page).getByRole('alert')).toHaveCount(0);
 });
 
 test('number field keeps digits only', async ({ page }) => {
   await openGallery(page);
-  const minutes = page.getByLabel('Czas');
+  const minutes = fields(page).getByLabel('Czas');
   await minutes.fill('');
   await minutes.pressSequentially('4a5-');
   await expect(minutes).toHaveValue('45');
@@ -80,7 +83,10 @@ test('progress bar exposes its value', async ({ page }) => {
 
 test('controls are at least 44 px tall and inputs at least 16 px (no iOS zoom)', async ({ page }) => {
   await openGallery(page);
-  const targets = page.locator('.ui-page button, .ui-page input:not([type=radio]), .ui-page select, .ui-segmented__label');
+  // :visible skips controls inside the gallery's closed sheet and dialog.
+  const targets = page.locator(
+    '.ui-page button:visible, .ui-page input:not([type=radio]):visible, .ui-page select:visible, .ui-segmented__label:visible',
+  );
   const count = await targets.count();
   expect(count).toBeGreaterThan(10);
   for (let i = 0; i < count; i++) {

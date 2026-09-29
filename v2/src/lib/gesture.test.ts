@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { dragProgress, FLICK_VELOCITY, releaseVelocity, settlesOpen } from './drawer-gesture';
+import { dragProgress, FLICK_VELOCITY, releaseVelocity, settlesOpen } from './gesture';
 
 describe('dragProgress', () => {
   test('follows the finger 1:1 relative to the drawer width', () => {
@@ -20,17 +20,17 @@ describe('dragProgress', () => {
 describe('releaseVelocity', () => {
   test('uses only the last 100 ms of the drag', () => {
     const samples = [
-      { x: 0, t: 0 },
-      { x: 10, t: 400 }, // slow start…
-      { x: 20, t: 450 },
-      { x: 60, t: 500 }, // …fast finish: (60 - 10) / 100
+      { pos: 0, t: 0 },
+      { pos: 10, t: 400 }, // slow start…
+      { pos: 20, t: 450 },
+      { pos: 60, t: 500 }, // …fast finish: (60 - 10) / 100
     ];
     expect(releaseVelocity(samples)).toBeCloseTo(0.5);
   });
 
   test('no movement or no samples means no velocity', () => {
     expect(releaseVelocity([])).toBe(0);
-    expect(releaseVelocity([{ x: 5, t: 10 }])).toBe(0);
+    expect(releaseVelocity([{ pos: 5, t: 10 }])).toBe(0);
   });
 });
 

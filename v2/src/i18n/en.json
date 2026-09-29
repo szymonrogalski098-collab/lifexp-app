@@ -32,7 +32,9 @@
       "invalid": "Enter an amount, e.g. 12.50"
     },
     "loadFailed": "This screen could not be loaded. Check your connection.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "close": "Close",
+    "cancel": "Cancel"
   },
   "gallery": {
     "intro": "A preview of the v2 interface pieces in every theme. This page saves no data.",
@@ -91,6 +93,19 @@
     "states": "States",
     "emptyTitle": "No tasks for today",
     "emptyBody": "Add a task or tell Ex-us what you need to do.",
-    "emptyAction": "Add task"
+    "emptyAction": "Add task",
+    "layers": "Layers",
+    "openSheet": "Open sheet",
+    "openConfirm": "Delete note",
+    "showError": "Show error",
+    "sheetTitle": "New expense",
+    "note": "Note",
+    "saved": "Expense saved: {{amount}}",
+    "undo": "Undo",
+    "undone": "Undone",
+    "confirmTitle": "Delete this note?",
+    "confirmBody": "This cannot be undone.",
+    "deleted": "Note deleted",
+    "errorMessage": "Could not save. Check your connection and try again."
   }
 }

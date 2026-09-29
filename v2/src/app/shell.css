@@ -61,7 +61,8 @@
     transition-timing-function: var(--ease-drawer-settle);
   }
 
-  .shell[data-drawer='open'] .shell__content {
+  .shell[data-drawer='open'] .shell__content,
+  .shell:has(dialog[open]) .shell__content {
     overflow-y: hidden;
   }
 
