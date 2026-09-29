@@ -1336,6 +1336,20 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 5. ~~Sprawdzić `aiTestAccces`~~ (duplikat `aiTestAccess`, usunięta 2026-09-29).
 6. ~~Decyzje D3 i D4~~ (2026-09-29). Etap 0 zamknięty; etap 1 startuje po akceptacji właściciela.
 
+**Etap 1 (start 2026-09-29, zaakceptowany przez właściciela)** — podział na PR-y:
+
+| PR | Zakres | Stan |
+|---|---|---|
+| 1a | Szkielet `v2/` (Vite 8, TypeScript 5.9 strict, Preact), lint architektury z testami (warstwy 4.2, zakazy 7.7), `scripts/build-site.js` (v1 bez zmian + v2 pod `/v2/`, kontrola plików v1), workflow „Deploy”, job CI „v2 checks and site build”, `CLAUDE.md` | w PR |
+| 1b | Tokeny i motywy (LifeXP ciemny/jasny, iOS, Gold), `base.css`, AppShell z sidebarem i drawerem (7.4), hash router, testy layoutu | — |
+| 1c | i18n (port słownika, typowane klucze), Toast, Dialog, Sheet | — |
+| 1d | Firebase 10.12.x z npm, logowanie/rejestracja/Google/weryfikacja/wylogowanie, bramy boot, e2e na emulatorze | — |
+| 1e | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | — |
+
+Po scaleniu 1a właściciel przełącza Settings → Pages → Source na „GitHub Actions” (D3). Do czasu SW v2 (1e)
+stronami `/v2/` zarządza SW v1 (scope `./`): online bez wpływu; offline `/v2/` otworzy się tylko z wcześniejszej
+wizyty online, inaczej SW v1 pokaże `app.html`.
+
 ---
 
 ## 10. Ryzyka

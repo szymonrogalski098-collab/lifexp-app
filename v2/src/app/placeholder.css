@@ -1,0 +1,51 @@
+/* Temporary styles for the stage 1 placeholder; replaced by ui/tokens.css. */
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #0e0f13;
+  color: #e8eaf0;
+}
+
+body {
+  margin: 0;
+}
+
+.placeholder {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.placeholder__overline {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a8fa8;
+}
+
+.placeholder__title {
+  margin: 0;
+  font-size: 32px;
+}
+
+.placeholder__text {
+  margin: 0;
+  line-height: 1.5;
+  color: #8a8fa8;
+}
+
+.placeholder__link {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 12px 0;
+  color: #4ecca3;
+  font-weight: 600;
+}
