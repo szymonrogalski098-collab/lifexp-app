@@ -49,11 +49,16 @@
 
   .shell:not(.is-dragging) .shell__nav,
   .shell:not(.is-dragging) .shell__content {
-    transition:
-      transform var(--duration-drawer) var(--ease-standard),
-      opacity var(--duration-drawer) var(--ease-standard),
-      border-radius var(--duration-drawer) var(--ease-standard),
-      box-shadow var(--duration-drawer) var(--ease-standard);
+    transition-property: transform, opacity, border-radius, box-shadow;
+    transition-duration: var(--duration-drawer);
+    transition-timing-function: var(--ease-drawer);
+  }
+
+  /* Set by AppShell.tsx when the finger lets go: continue its motion. */
+  .shell[data-motion='settle']:not(.is-dragging) .shell__nav,
+  .shell[data-motion='settle']:not(.is-dragging) .shell__content {
+    transition-duration: var(--duration-drawer-settle);
+    transition-timing-function: var(--ease-drawer-settle);
   }
 
   .shell[data-drawer='open'] .shell__content {
