@@ -45,8 +45,10 @@ Koszt przy tej wielkości bazy jest pomijalny (płaci się za przechowywanie kop
 Przed etapami 3a-3f, 4, migracjami i cutoverem — eksport do prywatnego bucketu.
 
 ```bash
-# jednorazowo: bucket w tej samej lokalizacji co baza (LOKALIZACJA z kroku 1)
-gcloud storage buckets create gs://faiobaj4-firestore-backups --location=LOKALIZACJA --uniform-bucket-level-access
+# jednorazowo: bucket w lokalizacji zgodnej z bazą. Cloud Storage nie zna nazw multiregionów
+# Firestore: dla bazy w eur3 bucket to EU, dla nam5 to US; dla bazy w jednym regionie
+# (np. europe-central2) ta sama nazwa regionu. Baza LifeXP jest w eur3, stąd EU.
+gcloud storage buckets create gs://faiobaj4-firestore-backups --location=EU --uniform-bucket-level-access
 
 # eksport całej bazy do katalogu z datą
 gcloud firestore export gs://faiobaj4-firestore-backups/$(date +%F-%H%M)
