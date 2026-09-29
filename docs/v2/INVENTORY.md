@@ -28,7 +28,8 @@ JSON, a GitHub maskuje każdą jego linię, także `{` i `}`), więc `users/***i
    - `users/{id}/aiConversations` (17): historia czatu Ex-us pisana przez backend. Klient v1 jej nie czyta,
      ale reguła `{col}/{docId}` daje do niej odczyt rodzicowi → dopisane do decyzji D7.
    - `plannerTasks` ma `dateISO` i `createdAt` (plan zakładał `day`) → poprawione w 1.5 i M5.
-   - `aiTestAccces` (literówka, 1 dokument obok 2 w `aiTestAccess`): ani reguły, ani backend jej nie czytają.
+   - `aiTestAccces` (literówka, 1 dokument obok 2 w `aiTestAccess`): ani reguły, ani backend jej nie czytają. Jej uid był też
+     w `aiTestAccess`, więc 2026-09-29 właściciel usunął ją jako duplikat.
    - Kwoty raz int, raz float w tym samym polu (`chorePayouts.amountPln`, `purchases.amount`,
      `pointsRateChoresZl`) — konwertery traktują je jako zwykłą liczbę.
    - Puste stringi zamiast braku wartości: `parentEmail` (5/6), `activities.desc` (33/37),

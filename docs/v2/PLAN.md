@@ -175,8 +175,8 @@ Podkolekcje `users/{uid}/…`:
 | `moneyGoals` | legacy | Czytane tylko przez skrypt raportu |
 
 Top-level: `bugReports`, `bugReportsConfig/keywords`, `broadcasts`, `aiTestAccess/{uid}`, `aiUsageGlobal/{date}` (`{totalTokens}`).
-W produkcji jest też `aiTestAccces/{uid}` (literówka, 1 dokument): ani reguły, ani backend jej nie czytają,
-więc to konto nie ma dostępu testowego AI, chyba że jest też w `aiTestAccess`. Stan faktyczny policzony
+Do 2026-09-29 była też `aiTestAccces/{uid}` (literówka, 1 dokument). Jej uid był też w `aiTestAccess`, więc
+właściciel ją usunął; nic jej nie czytało. Stan faktyczny policzony
 na produkcji: `INVENTORY.md`.
 
 ### 1.6 Operacje CRUD
@@ -588,8 +588,19 @@ Otwarcie drawera/sheetu dokłada wpis do historii, więc systemowe „wstecz” 
 
 - Słownik z `i18n-resources.js` przeniesiony do `pl.json`/`en.json`, klucze typowane (błąd kompilacji przy
   literówce w kluczu). Daty i liczby wyłącznie przez `Intl` z aktywnym locale.
-- Motywy jako zestawy tokenów (`[data-theme="dark|light|gold"]`) — trzy obecne motywy da się odtworzyć
-  jako same zmienne, bez selektorów per-komponent (dziś `body.theme-apple .btn-primary` itd.).
+- Motywy jako zestawy tokenów, bez selektorów per-komponent (dziś `body.theme-apple .btn-primary` itd.).
+  Motyw = rodzina × tryb: `[data-theme="lifexp|ios|gold"][data-mode="light|dark"]`. Tryb do wyboru:
+  jasny, ciemny albo jak system (`prefers-color-scheme`). Decyzja D4:
+
+  | Rodzina | Tryby | Domyślny tryb | Charakter |
+  |---|---|---|---|
+  | **LifeXP** (domyślna) | ciemny = obecny wygląd v1, jasny = nowy | ciemny | Fiolet `#6c63ff` + zieleń `#4ecca3`, Manrope |
+  | **iOS** (nowa, zastępuje „Apple”) | jasny i ciemny | jak system | Kolory systemowe iOS: tło grupowane `#F2F2F7`/`#000`, komórki `#FFF`/`#1C1C1E`, akcent systemBlue `#007AFF`/`#0A84FF`, zieleń `#34C759`/`#30D158`, czerwień `#FF3B30`/`#FF453A`; font systemowy (`-apple-system`); listy „inset grouped” z cienkimi separatorami zamiast kart z obramowaniem; rozmycie tylko w top barze (U5) |
+  | **Gold** | ciemny | ciemny | Zestaw tokenów z v1 bez zmian |
+
+  Obecny motyw „Apple” (jasne szkło z zielonym akcentem na kartach) nie przechodzi do v2: nie wygląda jak iOS,
+  a rozmycie na kartach obniża płynność. Migracja `lifexp-theme` z v1: `lifexp` → LifeXP ciemny,
+  `apple` → iOS, `gold` → Gold. Wybór fontu zostaje (leniwe ładowanie).
 
 ### 4.10 Konwencje dla rozwoju z AI
 
@@ -639,7 +650,7 @@ Plik `CLAUDE.md` w katalogu głównym (treść do przygotowania w etapie 1):
 | `plannerTasks` | Nie ruszać | Opcjonalny import niezrobionych do `todos` (M5, decyzja usera) |
 | `moneyGoals` | Nie ruszać | W produkcji brak dokumentów; skrypt raportu przestaje ją czytać (etap 6) |
 | `aiConversations` | Nie ruszać, v2 nie czyta | Historia backendu v1. Nie importujemy do lokalnej historii v2; dostęp rodzica — D7 |
-| `aiTestAccces` (literówka) | Nie ruszać | Właściciel sprawdza w konsoli, czy ten uid ma być w `aiTestAccess` |
+| ~~`aiTestAccces`~~ (literówka) | Usunięta 2026-09-29 | Duplikat wpisu z `aiTestAccess` |
 | `fcmTokens` | Zachować | Po cutover nowe tokeny z SW v2; martwe czyści skrypt push |
 | `bugReports`, `bugReportsConfig`, `broadcasts` | Zachować | Wiadomości przez `arrayUnion` |
 | `aiTestAccess`, `aiUsageGlobal`, `aiSettings` | Zachować | Obsługiwane przez backend |
@@ -1096,7 +1107,7 @@ zamiast awarii, licznik rośnie o zużycie z odpowiedzi modelu.
 |---|---|
 | Typografia | Jeden variable font self-hosted (Inter albo Manrope, subset latin-ext). Skala 1.25: 12 / 14 / 16 / 20 / 24 / 32 / 40. Wagi 400/500/600/700. `tabular-nums` dla wszystkich kwot i punktów. Overline: 12 px, uppercase, `letter-spacing .06em` |
 | Spacing | Siatka 4 px: 4, 8, 12, 16, 20, 24, 32, 40, 56 |
-| Kolor | Skala neutralna (10 stopni), jeden akcent jako rampa, semantyczne: `positive`, `negative`, `warning`. Motywy: dark (domyślny), light, gold |
+| Kolor | Skala neutralna (10 stopni), jeden akcent jako rampa, semantyczne: `positive`, `negative`, `warning`. Motywy: LifeXP ciemny (domyślny) i jasny, iOS (jasny/ciemny jak system), Gold — 4.9 |
 | Kształt | Promienie 8 / 12 / 16 / 999 |
 | Elewacja | 0 (płaskie karty z 1 px obramowaniem), 1 (sheet, drawer), 2 (dialog). Rozmycie tła (`backdrop-filter`) wyłącznie w top barze — jedna warstwa nawigacji nad treścią, jak zaleca Apple HIG; nigdy na kartach (v1: spadki FPS) (U5) |
 | Z-index | `topbar 100 < drawer 200 < sheet 300 < dialog 400 < toast 500` — jedyne dozwolone warstwy |
@@ -1321,9 +1332,23 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 1. ~~Scalić zmiany do `main`~~ (PR #12).
 2. ~~Backup wg `BACKUP.md`~~ (2026-09-29: PITR, codzienny backup, eksport `2026-09-29-0850/`).
 3. ~~Uruchomić „Data inventory”~~ (2026-09-27, `INVENTORY.md`).
-4. Usunąć stary klucz konta serwisowego: najpierw wyłączyć, po dniu bez błędów usunąć.
-5. Sprawdzić w konsoli `aiTestAccces` (literówka): czy ten uid ma być w `aiTestAccess`.
-6. Decyzje D3 i D4 (blokują etap 1).
+4. ~~Usunąć stary klucz konta serwisowego~~ (2026-09-29; „Data inventory” zielone po usunięciu).
+5. ~~Sprawdzić `aiTestAccces`~~ (duplikat `aiTestAccess`, usunięta 2026-09-29).
+6. ~~Decyzje D3 i D4~~ (2026-09-29). Etap 0 zamknięty; etap 1 startuje po akceptacji właściciela.
+
+**Etap 1 (start 2026-09-29, zaakceptowany przez właściciela)** — podział na PR-y:
+
+| PR | Zakres | Stan |
+|---|---|---|
+| 1a | Szkielet `v2/` (Vite 8, TypeScript 5.9 strict, Preact), lint architektury z testami (warstwy 4.2, zakazy 7.7), `scripts/build-site.js` (v1 bez zmian + v2 pod `/v2/`, kontrola plików v1), workflow „Deploy”, job CI „v2 checks and site build”, `CLAUDE.md` | w PR |
+| 1b | Tokeny i motywy (LifeXP ciemny/jasny, iOS, Gold), `base.css`, AppShell z sidebarem i drawerem (7.4), hash router, testy layoutu | — |
+| 1c | i18n (port słownika, typowane klucze), Toast, Dialog, Sheet | — |
+| 1d | Firebase 10.12.x z npm, logowanie/rejestracja/Google/weryfikacja/wylogowanie, bramy boot, e2e na emulatorze | — |
+| 1e | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | — |
+
+Po scaleniu 1a właściciel przełącza Settings → Pages → Source na „GitHub Actions” (D3). Do czasu SW v2 (1e)
+stronami `/v2/` zarządza SW v1 (scope `./`): online bez wpływu; offline `/v2/` otworzy się tylko z wcześniejszej
+wizyty online, inaczej SW v1 pokaże `app.html`.
 
 ---
 
@@ -1392,8 +1417,8 @@ Uzasadnienie techniczne:
 |---|---|---|---|
 | D1 | ~~Gdzie jest kod Cloud Functions?~~ **Rozstrzygnięte**: nieodnaleziony → odtwarzamy nowy backend (6.12) | — | — |
 | D2 | ~~Czy usunięcie workflowów 19.08 było celowe?~~ **Rozstrzygnięte w etapie 0**: `test.yml` przywrócony; `notify`/`weekly-report` wracają w etapie 6 (skrypt raportu czyta nieaktualne dane) | — | — |
-| D3 | Akceptacja build stepu i deployu przez GitHub Actions (zmiana źródła Pages) | Tak (plan A) | Etap 1 |
-| D4 | Które motywy zostają (dark/light/gold) i czy wybór fontu zostaje | Dark + light na start, gold jako zestaw tokenów; wybór fontu z leniwym ładowaniem | Etap 1 |
+| D3 | ~~Build i deploy przez GitHub Actions?~~ **Rozstrzygnięte 2026-09-29: tak.** Źródło Pages przełączane dopiero w etapie 1, po scaleniu `deploy.yml` (wcześniejsze przełączenie zatrzymałoby publikację zmian) | — | — |
+| D4 | ~~Które motywy zostają?~~ **Rozstrzygnięte 2026-09-29**: LifeXP ciemny (obecny) + jasny, nowy motyw iOS zamiast „Apple”, Gold bez zmian, wybór fontu zostaje (4.9) | — | — |
 | D5 | Gry i FPS w v2 | Zostają jako moduł lazy (silnik bez zmian), FPS jako osobna strona | Etap 7 |
 | D6 | `plannerTasks` (zadania dodane przez Ex-us, dziś niewidoczne) | Jednorazowy import niezrobionych do `todos` (M5) | Etap 3a |
 | D7 | Czy rodzic ma widzieć notatki, zadania i rozmowy z Ex-us (`aiConversations`) | Notatki i rozmowy: nie (prywatne); zadania: tak | Etap 8 |

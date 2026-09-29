@@ -54,6 +54,24 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  v2:
+    name: v2 checks and site build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: v2/package-lock.json
+      - run: npm ci --prefix v2
+      # typecheck, architecture lint, unit tests
+      - run: npm run check --prefix v2
+      - run: npm run build --prefix v2
+      # Same assembly as the Deploy workflow, so a missing v1 file fails here, not in production.
+      - run: node scripts/build-site.js --out _site
+
   functions:
     name: Cloud Functions build
     runs-on: ubuntu-latest

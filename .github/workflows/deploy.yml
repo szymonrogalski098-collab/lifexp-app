@@ -1,0 +1,67 @@
+name: Deploy
+
+# Publishes GitHub Pages from main: v1 files at the site root, unchanged, and
+# the v2 build under /v2/ (docs/v2/PLAN.md 3.1). Requires Settings → Pages →
+# Source = "GitHub Actions"; until that switch the deploy step is skipped with
+# a notice and the old branch-based publishing keeps serving the site.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: v2/package-lock.json
+      - run: npm ci --prefix v2
+      - run: npm run check --prefix v2
+      - run: npm run build --prefix v2
+      - run: node scripts/build-site.js --out _site
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check Pages source
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # "legacy" = Deploy from a branch. If the API cannot be read, deploy anyway:
+        # the deploy step then reports the real problem.
+        run: |
+          type=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null || echo unknown)
+          echo "type=$type" >> "$GITHUB_OUTPUT"
+          if [ "$type" = "legacy" ]; then
+            echo "::notice::Pages source is still 'Deploy from a branch': nothing deployed. Switch Settings → Pages → Source to GitHub Actions, then re-run this workflow."
+          fi
+      - name: Deploy
+        id: deployment
+        if: steps.source.outputs.type != 'legacy'
+        uses: actions/deploy-pages@v5
