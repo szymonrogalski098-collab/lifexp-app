@@ -67,3 +67,5 @@ ui (design system) i i18n nie znają domeny ani danych
 - Przed PR: `npm run check --prefix v2` (i `npm test`, gdy ruszasz v1).
 - Małe PR-y: jeden element etapu, moduł albo serwis na PR. Opis PR i komentarze w kodzie po polsku albo
   angielsku, tak jak w otaczającym kodzie.
+- Commity i opisy PR od AI kończą się linią `Co-Authored-By: Claude …`. **Bez linku do sesji Claude**
+  (`claude.ai/code/session_…`) — decyzja właściciela, repo jest publiczne.
