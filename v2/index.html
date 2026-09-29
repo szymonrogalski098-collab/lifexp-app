@@ -1,11 +1,35 @@
 <!doctype html>
-<html lang="pl">
+<html lang="pl" data-theme="lifexp" data-mode="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0e0f13" />
     <meta name="robots" content="noindex" />
-    <title>LifeXP v2</title>
+    <title>LifeXP</title>
+    <script>
+      // Theme before first paint, so a light theme never flashes dark. Same rules as
+      // src/lib/theme.ts (FAMILY_MODES, v1 migration); tests/theme-boot.test.ts keeps them equal.
+      (function () {
+        var families = { lifexp: ['dark', 'light', 'system'], ios: ['system', 'light', 'dark'], gold: ['dark'] };
+        var pref = null;
+        try {
+          var stored = JSON.parse(localStorage.getItem('lifexp-v2-theme'));
+          if (stored && Object.prototype.hasOwnProperty.call(families, stored.family)) pref = stored;
+        } catch (e) {}
+        if (!pref) {
+          var v1 = null;
+          try {
+            v1 = localStorage.getItem('lifexp-theme');
+          } catch (e) {}
+          pref = { family: v1 === 'apple' ? 'ios' : v1 === 'gold' ? 'gold' : 'lifexp' };
+        }
+        var modes = families[pref.family];
+        var mode = modes.indexOf(pref.mode) >= 0 ? pref.mode : modes[0];
+        if (mode === 'system') mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', pref.family);
+        document.documentElement.setAttribute('data-mode', mode);
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

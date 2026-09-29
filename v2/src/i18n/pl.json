@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "LifeXP"
+  },
+  "nav": {
+    "label": "Nawigacja",
+    "menu": "Menu",
+    "closeMenu": "Zamknij menu",
+    "askExus": "Zapytaj Ex-us",
+    "today": "Dziś",
+    "tasks": "Zadania",
+    "goals": "Cele",
+    "chores": "Obowiązki",
+    "money": "Pieniądze",
+    "notes": "Notatki",
+    "stats": "Statystyki",
+    "games": "Gry",
+    "reports": "Zgłoszenia i aktualizacje",
+    "settings": "Ustawienia",
+    "exus": "Ex-us"
+  },
+  "comingSoon": {
+    "overline": "W budowie",
+    "body": "Ten ekran powstaje w etapie {{stage}} przebudowy. Do tego czasu wszystko działa w obecnej wersji LifeXP.",
+    "openV1": "Otwórz obecną wersję"
+  }
+}

@@ -1,0 +1,204 @@
+/*
+ * Design tokens (docs/v2/PLAN.md 7.2). Components use only these variables, so a
+ * theme is nothing but a set of values: <html data-theme="lifexp|ios|gold"
+ * data-mode="light|dark">. No component has theme-specific selectors.
+ */
+
+:root {
+  /* Type: one family per theme, scale 1.25 */
+  --font-family-base: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-family-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-3xl: 40px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+
+  /* Spacing: 4 px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-14: 56px;
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --card-radius: var(--radius-lg);
+  --card-border-width: 1px;
+
+  /* Layers: the only allowed z-index values */
+  --z-topbar: 100;
+  --z-drawer: 200;
+  --z-sheet: 300;
+  --z-dialog: 400;
+  --z-toast: 500;
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+  --duration-drawer: 380ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Shell */
+  --topbar-height: 56px;
+  --sidebar-width: 264px;
+  --touch-target: 44px;
+  --content-max-width: 1100px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-drawer: 0ms;
+  }
+}
+
+/* ── LifeXP ─────────────────────────────────────────────────────────────── */
+
+/* Dark = the v1 look (style.css :root). Also the fallback before a theme is set. */
+:root,
+[data-theme='lifexp'][data-mode='dark'] {
+  color-scheme: dark;
+  --color-bg: #0e0f13;
+  --color-nav-bg: #16181f;
+  --color-surface: #16181f;
+  --color-surface-raised: #1e2029;
+  --color-border: #2a2d3a;
+  --color-separator: #2a2d3a;
+  --color-text: #e8eaf0;
+  --color-text-secondary: #8a8fa8;
+  --color-text-tertiary: #5d6178;
+  --color-accent: #6c63ff;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: rgb(108 99 255 / 16%);
+  --color-positive: #4ecca3;
+  --color-negative: #ff6b6b;
+  --color-warning: #ffd166;
+  --color-focus: #8f88ff;
+  --color-topbar: rgb(14 15 19 / 72%);
+  --shadow-1: 0 8px 24px rgb(0 0 0 / 35%);
+  --shadow-2: 0 16px 48px rgb(0 0 0 / 50%);
+}
+
+[data-theme='lifexp'][data-mode='light'] {
+  color-scheme: light;
+  --color-bg: #f5f5fa;
+  --color-nav-bg: #ebebf3;
+  --color-surface: #ffffff;
+  --color-surface-raised: #eef0f6;
+  --color-border: #dfe1ea;
+  --color-separator: #dfe1ea;
+  --color-text: #15161c;
+  --color-text-secondary: #5c6078;
+  --color-text-tertiary: #8a8ea3;
+  --color-accent: #5a51e6;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: rgb(90 81 230 / 12%);
+  --color-positive: #16875f;
+  --color-negative: #d43f3f;
+  --color-warning: #a86b00;
+  --color-focus: #5a51e6;
+  --color-topbar: rgb(245 245 250 / 78%);
+  --shadow-1: 0 8px 24px rgb(21 22 28 / 10%);
+  --shadow-2: 0 16px 48px rgb(21 22 28 / 18%);
+}
+
+/* ── iOS ────────────────────────────────────────────────────────────────── */
+/* iOS system colors; text-colored green/red/orange use Apple's high-contrast
+   variants in light mode so small amounts stay readable on white. */
+
+[data-theme='ios'] {
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  --card-radius: 10px;
+  --card-border-width: 0px;
+}
+
+[data-theme='ios'][data-mode='light'] {
+  color-scheme: light;
+  --color-bg: #f2f2f7;
+  --color-nav-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #e5e5ea;
+  --color-border: rgb(60 60 67 / 18%);
+  --color-separator: rgb(60 60 67 / 29%);
+  --color-text: #000000;
+  --color-text-secondary: rgb(60 60 67 / 60%);
+  --color-text-tertiary: rgb(60 60 67 / 30%);
+  --color-accent: #007aff;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: rgb(0 122 255 / 12%);
+  --color-positive: #248a3d;
+  --color-negative: #d70015;
+  --color-warning: #c93400;
+  --color-focus: rgb(0 122 255 / 60%);
+  --color-topbar: rgb(249 249 249 / 80%);
+  --shadow-1: 0 8px 24px rgb(0 0 0 / 8%);
+  --shadow-2: 0 16px 48px rgb(0 0 0 / 16%);
+}
+
+[data-theme='ios'][data-mode='dark'] {
+  color-scheme: dark;
+  --color-bg: #000000;
+  --color-nav-bg: #1c1c1e;
+  --color-surface: #1c1c1e;
+  --color-surface-raised: #2c2c2e;
+  --color-border: rgb(84 84 88 / 40%);
+  --color-separator: rgb(84 84 88 / 65%);
+  --color-text: #ffffff;
+  --color-text-secondary: rgb(235 235 245 / 60%);
+  --color-text-tertiary: rgb(235 235 245 / 30%);
+  --color-accent: #0a84ff;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: rgb(10 132 255 / 20%);
+  --color-positive: #30d158;
+  --color-negative: #ff453a;
+  --color-warning: #ff9f0a;
+  --color-focus: rgb(10 132 255 / 70%);
+  --color-topbar: rgb(22 22 24 / 78%);
+  --shadow-1: 0 8px 24px rgb(0 0 0 / 50%);
+  --shadow-2: 0 16px 48px rgb(0 0 0 / 60%);
+}
+
+/* ── Gold (v1 token set, dark only) ─────────────────────────────────────── */
+
+[data-theme='gold'] {
+  color-scheme: dark;
+  --radius-lg: 10px;
+  --color-bg: #080807;
+  --color-nav-bg: #111110;
+  --color-surface: #111110;
+  --color-surface-raised: #1a1a18;
+  --color-border: #252420;
+  --color-separator: #252420;
+  --color-text: #f5f2ec;
+  --color-text-secondary: #7a7872;
+  --color-text-tertiary: #55534e;
+  --color-accent: #f5c842;
+  --color-on-accent: #080807;
+  --color-accent-soft: rgb(245 200 66 / 14%);
+  --color-positive: #c9960f;
+  --color-negative: #e05555;
+  --color-warning: #e8a33d;
+  --color-focus: #f5c842;
+  --color-topbar: rgb(8 8 7 / 72%);
+  --shadow-1: 0 8px 24px rgb(0 0 0 / 45%);
+  --shadow-2: 0 16px 48px rgb(0 0 0 / 60%);
+}

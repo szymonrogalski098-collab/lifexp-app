@@ -21,6 +21,7 @@ npm test                      # testy v1 (Playwright, bez sieci)
 npm run test:emulator         # v1 na emulatorach Auth + Firestore (wymaga Javy 21)
 npm run check --prefix v2     # v2: typecheck + lint architektury + testy jednostkowe
 npm run build --prefix v2     # v2: build do v2/dist
+npm run test:v2               # v2: build + testy powłoki w przeglądarce (drawer, motywy, layout)
 node scripts/build-site.js    # składa stronę Pages (v1 + v2/dist) w _site i sprawdza pliki v1
 ```
 

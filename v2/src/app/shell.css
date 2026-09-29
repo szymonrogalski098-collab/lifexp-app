@@ -1,0 +1,303 @@
+/*
+ * App shell (docs/v2/PLAN.md 7.3, 7.4). The only place with position: fixed and
+ * safe-area insets; pages never know about either.
+ *
+ * --drawer-progress: 0 (closed) … 1 (open), written by AppShell.tsx. Everything
+ * that moves is derived from it, so a drag and the settle animation share one path.
+ */
+
+.shell {
+  isolation: isolate;
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
+
+/* ── Drawer mode: compact and medium (< 840 px) ─────────────────────────── */
+
+@media (max-width: 839.98px) {
+  .shell {
+    --drawer-offset: min(82vw, 400px);
+  }
+
+  .shell__nav {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 0;
+    width: var(--drawer-offset);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--color-nav-bg);
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    /* The menu "was always there": it drifts in from -10 % and fades up from .55. */
+    transform: translateX(calc((1 - var(--drawer-progress, 0)) * -10%));
+    opacity: calc(0.55 + 0.45 * var(--drawer-progress, 0));
+  }
+
+  /* The content is the card that slides away; it is also the scroll container. */
+  .shell__content {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: var(--color-bg);
+    transform: translateX(calc(var(--drawer-progress, 0) * var(--drawer-offset)));
+    border-radius: calc(var(--drawer-progress, 0) * 28px) 0 0 calc(var(--drawer-progress, 0) * 28px);
+    box-shadow: 0 0 calc(var(--drawer-progress, 0) * 48px) rgb(0 0 0 / calc(var(--drawer-progress, 0) * 35%));
+  }
+
+  .shell:not(.is-dragging) .shell__nav,
+  .shell:not(.is-dragging) .shell__content {
+    transition:
+      transform var(--duration-drawer) var(--ease-standard),
+      opacity var(--duration-drawer) var(--ease-standard),
+      border-radius var(--duration-drawer) var(--ease-standard),
+      box-shadow var(--duration-drawer) var(--ease-standard);
+  }
+
+  .shell[data-drawer='open'] .shell__content {
+    overflow-y: hidden;
+  }
+
+  /* The revealed strip of the card: tap or drag it to close. */
+  .shell__closer {
+    position: fixed;
+    inset: 0 0 0 var(--drawer-offset);
+    z-index: 2;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: default;
+    touch-action: none;
+  }
+
+  /* Edge swipe to open (installed app only; see AppShell.tsx). */
+  .shell__edge {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 2;
+    width: 24px;
+    touch-action: none;
+  }
+}
+
+/* ── Sidebar mode: expanded (≥ 840 px) ──────────────────────────────────── */
+
+@media (min-width: 840px) {
+  .shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  }
+
+  .shell__nav {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+    background: var(--color-nav-bg);
+    border-right: 1px solid var(--color-separator);
+  }
+
+  .shell__content {
+    min-width: 0;
+  }
+}
+
+/* ── Top bar ────────────────────────────────────────────────────────────── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topbar);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: calc(var(--topbar-height) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) var(--space-2) 0;
+  background: var(--color-topbar);
+  border-bottom: 1px solid var(--color-separator);
+  /* The only blurred layer: navigation floating over content (U5). */
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+.topbar__menu {
+  grid-column: 1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Two short lines drawn in CSS — a shape, not an icon font. */
+.topbar__menu::before {
+  content: '';
+  width: 14px;
+  height: 8px;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+
+.topbar__menu:hover {
+  background: var(--color-surface-raised);
+}
+
+.topbar__title {
+  grid-column: 2;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 840px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0 var(--space-8);
+  }
+
+  .topbar__title {
+    grid-column: 1;
+    font-size: var(--font-size-lg);
+    text-align: left;
+  }
+}
+
+/* ── Menu ───────────────────────────────────────────────────────────────── */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 100%;
+  padding: var(--space-4) var(--space-3) calc(var(--space-6) + env(safe-area-inset-bottom));
+}
+
+.nav__wordmark {
+  padding: var(--space-2) var(--space-3) 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.nav__exus {
+  min-height: var(--touch-target);
+  margin: var(--space-1) 0 var(--space-2);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--font-weight-semibold);
+  text-align: left;
+}
+
+.nav__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.nav__link:hover {
+  background: var(--color-surface-raised);
+}
+
+.nav__link[aria-current='page'] {
+  background: var(--color-accent-soft);
+  font-weight: var(--font-weight-semibold);
+}
+
+.nav__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav__divider {
+  width: calc(100% - 2 * var(--space-4));
+  margin: var(--space-1) auto;
+  border: 0;
+  border-top: 1px solid var(--color-separator);
+}
+
+/* ── Page frame and the "coming soon" stand-in ──────────────────────────── */
+
+.page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) calc(var(--space-10) + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 840px) {
+  .page {
+    max-width: var(--content-max-width);
+    padding: var(--space-8);
+  }
+}
+
+.coming-soon {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 560px;
+  padding: var(--space-6);
+  border: var(--card-border-width) solid var(--color-border);
+  border-radius: var(--card-radius);
+  background: var(--color-surface);
+}
+
+.coming-soon__overline {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coming-soon__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.coming-soon__body {
+  color: var(--color-text-secondary);
+}
+
+.coming-soon__link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  font-weight: var(--font-weight-semibold);
+}
