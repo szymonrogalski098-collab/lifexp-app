@@ -42,6 +42,8 @@ Deploy: workflow „Deploy” na każdy push do `main` (v1 w katalogu głównym 
 - Zmiana pliku z listy `STATIC`/`HTML` w `sw.js` → podbij `CACHE` w `sw.js`, inaczej telefony dostaną stary plik.
 - Nowy plik, którego v1 używa, musi przejść przez `scripts/build-site.js` (lista `EXCLUDE` to narzędzia, nie aplikacja).
 - Testy są hermetyczne (`tests/support/hermetic.js`): żadnego ruchu poza localhost.
+- „FPS gameplay” (~8 min, `.github/workflows/fps.yml`) CI uruchamia tylko przy zmianie `fps.html`, jego specu,
+  `playwright.config.js` albo zależności; ręcznie z zakładki Actions. Szybkie testy `fps.html` są w jobie „App”.
 - `?emulator=1` na localhost podłącza v1 do emulatorów (`firebase-config.js`); na produkcji jest nieaktywne.
 
 ## v2 (`v2/`)
