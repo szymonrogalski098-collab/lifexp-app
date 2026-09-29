@@ -253,9 +253,9 @@ test.describe('desktop: sidebar', () => {
     await expect(drawer(page)).toBeVisible();
     await expect(drawer(page)).not.toHaveAttribute('role', 'dialog');
     expect((await drawer(page).boundingBox()).width).toBe(264);
-    await page.getByRole('link', { name: 'Pieniądze' }).click();
+    await drawer(page).getByRole('link', { name: 'Pieniądze' }).click();
     await expect(page).toHaveURL(/#\/money$/);
-    await expect(page.getByRole('link', { name: 'Pieniądze' })).toHaveAttribute('aria-current', 'page');
+    await expect(drawer(page).getByRole('link', { name: 'Pieniądze' })).toHaveAttribute('aria-current', 'page');
     expect(errors).toEqual([]);
   });
 
