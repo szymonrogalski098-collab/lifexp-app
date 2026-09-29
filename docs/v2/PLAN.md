@@ -175,8 +175,8 @@ Podkolekcje `users/{uid}/…`:
 | `moneyGoals` | legacy | Czytane tylko przez skrypt raportu |
 
 Top-level: `bugReports`, `bugReportsConfig/keywords`, `broadcasts`, `aiTestAccess/{uid}`, `aiUsageGlobal/{date}` (`{totalTokens}`).
-W produkcji jest też `aiTestAccces/{uid}` (literówka, 1 dokument): ani reguły, ani backend jej nie czytają,
-więc to konto nie ma dostępu testowego AI, chyba że jest też w `aiTestAccess`. Stan faktyczny policzony
+Do 2026-09-29 była też `aiTestAccces/{uid}` (literówka, 1 dokument). Jej uid był też w `aiTestAccess`, więc
+właściciel ją usunął; nic jej nie czytało. Stan faktyczny policzony
 na produkcji: `INVENTORY.md`.
 
 ### 1.6 Operacje CRUD
@@ -639,7 +639,7 @@ Plik `CLAUDE.md` w katalogu głównym (treść do przygotowania w etapie 1):
 | `plannerTasks` | Nie ruszać | Opcjonalny import niezrobionych do `todos` (M5, decyzja usera) |
 | `moneyGoals` | Nie ruszać | W produkcji brak dokumentów; skrypt raportu przestaje ją czytać (etap 6) |
 | `aiConversations` | Nie ruszać, v2 nie czyta | Historia backendu v1. Nie importujemy do lokalnej historii v2; dostęp rodzica — D7 |
-| `aiTestAccces` (literówka) | Nie ruszać | Właściciel sprawdza w konsoli, czy ten uid ma być w `aiTestAccess` |
+| ~~`aiTestAccces`~~ (literówka) | Usunięta 2026-09-29 | Duplikat wpisu z `aiTestAccess` |
 | `fcmTokens` | Zachować | Po cutover nowe tokeny z SW v2; martwe czyści skrypt push |
 | `bugReports`, `bugReportsConfig`, `broadcasts` | Zachować | Wiadomości przez `arrayUnion` |
 | `aiTestAccess`, `aiUsageGlobal`, `aiSettings` | Zachować | Obsługiwane przez backend |
@@ -1322,7 +1322,7 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 2. ~~Backup wg `BACKUP.md`~~ (2026-09-29: PITR, codzienny backup, eksport `2026-09-29-0850/`).
 3. ~~Uruchomić „Data inventory”~~ (2026-09-27, `INVENTORY.md`).
 4. Usunąć stary klucz konta serwisowego: najpierw wyłączyć, po dniu bez błędów usunąć.
-5. Sprawdzić w konsoli `aiTestAccces` (literówka): czy ten uid ma być w `aiTestAccess`.
+5. ~~Sprawdzić `aiTestAccces`~~ (duplikat `aiTestAccess`, usunięta 2026-09-29).
 6. Decyzje D3 i D4 (blokują etap 1).
 
 ---
