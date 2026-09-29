@@ -21,6 +21,12 @@ interface Drag {
   moved: boolean;
 }
 
+/**
+ * How the next open/close animates (shell.css): 'tap' starts from rest,
+ * 'settle' continues a drag at the finger's speed.
+ */
+type Motion = 'tap' | 'settle';
+
 /** Opening the drawer adds a history entry, so the system Back closes it (PLAN.md 4.7). */
 const DRAWER_STATE_KEY = 'lifexpDrawer';
 
@@ -52,15 +58,20 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
   // The drawer position lives in one CSS variable, written directly (not through
   // render) so dragging does not re-render the page 60 times per second.
   const setProgress = (progress: number) => shellRef.current?.style.setProperty('--drawer-progress', String(progress));
+  const setMotion = (motion: Motion) => {
+    if (shellRef.current) shellRef.current.dataset.motion = motion;
+  };
 
-  const openDrawer = () => {
+  const openDrawer = (motion: Motion = 'tap') => {
+    setMotion(motion);
     if (openRef.current) return setProgress(1);
     openRef.current = true;
     history.pushState({ [DRAWER_STATE_KEY]: true }, '', location.href);
     setOpen(true);
   };
 
-  const closeDrawer = () => {
+  const closeDrawer = (motion: Motion = 'tap') => {
+    setMotion(motion);
     if (!openRef.current) return setProgress(0);
     openRef.current = false;
     setOpen(false);
@@ -71,6 +82,7 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
     // A choice made in the open drawer replaces its history entry: Back from the
     // new screen goes to the previous screen, not to the drawer.
     const replace = openRef.current && drawerEntryOnTop();
+    setMotion('tap');
     openRef.current = false;
     setOpen(false);
     navigate(target, { replace });
@@ -82,6 +94,7 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
   useEffect(() => {
     const onPopState = () => {
       if (openRef.current && !drawerEntryOnTop()) {
+        setMotion('tap');
         openRef.current = false;
         setOpen(false);
       }
@@ -157,8 +170,8 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
     const lastX = d.samples[d.samples.length - 1]?.x ?? d.startX;
     const progress = dragProgress(d.startProgress, lastX - d.startX, d.offset);
     const shouldOpen = cancelled ? progress >= 0.5 : settlesOpen(progress, releaseVelocity(d.samples));
-    if (shouldOpen) openDrawer();
-    else closeDrawer();
+    if (shouldOpen) openDrawer('settle');
+    else closeDrawer('settle');
   };
 
   const gestureHandlers = {
@@ -193,7 +206,7 @@ export function AppShell({ title, activeId, path, children }: AppShellProps) {
               class="topbar__menu"
               aria-expanded={open}
               aria-controls="app-nav"
-              onClick={openDrawer}
+              onClick={() => openDrawer()}
             >
               {t('nav.menu')}
             </button>

@@ -53,6 +53,23 @@ test.describe('phone: drawer', () => {
     expect(radius).toBe('28px');
   });
 
+  test('a tap opens from rest; a released drag keeps the finger speed', async ({ page }) => {
+    await openApp(page);
+    const easing = () => page.locator('.shell__content').evaluate((el) => getComputedStyle(el).transitionTimingFunction);
+    await menuButton(page).click();
+    await waitForDrawer(page, 'open');
+    await expect(page.locator('.shell')).toHaveAttribute('data-motion', 'tap');
+    expect(await easing()).toBe('cubic-bezier(0.2, 0, 0, 1)'); // initial slope 0: no jump
+
+    await page.mouse.move(PHONE.width - 30, PHONE.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(PHONE.width - 280, PHONE.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await waitForDrawer(page, 'closed');
+    await expect(page.locator('.shell')).toHaveAttribute('data-motion', 'settle');
+    expect(await easing()).toBe('cubic-bezier(0.2, 0.8, 0.2, 1)');
+  });
+
   test('Escape closes and returns focus to Menu', async ({ page }) => {
     await openApp(page);
     await menuButton(page).click();
