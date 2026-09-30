@@ -132,6 +132,14 @@ a {
   }
 }
 
+/* Content arriving (a screen, a card with data): a short rise from just below. */
+@keyframes ui-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 @keyframes ui-dialog-in {
   from {
     opacity: 0;

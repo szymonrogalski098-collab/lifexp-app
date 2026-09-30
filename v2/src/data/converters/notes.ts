@@ -17,19 +17,19 @@ export function noteFromData(id: string, data: DocumentData): Note {
   };
 }
 
-/** v1 saveNote() for a new note: no icon chosen = "", createdAt as an ISO string. */
+/** v1 saveNote() for a new note: nothing chosen = "", createdAt as an ISO string. */
 export function newNoteData(draft: NoteDraft, now: Date): DocumentData {
   return {
     title: draft.title,
     content: draft.content,
-    icon: '',
+    icon: draft.icon,
     color: draft.color,
     createdAt: now.toISOString(),
     archived: false,
   };
 }
 
-/** v1 saveNote() for an edit, minus the icon v2 does not edit (the stored one stays). */
+/** v1 saveNote() for an edit. */
 export function noteEditData(draft: NoteDraft): DocumentData {
-  return { title: draft.title, content: draft.content, color: draft.color };
+  return { title: draft.title, content: draft.content, icon: draft.icon, color: draft.color };
 }

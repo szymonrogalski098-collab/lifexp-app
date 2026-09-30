@@ -237,6 +237,8 @@ test.describe('phone: tab bar', () => {
   test('toasts appear above the tab bar', async ({ page, account }) => {
     await openApp(page, account, '#/ui');
     await page.getByRole('button', { name: 'Pokaż błąd' }).click();
+    // Measure where it rests, not where its entrance animation starts.
+    await page.locator('.ui-toast').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
     const toast = await page.locator('.ui-toast').boundingBox();
     const bar = await tabBar(page).boundingBox();
     expect(toast.y + toast.height).toBeLessThanOrEqual(bar.y);

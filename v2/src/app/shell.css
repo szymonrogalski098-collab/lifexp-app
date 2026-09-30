@@ -185,6 +185,8 @@
   color: var(--color-text-secondary);
   font: inherit;
   text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tabbar__item[aria-current='page'] {
@@ -195,19 +197,21 @@
   width: 24px;
   height: 24px;
   stroke-width: var(--icon-stroke);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+/* A press answers at once; the icon settles back when the finger lifts. */
+.tabbar__item:active .tabbar__icon {
+  transform: scale(0.88);
 }
 
 .tabbar__label {
   max-width: 100%;
   overflow: hidden;
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.tabbar__item[aria-current='page'] .tabbar__label {
-  font-weight: var(--font-weight-bold);
 }
 
 /* The one filled, raised control: quick add. */
@@ -292,9 +296,12 @@
   color: var(--color-text);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.nav__link:hover {
+.nav__link:hover,
+.nav__link:active {
   background: var(--color-surface-raised);
 }
 

@@ -51,6 +51,16 @@
   height: max(2px, calc(var(--bar) * (var(--bars-plot-height) - var(--bars-label-band))));
   border-radius: 4px 4px 0 0;
   background: var(--color-accent);
+  /* Grows from the baseline when the chart appears, one day after another. */
+  transform-origin: bottom;
+  animation: ui-bar-grow var(--duration-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+@keyframes ui-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
 }
 
 .ui-bars__value {
@@ -60,6 +70,8 @@
   font-weight: var(--font-weight-semibold);
   line-height: 1;
   white-space: nowrap;
+  animation: ui-fade-in var(--duration-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 30ms + var(--duration-fast));
 }
 
 .ui-bars__label {
@@ -106,8 +118,11 @@
   line-height: 1.3;
   opacity: 0;
   pointer-events: none;
+  translate: 0 4px;
   transform: translateX(-50%);
-  transition: opacity var(--duration-fast) var(--ease-standard);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    translate var(--duration-fast) var(--ease-out);
 }
 
 .ui-bars__tip-value {
@@ -129,4 +144,5 @@
 .ui-bars__item:hover .ui-bars__tip,
 .ui-bars__item:focus .ui-bars__tip {
   opacity: 1;
+  translate: 0 0;
 }

@@ -108,7 +108,14 @@
   text-decoration: none;
 }
 
-.ui-list__row--action:hover {
+.ui-list__row--action {
+  transition: background-color var(--duration-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* :active too: on a phone there is no hover, the press itself answers. */
+.ui-list__row--action:hover,
+.ui-list__row--action:active {
   background: var(--color-surface-raised);
 }
 
@@ -157,7 +164,15 @@
   background: currentColor;
   transform: scaleX(var(--progress, 0));
   transform-origin: left center;
-  transition: transform var(--duration-slow) var(--ease-standard);
+  transition: transform var(--duration-slow) var(--ease-out);
+  /* Fills from zero when it first appears, then follows changes. */
+  animation: ui-progress-grow var(--duration-enter) var(--ease-out) backwards;
+}
+
+@keyframes ui-progress-grow {
+  from {
+    transform: scaleX(0);
+  }
 }
 
 .ui-progress.tone-default {

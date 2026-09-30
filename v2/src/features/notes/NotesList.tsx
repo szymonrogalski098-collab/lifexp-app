@@ -1,5 +1,4 @@
-// The list of notes: active or archived, newest first. A note's saved colour is its
-// mark (PLAN.md 7.1: v1's icons stay in the data but are not shown).
+// The list of notes: active or archived, newest first, each with its icon and colour.
 import { Plus } from 'lucide-preact';
 import { useState } from 'preact/hooks';
 import { activeNoteCount, noteExcerpt, notesInView, NOTES_MAX, type Note } from '@/domain/notes';
@@ -9,12 +8,9 @@ import { ButtonLink } from '@/ui/components/ButtonLink';
 import { EmptyState, List, ListRow } from '@/ui/components/Display';
 import { SegmentedControl } from '@/ui/components/Fields';
 import { Card } from '@/ui/components/Layout';
+import { NoteBadge } from './NoteBadge';
 
 type View = 'active' | 'archived';
-
-export function NoteMark({ color }: { color: string }) {
-  return <span class="notes-mark" style={{ '--note-color': color || 'var(--color-border)' }} aria-hidden="true" />;
-}
 
 export function NotesList({ notes }: { notes: readonly Note[] }) {
   const [view, setView] = useState<View>('active');
@@ -49,7 +45,7 @@ export function NotesList({ notes }: { notes: readonly Note[] }) {
             {shown.map((note) => (
               <ListRow
                 key={note.id}
-                leading={<NoteMark color={note.color} />}
+                leading={<NoteBadge icon={note.icon} color={note.color} />}
                 title={note.title}
                 meta={noteExcerpt(note.content) || undefined}
                 value={note.createdAt ? formatShortDate(note.createdAt, lang) : undefined}

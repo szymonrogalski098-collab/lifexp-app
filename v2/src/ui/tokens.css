@@ -68,6 +68,12 @@
   --duration-base: 200ms;
   --duration-slow: 250ms;
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Something appearing decelerates into place; something leaving accelerates away
+     and takes less time, so the next state is never kept waiting. */
+  --duration-enter: 260ms;
+  --duration-exit: 160ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
   /* Drawer opened or closed by a tap (Menu, Esc, Back): starts from rest (initial
      slope 0) and lands softly. A fast-start curve made the card jump. */
   --duration-drawer: 450ms;
@@ -90,6 +96,8 @@
     --duration-fast: 0ms;
     --duration-base: 0ms;
     --duration-slow: 0ms;
+    --duration-enter: 0ms;
+    --duration-exit: 0ms;
     --duration-drawer: 0ms;
     --duration-drawer-settle: 0ms;
   }

@@ -229,8 +229,8 @@ v2: historia czyta stronę kursorem (`limit(16)` + `startAfter`) zamiast całej 
 | G15.1 | tytuł pusty albo same spacje | brak zapisu, „Nadaj notatce tytuł.”; tytuł zapisywany po `trim()`, treść bez zmian | e2e |
 | G15.2 | treść > 1000 linii | brak zapisu, komunikat z liczbą linii | kod |
 | G15.3 | 30 aktywnych notatek | nowa notatka zablokowana; zarchiwizowane się nie liczą; przywrócenie z archiwum limitu nie sprawdza (kod) | e2e |
-| G15.4 | nowa notatka bez wybranej ikony / koloru | `icon: ""`, `color: ""`, `archived: false`, `createdAt` = ISO | e2e |
-| G15.5 | edycja | `updateDoc({title, content, icon, color})`; v2 nie edytuje ikony i nie zapisuje pola `icon`, więc zostaje stare | e2e |
+| G15.4 | nowa notatka | `icon` = klasa Tabler z 12 presetów (`ti-notebook` … `ti-music`) albo `""` (bez wyboru: v1 pokazuje notatnik), `color` = preset albo `""`, `archived: false`, `createdAt` = ISO | e2e |
+| G15.5 | edycja | `updateDoc({title, content, icon, color})`; nietknięta ikona zostaje taka, jaka była | e2e |
 | G15.6 | archiwizacja / przywrócenie | jedno pole `archived` | e2e |
 | G15.7 | usunięcie | `deleteDoc` po potwierdzeniu; w archiwum „Usuń trwale” | e2e |
 | G15.8 | treść | Markdown (`breaks: true`) przez marked + DOMPurify; bez bibliotek — zwykły tekst | e2e |

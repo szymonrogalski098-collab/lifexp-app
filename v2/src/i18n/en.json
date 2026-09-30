@@ -122,6 +122,22 @@
     "titleLabel": "Title",
     "contentLabel": "Content",
     "contentPh": "Write something…",
+    "icon": "Icon",
+    "defaultIcon": "default",
+    "icons": {
+      "notebook": "Notebook",
+      "bulb": "Light bulb",
+      "star": "Star",
+      "flag": "Flag",
+      "heart": "Heart",
+      "briefcase": "Briefcase",
+      "school": "School",
+      "shopping-cart": "Shopping cart",
+      "plane": "Plane",
+      "home": "Home",
+      "code": "Code",
+      "music": "Music"
+    },
     "color": "Colour",
     "noColor": "No colour",
     "colors": {

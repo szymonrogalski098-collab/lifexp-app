@@ -27,12 +27,14 @@ function comparable(data) {
 const TITLE = 'Zakupy';
 const CONTENT = 'Na sobotę:\n- mleko\n- **chleb**';
 const GREEN = '#4ecca3';
+const CART = 'ti-shopping-cart';
 
 async function writeNoteInV2(page) {
   await page.getByRole('link', { name: 'Nowa notatka' }).click();
   await expect(page).toHaveURL(/#\/notes\/new$/);
   await page.getByLabel('Tytuł').fill(TITLE);
   await page.getByLabel('Treść').fill(CONTENT);
+  await page.getByLabel('Koszyk').check();
   await page.getByLabel('Zielony').check();
   await page.getByRole('button', { name: 'Zapisz' }).click();
 }
@@ -46,7 +48,7 @@ test('a note written in v2 has v1\'s shape, gets its own address and shows as Ma
   await expect(page).toHaveURL(/#\/notes\/[A-Za-z0-9]{20}$/);
   const { id, data } = await onlyNote(account.uid);
   expect(page.url()).toContain(id);
-  expect(comparable(data)).toEqual({ title: TITLE, content: CONTENT, icon: '', color: GREEN, archived: false });
+  expect(comparable(data)).toEqual({ title: TITLE, content: CONTENT, icon: CART, color: GREEN, archived: false });
 
   // After saving, the content is shown rendered, not as the source.
   await expect(page.locator('.ui-markdown strong')).toHaveText('chleb');
@@ -73,12 +75,13 @@ test.describe('v1 on a desktop', () => {
     await page.click('#notes-fab');
     await page.fill('#note-title', TITLE);
     await page.fill('#note-content', CONTENT);
+    await page.click(`#note-icon-picker button[data-icon="${CART}"]`);
     await page.click(`#note-color-picker button[data-color="${GREEN}"]`);
     await page.click('#note-editor button[onclick="saveNote()"]');
     await expect(page.locator('#notes-list .note-item')).toHaveCount(1);
 
     const { data } = await onlyNote(account.uid);
-    expect(comparable(data)).toEqual({ title: TITLE, content: CONTENT, icon: '', color: GREEN, archived: false });
+    expect(comparable(data)).toEqual({ title: TITLE, content: CONTENT, icon: CART, color: GREEN, archived: false });
   });
 
   test('v1 lists and opens a note that v2 wrote', async ({ page, context }) => {
@@ -103,7 +106,7 @@ test.describe('v1 on a desktop', () => {
   });
 });
 
-test('editing keeps v1\'s icon; archive, undo, restore and delete', async ({ page, account }) => {
+test('editing: the icon stays unless changed; archive, undo, restore and delete', async ({ page, account }) => {
   const ref = await notesOf(account.uid).add({
     title: 'Pomysły',
     content: 'pierwsza wersja',
@@ -116,6 +119,7 @@ test('editing keeps v1\'s icon; archive, undo, restore and delete', async ({ pag
   await openSignedIn(page, account, '#/notes');
   await page.getByRole('link', { name: /Pomysły/ }).click();
   await expect(page).toHaveURL(new RegExp(`#/notes/${ref.id}$`));
+  await expect(page.getByText('Ikona: Żarówka')).toBeVisible();
   await page.getByLabel('Tytuł').fill('Pomysły na weekend');
   await page.getByRole('radio', { name: 'Edytuj' }).check();
   await page.getByLabel('Treść').fill('druga wersja');
@@ -124,6 +128,12 @@ test('editing keeps v1\'s icon; archive, undo, restore and delete', async ({ pag
   await expect
     .poll(async () => (await ref.get()).data())
     .toMatchObject({ title: 'Pomysły na weekend', content: 'druga wersja', icon: 'ti-bulb', color: '#ff6b6b' });
+
+  // A new icon is saved as v1's class name.
+  await page.getByLabel('Serce').check();
+  await expect(page.getByText('Ikona: Serce')).toBeVisible();
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect.poll(async () => (await ref.get()).data().icon).toBe('ti-heart');
 
   // Archive, then undo from the toast.
   await page.getByRole('button', { name: 'Archiwizuj' }).click();

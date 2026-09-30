@@ -24,7 +24,12 @@
   background: var(--color-surface-raised);
   box-shadow: var(--shadow-2);
   pointer-events: auto;
-  animation: ui-toast-in var(--duration-slow) var(--ease-standard);
+  animation: ui-toast-in var(--duration-enter) var(--ease-out);
+}
+
+.ui-toast--leaving {
+  pointer-events: none;
+  animation: ui-toast-out var(--duration-exit) var(--ease-in) forwards;
 }
 
 .ui-toast--positive {
@@ -68,5 +73,12 @@
   from {
     opacity: 0;
     transform: translateY(16px);
+  }
+}
+
+@keyframes ui-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }

@@ -1105,8 +1105,9 @@ zamiast awarii, licznik rośnie o zużycie z odpowiedzi modelu.
 - **Bez ikon jako nośnika znaczenia.** Nawigacja i akcje to tekst. Znaczenie niesie hierarchia
   typograficzna, położenie i kolor semantyczny. Jedyne znaki graficzne: kształt przycisku Menu (dwie kreski
   rysowane CSS), zamknięcie (×), chevron w listach (›), znacznik wykonania (✓) — jako znaki/CSS, nie font ikon.
-- **Dane użytkownika zostają**: pola `icon` (np. `ti-book`) w `activityDefs` i `notes` nie są kasowane;
-  v2 ich nie renderuje. Tożsamość wizualną przejmuje zapisane pole `color` (kropka / pasek przy nazwie).
+- **Dane użytkownika zostają**: pola `icon` (np. `ti-book`) w `activityDefs` i `notes` nie są kasowane.
+  Notatki (decyzja właściciela 2026-09-30, D11): v2 pokazuje i pozwala wybrać ikonę; zapisuje tę samą klasę
+  Tabler co v1, a rysuje jej odpowiednik z `lucide-preact`. Ikony `activityDefs` — do decyzji przy etapie 3e.
   Emoji obowiązków (dane usera) mogą zostać wyświetlane jako treść.
 - Nowoczesny, nie „formularzowy”: duże liczby jako bohaterowie ekranu, dużo powietrza, karty z jedną
   intencją, ruch 150-250 ms, subtelne tła i cienie.
@@ -1365,7 +1366,9 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | 1f | Service Worker v2 (`vite-plugin-pwa` + Workbox: precache całego buildu, nawigacje network-first 3 s, scope `/v2/`), manifest „LifeXP v2” z ikonami, meta iOS; v1 `sw.js` nie kasuje cache v2; Auth bez gapi przy starcie; akcent LifeXP ciemny rozdzielony na wypełnienie i tekst (4.5:1). Lighthouse (telefon, gzip jak Pages): wydajność 95, dostępność 100, dobre praktyki 100 | scalone (#23) |
 | 2b | Obowiązki na „Dziś” (tylko odczyt): definicje v1 w kolejności `order` ze znacznikiem i liczbą wpisów z dnia lokalnego (G8, G13), wpisy dzisiejsze bez definicji (jednorazowe) zostają na liście, „Do wypłaty” = wszystkie nierozliczone wpisy × bieżący kurs obowiązków (G8.5–G8.7); e2e: te same kwoty co v1, zero zapisów | scalone (#24) |
 | 2c | Statystyki `#/stats` i historia `#/stats/history` (tylko odczyt, G14): sumy z profilu, punkty i granie z 7 dni jako dwa osobne wykresy słupkowe (`ui/BarChart`: jedna oś od zera, etykiety tylko na najwyższym i dzisiejszym słupku, tooltip na najechanie/fokus/dotyk, wartości w tekście dla czytników), TOP 5 z ostatnich 50 wpisów, ciekawostki jak w v1; historia stronami po 15 z kursorem i licznikiem `count()`; ekran modułu dostaje ścieżkę z routera; e2e: te same liczby co v1, zero zapisów | scalone (#25) |
-| 3a-1 | Notatki `#/notes`, `#/notes/:id` (pierwsze zapisy, G15): lista aktywne/archiwum z kolorem jako znakiem notatki, edytor (tytuł, kolor, Markdown z paskiem formatowania, Edytuj/Podgląd), archiwizacja z „Cofnij”, usuwanie z potwierdzeniem; dokumenty w kształcie v1 (ikona v1 zostaje nietknięta); `ui/Markdown` (marked + DOMPurify z npm, ładowane leniwie, jedyne miejsce z HTML); zapis nie czeka na serwer (offline kolejkuje Firestore); „+” → Notatka; e2e: parytet 8.3 (v1 i v2 zapisują ten sam dokument, v1 pokazuje notatkę z v2), sanityzacja XSS | w toku |
+| 3a-1 | Notatki `#/notes`, `#/notes/:id` (pierwsze zapisy, G15): lista aktywne/archiwum z kolorem jako znakiem notatki, edytor (tytuł, kolor, Markdown z paskiem formatowania, Edytuj/Podgląd), archiwizacja z „Cofnij”, usuwanie z potwierdzeniem; dokumenty w kształcie v1 (ikona v1 zostaje nietknięta); `ui/Markdown` (marked + DOMPurify z npm, ładowane leniwie, jedyne miejsce z HTML); zapis nie czeka na serwer (offline kolejkuje Firestore); „+” → Notatka; e2e: parytet 8.3 (v1 i v2 zapisują ten sam dokument, v1 pokazuje notatkę z v2), sanityzacja XSS | scalone (#26) |
+| 3a-1b | Ikony notatek (D11): wybór jednej z 12 ikon v1 w edytorze, ikona na kafelku w kolorze notatki na liście i w nagłówku; zapis `icon` przy edycji jak w v1; e2e: parytet v1↔v2 z ikoną | w toku |
+| 1h | Płynny ruch (prośba właściciela 2026-09-30): wjazd każdego ekranu (Web Animations, bez przeładowania widoku), przesuwany wskaźnik w przełącznikach segmentowych i `ViewSwitch`, toast znika animacją, karty z danymi pojawiają się miękko, słupki i paski postępu rosną od zera, reakcja wierszy, drawera i dolnego paska na dotyk (bez skoku grubości tekstu); tokeny `--duration-enter/exit`, `--ease-out/in`; tylko `transform`/`opacity`; „ogranicz ruch” = 0 ms; e2e `motion.spec.js` | w toku |
 
 Kolejność od 2026-09-29: 1g → 2a (ekran „Dziś” tylko do odczytu, pierwszy ekran z danymi) → 1f. Właściciel
 nie widział dotąd zmian w aplikacji, a 1f (offline, manifest) też jest niewidoczne, więc ekran z danymi idzie przed nim.
@@ -1455,3 +1458,4 @@ Uzasadnienie techniczne:
 | D8 | Czy dodać usuwanie zadań (v1 go nie ma) | Tak, trywialne i oczekiwane | Etap 3a |
 | D9 | ~~Ikony?~~ **Rozstrzygnięte 2026-09-29** (styl referencyjny właściciela): ikony tak, **zawsze obok tekstu** — nigdy jedynym nośnikiem znaczenia. Jeden zestaw SVG (`lucide-preact`, ISC) w bundlu, bez fontu ikon. Bez podpisu tylko znaki uniwersalne (×, ›, ✓, „+” z nazwą dostępną). Zmienia 7.1 | — | — |
 | D10 | ~~Nawigacja na telefonie?~~ **Rozstrzygnięte 2026-09-29**: dolny pasek (Dziś, Obowiązki, „+”, Pieniądze, Menu) + dotychczasowy drawer z pełną listą modułów, otwierany przyciskiem „Menu” z paska. Desktop bez zmian (sidebar). Zmienia 7.3 i 7.4 | — | — |
+| D11 | ~~Ikony notatek?~~ **Rozstrzygnięte 2026-09-30** (właściciel): w edytorze notatki da się wybrać ikonę, jak w v1. Dane bez zmian: 12 klas Tabler v1, rysowane odpowiednikami `lucide-preact`; ikona na kafelku w kolorze notatki, zawsze obok tytułu. Zmienia 7.1 | — | — |

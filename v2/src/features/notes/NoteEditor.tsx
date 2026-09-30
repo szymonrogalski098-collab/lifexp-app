@@ -1,8 +1,19 @@
-// One note: title, colour and Markdown content, with Edit | Preview for the content
+// One note: title, icon, colour and Markdown content, with Edit | Preview for the content
 // (v1's editor, notes.js:437-500). Saving keeps the note open — a new one moves to
 // its own address — so Back returns to wherever the person came from.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { NOTE_COLORS, NOTE_TITLE_MAX, NOTES_MAX, canAddNote, type Note, type NoteDraft, type NoteProblem } from '@/domain/notes';
+import {
+  NOTE_COLORS,
+  NOTE_ICONS,
+  NOTE_TITLE_MAX,
+  NOTES_MAX,
+  canAddNote,
+  isNoteIcon,
+  type Note,
+  type NoteDraft,
+  type NoteIcon,
+  type NoteProblem,
+} from '@/domain/notes';
 import { locale, t } from '@/i18n';
 import { formatLongDate } from '@/lib/dates';
 import { applyMarkdownFormat, type MarkdownFormat } from '@/lib/markdown-edit';
@@ -17,7 +28,7 @@ import { SegmentedControl, TextAreaField, TextField } from '@/ui/components/Fiel
 import { Card } from '@/ui/components/Layout';
 import { Markdown } from '@/ui/components/Markdown';
 import { afterModalHistory } from '@/ui/components/useModal';
-import { NoteMark } from './NotesList';
+import { NoteBadge, noteIconOf } from './NoteBadge';
 
 const NEW = 'new';
 const FORMATS: readonly MarkdownFormat[] = ['bold', 'italic', 'heading', 'bullets', 'numbers'];
@@ -30,6 +41,12 @@ const isNoteColor = (color: string): color is NoteColor => (NOTE_COLORS as reado
 /** The preset's name; a colour v1 allowed that is not a preset shows as its code. */
 function colorName(color: string): string {
   return isNoteColor(color) ? t(`notes.colors.${color.slice(1) as ColorKey}`) : color;
+}
+
+type IconKey = NoteIcon extends `ti-${infer Name}` ? Name : never;
+
+function iconName(icon: string): string {
+  return isNoteIcon(icon) ? t(`notes.icons.${icon.slice(3) as IconKey}`) : t('notes.defaultIcon');
 }
 
 function problemText(problem: NoteRejection): string {
@@ -74,6 +91,42 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (color: str
   );
 }
 
+/** v1's icon grid as radios: the chosen name in the legend, each icon named for screen readers. */
+function IconPicker({ value, color, onChange }: { value: string; color: string; onChange: (icon: string) => void }) {
+  return (
+    <fieldset class="notes-icons">
+      <legend class="ui-field__label">
+        {t('notes.icon')}: <span class="notes-icons__current">{iconName(value)}</span>
+      </legend>
+      <div class="notes-icons__options">
+        {NOTE_ICONS.map((icon) => {
+          const Icon = noteIconOf(icon);
+          return (
+            <label key={icon} class="notes-icons__option">
+              <input
+                class="notes-icons__input"
+                type="radio"
+                name="note-icon"
+                value={icon}
+                checked={icon === value}
+                onChange={() => onChange(icon)}
+              />
+              <span
+                class={color ? 'notes-icons__tile' : 'notes-icons__tile notes-icons__tile--plain'}
+                style={{ '--note-color': color || 'var(--color-text-secondary)' }}
+                aria-hidden="true"
+              >
+                <Icon />
+              </span>
+              <span class="visually-hidden">{iconName(icon)}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 interface NoteEditorProps {
   uid: string;
   /** A note id, or "new". */
@@ -88,6 +141,7 @@ export function NoteEditor({ uid, id, notes, navigate }: NoteEditorProps) {
   const [draft, setDraft] = useState<NoteDraft>(() => ({
     title: note?.title ?? '',
     content: note?.content ?? '',
+    icon: note?.icon ?? '',
     color: note?.color ?? '',
   }));
   const [mode, setMode] = useState<'edit' | 'preview'>(isNew ? 'edit' : 'preview');
@@ -139,7 +193,12 @@ export function NoteEditor({ uid, id, notes, navigate }: NoteEditorProps) {
   }
 
   const dirty =
-    isNew || !note || draft.title !== note.title || draft.content !== note.content || draft.color !== note.color;
+    isNew ||
+    !note ||
+    draft.title !== note.title ||
+    draft.content !== note.content ||
+    draft.icon !== note.icon ||
+    draft.color !== note.color;
   const set = (patch: Partial<NoteDraft>) => {
     setDraft({ ...draft, ...patch });
     setProblem(null);
@@ -207,7 +266,7 @@ export function NoteEditor({ uid, id, notes, navigate }: NoteEditorProps) {
       {back}
 
       <header class="notes-editor__head">
-        <NoteMark color={draft.color} />
+        <NoteBadge icon={draft.icon} color={draft.color} size="lg" />
         <div class="notes-editor__heading">
           <h2 class="notes-editor__title user-text">{isNew ? t('notes.new') : note?.title}</h2>
           {note && (
@@ -235,6 +294,7 @@ export function NoteEditor({ uid, id, notes, navigate }: NoteEditorProps) {
             maxLength={NOTE_TITLE_MAX}
           />
 
+          <IconPicker value={draft.icon} color={draft.color} onChange={(icon) => set({ icon })} />
           <ColorPicker value={draft.color} onChange={(color) => set({ color })} />
 
           <SegmentedControl
@@ -247,46 +307,48 @@ export function NoteEditor({ uid, id, notes, navigate }: NoteEditorProps) {
             onChange={setMode}
           />
 
-          {mode === 'edit' ? (
-            <TextAreaField
-              label={t('notes.contentLabel')}
-              value={draft.content}
-              onInput={(content) => set({ content })}
-              placeholder={t('notes.contentPh')}
-              error={contentError}
-              textareaRef={textarea}
-              rows={10}
-              toolbar={
-                <div class="notes-toolbar" role="toolbar" aria-label={t('notes.format')}>
-                  {FORMATS.map((kind) => (
-                    <button
-                      key={kind}
-                      type="button"
-                      class={`notes-toolbar__button notes-toolbar__button--${kind}`}
-                      // Keep the textarea's selection: a pressed button must not take the focus first.
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => format(kind)}
-                    >
-                      {t(`notes.formats.${kind}`)}
-                    </button>
-                  ))}
-                </div>
-              }
-            />
-          ) : (
-            <div class="notes-preview" aria-label={t('notes.modePreview')}>
-              {draft.content.trim() ? (
-                <Markdown text={draft.content} />
-              ) : (
-                <p class="notes-preview__empty">{t('notes.previewEmpty')}</p>
-              )}
-              {contentError && (
-                <p class="ui-field__error" role="alert">
-                  {contentError}
-                </p>
-              )}
-            </div>
-          )}
+          <div key={mode} class="notes-pane">
+            {mode === 'edit' ? (
+              <TextAreaField
+                label={t('notes.contentLabel')}
+                value={draft.content}
+                onInput={(content) => set({ content })}
+                placeholder={t('notes.contentPh')}
+                error={contentError}
+                textareaRef={textarea}
+                rows={10}
+                toolbar={
+                  <div class="notes-toolbar" role="toolbar" aria-label={t('notes.format')}>
+                    {FORMATS.map((kind) => (
+                      <button
+                        key={kind}
+                        type="button"
+                        class={`notes-toolbar__button notes-toolbar__button--${kind}`}
+                        // Keep the textarea's selection: a pressed button must not take the focus first.
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => format(kind)}
+                      >
+                        {t(`notes.formats.${kind}`)}
+                      </button>
+                    ))}
+                  </div>
+                }
+              />
+            ) : (
+              <div class="notes-preview" aria-label={t('notes.modePreview')}>
+                {draft.content.trim() ? (
+                  <Markdown text={draft.content} />
+                ) : (
+                  <p class="notes-preview__empty">{t('notes.previewEmpty')}</p>
+                )}
+                {contentError && (
+                  <p class="ui-field__error" role="alert">
+                    {contentError}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
           <Button type="submit" variant="primary" size="lg" block disabled={!dirty}>
             {t('notes.save')}

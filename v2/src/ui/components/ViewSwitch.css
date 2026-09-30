@@ -1,6 +1,7 @@
 /* The segmented control's track (Fields.css), with links instead of radios. */
 
 .ui-view-switch {
+  position: relative;
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
@@ -10,7 +11,23 @@
   background: var(--color-surface-raised);
 }
 
+/* Slides to the current view, like the segmented control's thumb (Fields.css). */
+.ui-view-switch__thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px - (var(--segments) - 1) * 2px) / var(--segments));
+  border-radius: calc(var(--field-radius) - 2px);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+  transform: translateX(calc(var(--active) * (100% + 2px)));
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
 .ui-view-switch__link {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,10 +43,12 @@
   white-space: nowrap;
 }
 
+.ui-view-switch__link {
+  transition: color var(--duration-slow) var(--ease-out);
+}
+
 .ui-view-switch__link[aria-current='page'] {
-  background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
 }
 
 .ui-view-switch__link:focus-visible {
