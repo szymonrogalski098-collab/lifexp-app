@@ -43,6 +43,10 @@
   --card-shadow: none;
   --button-radius: var(--radius-pill);
   --field-radius: var(--radius-md);
+  /* The accent as text or an icon on a surface (links, quiet buttons, the active
+     tab). Same as the fill unless a theme's fill is too dark to read on its
+     background; resolved on <html>, where the theme attributes live. */
+  --color-accent-text: var(--color-accent);
   /* Filled accents (the "+" button, hero surfaces); themes may make it a gradient. */
   --gradient-accent: linear-gradient(var(--color-accent), var(--color-accent));
   /* The dark hero card (Today's points) in every theme; white text on it. */
@@ -93,7 +97,9 @@
 
 /* ── LifeXP ─────────────────────────────────────────────────────────────── */
 
-/* Dark = the v1 look (style.css :root). Also the fallback before a theme is set. */
+/* Dark = the v1 look (style.css :root). Also the fallback before a theme is set.
+   v1's #6c63ff is split in two for 4.5:1: a touch darker as a fill under white
+   text (5.1:1), lighter as text on the dark surfaces (≥ 5.5:1). */
 :root,
 [data-theme='lifexp'][data-mode='dark'] {
   color-scheme: dark;
@@ -106,7 +112,8 @@
   --color-text: #e8eaf0;
   --color-text-secondary: #8a8fa8;
   --color-text-tertiary: #5d6178;
-  --color-accent: #6c63ff;
+  --color-accent: #5f56f2;
+  --color-accent-text: #8f88ff;
   --color-on-accent: #ffffff;
   --color-accent-soft: rgb(108 99 255 / 16%);
   --color-positive: #4ecca3;
@@ -138,6 +145,7 @@
   --color-text-secondary: #5f6b7a;
   --color-text-tertiary: #98a2b3;
   --color-accent: #1668e3;
+  --color-accent-text: #1668e3;
   --color-on-accent: #ffffff;
   --color-accent-soft: rgb(22 104 227 / 10%);
   --color-positive: #15803d;
@@ -173,6 +181,7 @@
   --color-text-secondary: rgb(60 60 67 / 60%);
   --color-text-tertiary: rgb(60 60 67 / 30%);
   --color-accent: #007aff;
+  --color-accent-text: #007aff;
   --color-on-accent: #ffffff;
   --color-accent-soft: rgb(0 122 255 / 12%);
   --color-positive: #248a3d;
@@ -196,6 +205,7 @@
   --color-text-secondary: rgb(235 235 245 / 60%);
   --color-text-tertiary: rgb(235 235 245 / 30%);
   --color-accent: #0a84ff;
+  --color-accent-text: #0a84ff;
   --color-on-accent: #ffffff;
   --color-accent-soft: rgb(10 132 255 / 20%);
   --color-positive: #30d158;
@@ -223,6 +233,7 @@
   --color-text-secondary: #7a7872;
   --color-text-tertiary: #55534e;
   --color-accent: #f5c842;
+  --color-accent-text: #f5c842;
   --color-on-accent: #080807;
   --color-accent-soft: rgb(245 200 66 / 14%);
   --color-positive: #c9960f;

@@ -5,6 +5,7 @@ import '@/app/shell.css';
 import { render } from 'preact';
 import { App } from '@/app/App';
 import { startLanguageSync } from '@/app/language';
+import { registerServiceWorker, reloadOnStaleChunk } from '@/app/pwa';
 import { startRouter } from '@/app/router';
 import { startThemeSync } from '@/app/theme';
 import { initI18n, pickLanguage, V1_LANG_STORAGE_KEY } from '@/i18n';
@@ -23,8 +24,10 @@ initI18n(pickLanguage(storedLanguage()));
 startLanguageSync();
 startThemeSync();
 startRouter();
+reloadOnStaleChunk();
 void startSession();
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app root element');
 render(<App />, root);
+registerServiceWorker();

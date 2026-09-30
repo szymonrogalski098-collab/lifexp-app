@@ -43,7 +43,7 @@
 
 .ui-button--quiet {
   background: transparent;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .ui-button--danger {

@@ -583,6 +583,12 @@ Otwarcie drawera/sheetu dokłada wpis do historii, więc systemowe „wstecz” 
 - Zapisy offline: kolejka szkiców (`offline/queue.ts`) czyta i pisze **ten sam** klucz `lifexp-offline-queue`
   i te same payloady co v1. Zatwierdzanie szkicu wywołuje ten sam serwis co formularz.
 - Aktualizacja: baner „Nowa wersja — odśwież” zamiast `skipWaiting` w ciemno (nie przerywa wpisywania).
+  **Zmiana w 1f (2026-09-30):** skoro nawigacje są network-first, start online zawsze dostaje najnowszy build,
+  a baner mylił (strona często już była nowa). Nowy SW instaluje się w tle i przejmuje kontrolę bez
+  przeładowania; otwarta strona przeładowuje się raz tylko wtedy, gdy prosi o chunk usunięty deployem
+  (`vite:preloadError`, `app/pwa.ts`). Wpisywanie nie jest przerywane.
+- v1 `sw.js` przy aktywacji kasował wszystkie cache poza własnym, czyli też precache v2 — od 1f kasuje tylko
+  `lifexp-shell-*`; cache v2 mają prefiks `lifexp-v2`.
 
 ### 4.9 i18n i motywy
 
@@ -1356,7 +1362,7 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | 1e | Firebase 10.12.0 z npm (ta sama sesja co v1), logowanie e-mailem i Google, wylogowanie, bramy startu w kolejności v1, język z profilu; rejestracja, weryfikacja e-maila i pierwsza konfiguracja odsyłają do v1 (niżej); testy przeglądarkowe v2 na emulatorach z logowaniem | scalone (#19) |
 | 1g | Styl referencyjny właściciela (D9, D10): jasny motyw LifeXP pod referencję (białe karty z cieniem, akcent z ikony LifeXP, kontrast ≥ 4.5:1), ikony z podpisem (`lucide-preact`), dolny pasek z „+” i „Menu”, `IconTile`, arkusz „Dodaj” (do etapu 3 odsyła do v1) | scalone (#20) |
 | 2a | Ekran „Dziś” tylko do odczytu: punkty (≈ zł), poziom (G2), seria z tygodniem Pn–Nd i zamrożeniem (G3, liczone bez zapisu), punkty dziś względem limitu i granie (G1), saldo, skróty wg `enabledModules`, ostatnie 5 aktywności; `lib/dates` (dzień UTC i lokalny), konwertery i repozytoria `dailyLog`/`activities`/`activityDefs`/`money/balance`; e2e: te same liczby co dashboard v1 i zero zapisów | scalone (#21) |
-| 1f | Service Worker v2 (scope `/v2/`), manifest, Lighthouse ≥ 90 | po 2a |
+| 1f | Service Worker v2 (`vite-plugin-pwa` + Workbox: precache całego buildu, nawigacje network-first 3 s, scope `/v2/`), manifest „LifeXP v2” z ikonami, meta iOS; v1 `sw.js` nie kasuje cache v2; Auth bez gapi przy starcie; akcent LifeXP ciemny rozdzielony na wypełnienie i tekst (4.5:1). Lighthouse (telefon, gzip jak Pages): wydajność 95, dostępność 100, dobre praktyki 100 | w toku |
 
 Kolejność od 2026-09-29: 1g → 2a (ekran „Dziś” tylko do odczytu, pierwszy ekran z danymi) → 1f. Właściciel
 nie widział dotąd zmian w aplikacji, a 1f (offline, manifest) też jest niewidoczne, więc ekran z danymi idzie przed nim.

@@ -13,6 +13,8 @@ function appUrl(hash = '') {
 }
 
 const test = hermetic.extend({
+  // v2's Service Worker stays out of the way; tests/v2/offline.spec.js turns it on.
+  serviceWorkers: 'block',
   /** A ready account (verified, set up in v1) for this test only. */
   account: async ({}, use) => {
     await use(await createUser({ tag: 'v2' }));

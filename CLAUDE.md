@@ -67,6 +67,10 @@ ui (design system) i i18n nie znają domeny ani danych
 - Firebase SDK w v2 przypięty do 10.12.x, dopóki działa v1. Jedna aplikacja Firebase (`data/firebase.ts`), ładowana
   leniwie; ta sama sesja logowania co v1. `?emulator=1` na localhost działa jak w v1 (`lib/emulator.ts`).
 - Testy przeglądarkowe v2 logują się na emulatorach (`tests/support/v2.js`: fixture `account`, `openSignedIn`).
+  Service Worker jest w nich zablokowany, poza `tests/v2/offline.spec.js`.
+- Service Worker v2: `src/sw.ts` (Workbox, scope `/v2/`, cache `lifexp-v2-*`), rejestracja w `app/pwa.ts`, manifest
+  w `vite.config.ts`. v1 `sw.js` może kasować tylko `lifexp-shell-*`.
+- Akcent jako tekst albo ikona na powierzchni: `--color-accent-text`, nie `--color-accent` (to wypełnienie).
 
 ## Praca
 

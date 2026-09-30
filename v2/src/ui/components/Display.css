@@ -17,7 +17,7 @@
 /* ── Icon tile: icon on a soft square tinted with its tone ── */
 
 .ui-icon-tile {
-  --tile-color: var(--color-accent);
+  --tile-color: var(--color-accent-text);
   display: inline-grid;
   flex-shrink: 0;
   place-items: center;

@@ -57,9 +57,11 @@ self.addEventListener('install', (e) => {
   );
 });
 
+// Czyści tylko własne stare wersje (`lifexp-shell-*`). v2 pod /v2/ ma swój Service
+// Worker i cache `lifexp-v2-*` na tym samym originie — skasowanie ich zepsułoby v2 offline.
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith('lifexp-shell-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
