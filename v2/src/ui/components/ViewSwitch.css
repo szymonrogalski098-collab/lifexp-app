@@ -1,0 +1,38 @@
+/* The segmented control's track (Fields.css), with links instead of radios. */
+
+.ui-view-switch {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--field-radius);
+  background: var(--color-surface-raised);
+}
+
+.ui-view-switch__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  border-radius: calc(var(--field-radius) - 2px);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-view-switch__link[aria-current='page'] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+}
+
+.ui-view-switch__link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}

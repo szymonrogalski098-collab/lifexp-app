@@ -14,26 +14,21 @@ import {
   Zap,
 } from 'lucide-preact';
 import { useEffect } from 'preact/hooks';
-import { activeDays, activityName, type Activity, type DayLog } from '@/domain/activity';
+import { activeDays, type Activity, type DayLog } from '@/domain/activity';
 import { choresRate, todayChores, unpaidChores, type ChoreDef, type ChoreEntry } from '@/domain/chores';
 import type { Profile } from '@/domain/profile';
 import { dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
 import { calculateStreak, isFreezeAvailable } from '@/domain/streak';
+import { ActivityRow, formatDuration } from '@/features/shared/activity';
 import { locale, t } from '@/i18n';
-import { formatLongDate, formatShortDate, formatWeekdayShort, localDayKey, utcDayKey, weekOf } from '@/lib/dates';
-import { formatInteger, splitMinutes } from '@/lib/format';
+import { formatLongDate, formatWeekdayShort, localDayKey, utcDayKey, weekOf } from '@/lib/dates';
+import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
 import { EmptyState, IconTile, List, ListRow, ProgressBar, Skeleton } from '@/ui/components/Display';
 import { Card, Page, Section, Stack } from '@/ui/components/Layout';
 import './today.css';
-
-function duration(minutes: number): string {
-  const { hours, minutes: rest } = splitMinutes(minutes);
-  if (hours === 0) return t('today.minutes', { m: rest });
-  return rest === 0 ? t('today.hours', { h: hours }) : t('today.hoursMinutes', { h: hours, m: rest });
-}
 
 function PointsHero({ profile }: { profile: Profile }) {
   const total = profile.points.total;
@@ -138,7 +133,7 @@ function TodayCard({ profile, day }: { profile: Profile; day: DayLog | undefined
         <div>
           <p class="today-card__meta">{t('today.gaming')}</p>
           <p class="today-card__number numeric" data-testid="gaming">
-            {duration(day?.gamingMinutes ?? 0)}
+            {formatDuration(day?.gamingMinutes ?? 0)}
           </p>
         </div>
       </div>
@@ -190,7 +185,7 @@ function ChoresCard({ profile, defs, entries }: ChoresCardProps) {
                       ? t('today.choreDone')
                       : undefined
                 }
-                value={t('today.pointsGained', { points: row.points })}
+                value={t('units.pointsGained', { points: row.points })}
                 trailing={
                   <span class={`today-check${row.doneToday > 0 ? ' today-check--done' : ''}`} aria-hidden="true">
                     {row.doneToday > 0 && <Check />}
@@ -255,7 +250,6 @@ function Shortcuts({ profile }: { profile: Profile }) {
 }
 
 function RecentActivities({ recent, names }: { recent: readonly Activity[]; names: ReadonlyMap<string, string> }) {
-  const lang = locale();
   return (
     <Section title={t('today.recent')}>
       <Card padding="none">
@@ -264,20 +258,7 @@ function RecentActivities({ recent, names }: { recent: readonly Activity[]; name
         ) : (
           <List label={t('today.recent')}>
             {recent.map((activity) => (
-              <ListRow
-                key={activity.id}
-                leading={
-                  <IconTile tone="positive">
-                    <Zap />
-                  </IconTile>
-                }
-                title={activityName(activity, names)}
-                meta={[duration(activity.duration), formatShortDate(activity.at, lang), activity.desc]
-                  .filter(Boolean)
-                  .join(' · ')}
-                value={t('today.pointsGained', { points: activity.points })}
-                valueTone="positive"
-              />
+              <ActivityRow key={activity.id} activity={activity} names={names} />
             ))}
           </List>
         )}

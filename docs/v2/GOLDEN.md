@@ -202,3 +202,19 @@ wejściu admina.
 | Domyślna data transakcji, pożyczki, sesji grania | `todayStr()` | UTC |
 
 W Polsce między 00:00 a 01:00 (zima) / 02:00 (lato) te dwa kalendarze wskazują różne dni (B2, migracja M4).
+
+## G14. Statystyki i historia
+
+`history-stats.js`. Okna liczone od tego samego „dziś” (dzień UTC, G13): ten tydzień = dziś − 6 … dziś,
+poprzedni = dziś − 13 … dziś − 7 (to ostatnie 7 dni, nie tydzień kalendarzowy). Dzień bez `dailyLog` = 0.
+
+| # | Sytuacja | Wynik | Status |
+|---|---|---|---|
+| G14.1 | „Łącznie zarobione / wydane” | `points.earnedAllTime` / `points.spentAllTime` z profilu; „Czas grania łącznie” to suma **7 dni**, mimo etykiety (v2: „Granie w 7 dni”) | e2e |
+| G14.2 | TOP aktywności | 50 najnowszych wpisów pogrupowanych po `type` (wpis bez typu pominięty), malejąco po liczbie wpisów, remis w kolejności pierwszego wystąpienia (kod); nazwa z definicji, bez niej surowe id (nie `typeName`); pokazane 5 | e2e |
+| G14.3 | Ciekawostki | w kolejności: ulubiona aktywność (pierwsza z TOP); porównanie punktów tydzień do tygodnia (więcej / mniej / tyle samo, gdy > 0); wartość tygodnia × kurs ogólny; porównanie grania (tylko gdy różne); najlepszy dzień = pierwszy dzień z maksimum licząc od najstarszego, gdy > 0. Brak zdań → karta ukryta | e2e |
+| G14.4 | Historia | wszystkie aktywności malejąco po `timestamp`, strony po 15, licznik „Strona x / y · n aktywności” | e2e |
+
+e2e = `tests/v2/stats.spec.js` sprawdza v1 i v2 na tym samym koncie w emulatorze.
+v2: historia czyta stronę kursorem (`limit(16)` + `startAfter`) zamiast całej kolekcji (B16), licznik z
+`count()` na serwerze; usuwanie wpisu z historii przychodzi z etapem 3e.

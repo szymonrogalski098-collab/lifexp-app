@@ -71,6 +71,10 @@ ui (design system) i i18n nie znają domeny ani danych
 - Service Worker v2: `src/sw.ts` (Workbox, scope `/v2/`, cache `lifexp-v2-*`), rejestracja w `app/pwa.ts`, manifest
   w `vite.config.ts`. v1 `sw.js` może kasować tylko `lifexp-shell-*`.
 - Akcent jako tekst albo ikona na powierzchni: `--color-accent-text`, nie `--color-accent` (to wypełnienie).
+- Ekran modułu (`view` w `app/registry.ts`) dostaje z routera `RouteProps` (`path`, `params`). Kilka widoków jednego
+  modułu przełącza `ViewSwitch` (linki: każdy widok ma własny adres).
+- Wykresy: `ui/components/BarChart` (jedna seria, jedna oś od zera, każda wartość także w tekście). Dwie miary
+  o różnych jednostkach = dwa wykresy, nigdy dwie osie.
 
 ## Praca
 

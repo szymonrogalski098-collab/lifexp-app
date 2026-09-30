@@ -3,6 +3,12 @@
 
 export type RouteParams = Record<string, string>;
 
+/** What a module's screen gets from the router: the current path and its params. */
+export interface RouteProps {
+  path: string;
+  params: RouteParams;
+}
+
 /** "#/tasks?x=1" → "/tasks"; anything without a leading slash → "". */
 export function pathFromHash(hash: string): string {
   const raw = hash.replace(/^#/, '').split('?')[0] ?? '';

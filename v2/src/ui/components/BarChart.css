@@ -1,0 +1,132 @@
+/*
+ * Bar chart anatomy: each day is a column (the hit target, much larger than the
+ * bar). The plot keeps a band on top for the direct label of the tallest bar, so
+ * bar heights are a share of the same fixed height. The baseline is the only rule.
+ */
+
+.ui-bars {
+  --bars-plot-height: 128px;
+  --bars-label-band: 20px;
+
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  /* No gap: the baseline runs unbroken; bars (max 24 px) never touch anyway. */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-bars__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ui-bars__plot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  box-sizing: border-box;
+  height: var(--bars-plot-height);
+  padding-top: var(--bars-label-band);
+  border-bottom: 1px solid var(--color-separator);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.ui-bars__bar {
+  flex-shrink: 0;
+  width: min(24px, 70%);
+  /* A share of the plot below the label band; a positive value stays visible. */
+  height: max(2px, calc(var(--bar) * (var(--bars-plot-height) - var(--bars-label-band))));
+  border-radius: 4px 4px 0 0;
+  background: var(--color-accent);
+}
+
+.ui-bars__value {
+  flex-shrink: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ui-bars__label {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-bars__item--current .ui-bars__label {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-bars__item:hover .ui-bars__plot,
+.ui-bars__item:focus .ui-bars__plot {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.ui-bars__item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Tooltip: over the top of the column, kept inside the chart at both ends. */
+.ui-bars__tip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: max-content;
+  max-width: 180px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-text);
+  box-shadow: var(--shadow-1);
+  color: var(--color-surface);
+  font-size: var(--font-size-xs);
+  line-height: 1.3;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.ui-bars__tip-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.ui-bars__item:first-child .ui-bars__tip {
+  left: 0;
+  transform: none;
+}
+
+.ui-bars__item:last-child .ui-bars__tip {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.ui-bars__item:hover .ui-bars__tip,
+.ui-bars__item:focus .ui-bars__tip {
+  opacity: 1;
+}
