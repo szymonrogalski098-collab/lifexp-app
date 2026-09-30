@@ -155,6 +155,8 @@ Daty wpisów lokalne (`dateISOLocal`), inaczej niż `dailyLog`.
 | G8.7 | zmiana kursu przed rozliczeniem | rozliczenie liczone po **bieżącym** kursie dla wszystkich wpisów | kod |
 | G8.8 | kategoria transakcji z rozliczenia | tekst z i18n w języku ustawionym w chwili rozliczenia | kod |
 | G8.9 | offline | szkic z datą lokalną, bez pytania „wczoraj” | kod |
+| G8.10 | brak jakiejkolwiek definicji przy wejściu w Obowiązki albo Ustawienia | 8 definicji z seeda pod stałymi id (`chores.js:15-34`), sprawdzane raz na załadowanie strony; po skasowaniu wszystkich wracają przy następnym załadowaniu | e2e |
+| G8.11 | nowa definicja (Ustawienia) | `{name (trim), desc (trim), emoji (jedno z 12 albo ''), points (liczba całkowita > 0), oneTime, order = max(order) + 1 albo 0}`; `settings.js:276-297` | e2e |
 
 v2 (etap 3b-1, `tests/v2/chores.spec.js`): ten sam wpis co v1 (bez id i `createdAt`), v1 pokazuje wpis z v2;
 G8.2 i G8.3 zależnie od dnia uruchomienia (1. dnia miesiąca wychodzi G8.3). Wpis i usunięcie jednorazowej
@@ -170,6 +172,12 @@ czyta saldo i każdy wpis, więc wpis usunięty w innej karcie nie zostanie wyp�
 zmienia niczego — test sprawdza, że stan po nieudanej próbie jest identyczny jak przed nią, a kolejna próba
 przechodzi. v2 nie sprawdza osiągnięć przy rozliczeniu; v1 robi to przy każdym wejściu na dashboard, więc
 nadrabia je przy najbliższym otwarciu v1.
+
+v2 (etap 3b-3, `tests/v2/chores.spec.js`): lista obowiązków `#/chores/defs`. Nowa definicja jak z formularza v1
+(G8.11, e2e: v1 i v2 zapisują ten sam dokument, v1 pokazuje definicję z v2); v2 dodatkowo odrzuca więcej niż
+10 000 pkt, na co v1 pozwala mimo `max` w polu. Usuwanie z „Cofnij” zamiast potwierdzenia (D8) przywraca ten sam
+dokument pod tym samym id; wpisy zostają. Seed (G8.10) jak w v1 (e2e: ten sam zestaw dokumentów), ale tylko gdy
+serwer potwierdzi, że definicji nie ma — offline pusty cache niczego nie przesądza, więc v2 wtedy nie zapisuje nic.
 
 ## G9. Zadania i budowa PC
 

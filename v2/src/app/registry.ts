@@ -75,11 +75,11 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'chores',
     labelKey: 'nav.chores',
     icon: ClipboardCheck,
-    paths: ['/chores', '/chores/new'],
+    paths: ['/chores', '/chores/new', '/chores/defs'],
     nav: { group: 'main', order: 40 },
     tab: 2,
     stage: '3b',
-    view: () => import('@/features/chores/ChoresPage'),
+    view: () => import('@/features/chores/ChoresModule'),
   },
   { id: 'money', labelKey: 'nav.money', icon: Wallet, paths: ['/money', '/money/loans'], nav: { group: 'main', order: 50 }, tab: 3, stage: '3c' },
   {

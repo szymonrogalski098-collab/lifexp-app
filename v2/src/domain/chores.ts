@@ -6,6 +6,8 @@
 export interface ChoreDef {
   id: string;
   name: string;
+  /** Optional; v1 stores it and never shows it (all empty in production). */
+  desc: string;
   /** Chosen by the person, shown as content (PLAN.md 7.1). */
   emoji: string;
   points: number;
@@ -186,4 +188,64 @@ export function payoutPlan(entries: readonly ChoreEntry[], rate: number): Payout
 /** Newest first (v1 sorts by createdAt). */
 export function payoutHistory(payouts: readonly ChorePayout[]): ChorePayout[] {
   return [...payouts].sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+}
+
+// ── Definitions (v1 settings.js addChoreDef, deleteChoreDef; chores.js seed) ──
+
+/** v1's form fields (maxlength / max). */
+export const CHORE_NAME_MAX = 60;
+export const CHORE_DESC_MAX = 100;
+export const CHORE_POINTS_MAX = 10000;
+/** v1 CHORE_EMOJI_PRESETS: the only emoji a definition can get ("" = none). */
+export const CHORE_EMOJIS: readonly string[] = ['🧹', '🪣', '🧽', '🗑️', '🍽️', '🛏️', '🧺', '🚿', '🪴', '🔧', '📦', '🐶'];
+
+/**
+ * v1 ensureChoreDefsSeeded(): the list an account starts with, under the ids of
+ * v1's old constant list, so entries that point at them keep their definition.
+ */
+export const CHORE_SEEDS: readonly ChoreDef[] = [
+  { id: 'entryway', name: 'Odkurzanie wiatrołapu (buty, kurtki, czapki)', desc: '', emoji: '🧹', points: 10, oneTime: false, order: 0 },
+  { id: 'vacuum_stairs', name: 'Odkurzanie schodów', desc: '', emoji: '🧹', points: 5, oneTime: false, order: 1 },
+  { id: 'wash_stairs', name: 'Zmycie schodów na mokro', desc: '', emoji: '🪣', points: 30, oneTime: false, order: 2 },
+  { id: 'vacuum_ground', name: 'Kompleksowe odkurzenie całego parteru', desc: '', emoji: '🧹', points: 40, oneTime: false, order: 3 },
+  { id: 'room_quick', name: 'Pobieżne sprzątnięcie pokoju', desc: '', emoji: '🛏️', points: 30, oneTime: false, order: 4 },
+  { id: 'room_deep', name: 'Gruntowne sprzątnięcie pokoju', desc: '', emoji: '🧽', points: 60, oneTime: false, order: 5 },
+  { id: 'trash_segregated', name: 'Opróżnienie głównego kosza segregowanego', desc: '', emoji: '🗑️', points: 40, oneTime: false, order: 6 },
+  { id: 'dishwasher', name: 'Opróżnienie zmywarki', desc: '', emoji: '🍽️', points: 15, oneTime: false, order: 7 },
+];
+
+export interface ChoreDefDraft {
+  name: string;
+  desc: string;
+  emoji: string;
+  /** null = the field is empty. */
+  points: number | null;
+  oneTime: boolean;
+}
+
+export type ChoreDefProblem = 'nameRequired' | 'pointsRequired' | 'pointsTooMany';
+
+/** v1 addChoreDef(): a name (trimmed) and whole points above zero; v1's field stops at 10 000. */
+export function choreDefProblem(draft: ChoreDefDraft): ChoreDefProblem | null {
+  if (!draft.name.trim()) return 'nameRequired';
+  if (draft.points === null || !Number.isInteger(draft.points) || draft.points <= 0) return 'pointsRequired';
+  if (draft.points > CHORE_POINTS_MAX) return 'pointsTooMany';
+  return null;
+}
+
+/** v1 addChoreDef(): after the last one (max order + 1, missing order counts as 0), or 0 for the first. */
+export function nextChoreOrder(defs: readonly ChoreDef[]): number {
+  return defs.length ? Math.max(...defs.map((d) => d.order || 0)) + 1 : 0;
+}
+
+/** The definition v1 would write for a valid draft; call choreDefProblem() first. */
+export function newChoreDef(draft: ChoreDefDraft, defs: readonly ChoreDef[]): Omit<ChoreDef, 'id'> {
+  return {
+    name: draft.name.trim(),
+    desc: draft.desc.trim(),
+    emoji: CHORE_EMOJIS.includes(draft.emoji) ? draft.emoji : '',
+    points: draft.points ?? 0,
+    oneTime: draft.oneTime,
+    order: nextChoreOrder(defs),
+  };
 }

@@ -10,11 +10,17 @@ export function choreDefFromData(id: string, data: DocumentData): ChoreDef {
   return {
     id,
     name: stringOr(data.name, id),
+    desc: stringOr(data.desc),
     emoji: stringOr(data.emoji),
     points: numberOr(data.points),
     oneTime: data.oneTime === true,
     order: numberOr(data.order),
   };
+}
+
+/** A definition as v1 addChoreDef() and the seed write it (the id is the document's). */
+export function choreDefData(def: Omit<ChoreDef, 'id'>): DocumentData {
+  return { name: def.name, desc: def.desc, emoji: def.emoji, points: def.points, oneTime: def.oneTime, order: def.order };
 }
 
 /** null without a valid local day: it could not be placed on any day (none in production). */

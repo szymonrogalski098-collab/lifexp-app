@@ -228,3 +228,128 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
+
+/* ── List of chores (#/chores/defs) ── */
+
+.chores-defs__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.chores-defs__head .ui-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chores-defs__note {
+  flex: 1 1 16rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.chores-defs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chores-defs__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+}
+
+.chores-defs__row + .chores-defs__row {
+  border-top: 1px solid var(--color-separator);
+}
+
+.chores-defs__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chores-defs__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.chores-defs__points {
+  color: var(--color-positive);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* ── New chore: emoji as radios drawn as tiles, the chosen one in the legend ── */
+
+.chores-emojis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.chores-emojis__current {
+  color: var(--color-text);
+}
+
+.chores-emojis__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--touch-target), 1fr));
+  gap: var(--space-1);
+}
+
+.chores-emojis__option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: var(--touch-target);
+  cursor: pointer;
+}
+
+.chores-emojis__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.chores-emojis__tile {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 0 0 1px var(--color-border);
+  transition:
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.chores-emojis__input:checked + .chores-emojis__tile {
+  box-shadow: 0 0 0 2px var(--color-text);
+  transform: scale(1.06);
+}
+
+.chores-emojis__input:focus-visible + .chores-emojis__tile {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.chores-kind {
+  gap: var(--space-2);
+}

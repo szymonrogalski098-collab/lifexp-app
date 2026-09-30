@@ -1,6 +1,6 @@
 // Chores (docs/v2/PLAN.md 9, stage 3b; GOLDEN G8) on the Firebase emulators.
 // Parity (PLAN.md 8.3): logging the same chore in v1 and v2 writes the same entry,
-// and v1's calendar shows what v2 logged.
+// and v1's calendar shows what v2 logged; paying out and the list of chores likewise.
 const { createUser, db, serveCdnFromNpm, signInToApp } = require('../support/emulator');
 const { test, expect, openSignedIn } = require('../support/v2');
 
@@ -286,5 +286,139 @@ test.describe('v1 on a desktop: payout', () => {
     await expect.poll(async () => (await payoutState(account.uid)).transactions.length).toBe(1);
     await expect.poll(async () => (await payoutState(account.uid)).moneyIncomeAllTime).toBe(18);
     expect(await payoutState(account.uid)).toEqual(paidState());
+  });
+});
+
+// ── The list of chores (stage 3b-3; v1 Settings → "Zarządzaj obowiązkami") ──
+
+/** Every definition of the account, as written, sorted by id. */
+async function defsState(uid) {
+  const snap = await defsOf(uid).get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/** The new definition (the one outside DEFS), without its generated id. */
+async function addedDef(uid) {
+  await expect.poll(async () => (await defsOf(uid).get()).size).toBe(DEFS.length + 1);
+  const known = new Set(DEFS.map(([id]) => id));
+  const [added] = (await defsOf(uid).get()).docs.filter((d) => !known.has(d.id));
+  return added.data();
+}
+
+const flowers = { name: 'Podlanie kwiatów', desc: 'salon i kuchnia', emoji: '🪴', points: 12, oneTime: true, order: 3 };
+
+test('adding a chore to the list writes v1\'s definition, checked as v1 checks it', async ({ page }) => {
+  const account = await choresAccount('defs-v2');
+  await openSignedIn(page, account, '#/chores/defs');
+  const list = page.getByRole('list', { name: 'Lista obowiązków' }).getByRole('listitem');
+  await expect(list).toHaveCount(3);
+  await expect(list.nth(2)).toContainText('Mycie okien');
+  await expect(list.nth(2)).toContainText('jednorazowy');
+
+  await page.getByRole('button', { name: 'Nowy obowiązek' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Nowy obowiązek' });
+  await sheet.getByRole('button', { name: 'Dodaj obowiązek' }).click();
+  await expect(sheet.getByText('Podaj nazwę.')).toBeVisible();
+  await sheet.getByLabel('Nazwa').fill('  Podlanie kwiatów ');
+  await sheet.getByRole('button', { name: 'Dodaj obowiązek' }).click();
+  await expect(sheet.getByText('Podaj liczbę punktów większą od zera.')).toBeVisible();
+  await sheet.getByLabel('Punkty').fill('10001');
+  await sheet.getByRole('button', { name: 'Dodaj obowiązek' }).click();
+  await expect(sheet.getByText('Najwięcej 10 000 pkt.')).toBeVisible();
+
+  await sheet.getByLabel('Punkty').fill('12');
+  await sheet.getByLabel('Opis (opcjonalnie)').fill('salon i kuchnia');
+  await sheet.getByRole('radio', { name: '🪴' }).check();
+  await expect(sheet.getByText('Emoji: 🪴')).toBeVisible();
+  await sheet.getByRole('radio', { name: 'Jednorazowy' }).check();
+  await expect(sheet.getByText('Zniknie z listy po pierwszym zapisaniu.')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Dodaj obowiązek' }).click();
+
+  await expect(page.getByText('Dodano do listy: Podlanie kwiatów')).toBeVisible();
+  expect(await addedDef(account.uid)).toEqual(flowers);
+  await expect(list).toHaveCount(4);
+  await expect(list.nth(3)).toContainText('salon i kuchnia · jednorazowy');
+
+  // It can be logged straight away.
+  await page.getByRole('link', { name: 'Przegląd' }).click();
+  await page.getByRole('button', { name: 'Dodaj obowiązek' }).click();
+  await expect(page.getByRole('dialog', { name: 'Który obowiązek?' }).getByRole('button', { name: /Podlanie kwiatów/ })).toBeVisible();
+});
+
+test('removing a chore from the list, and undo brings back the same definition', async ({ page }) => {
+  const account = await choresAccount('defs-delete');
+  await seedEntry(account.uid, 'vacuum_stairs', localDay(0));
+  const before = await defsState(account.uid);
+  await openSignedIn(page, account, '#/chores/defs');
+
+  await page.getByRole('button', { name: 'Usuń: Odkurzanie schodów' }).click();
+  await expect(page.getByText('Usunięto z listy: Odkurzanie schodów')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Lista obowiązków' }).getByRole('listitem')).toHaveCount(2);
+  await expect.poll(async () => (await defsState(account.uid)).map((d) => d.id)).toEqual(['dishwasher', 'windows_once']);
+  // The entry logged from it stays, with its own name and points.
+  expect((await entries(account.uid, 1))[0]).toMatchObject({ choreId: 'vacuum_stairs', choreName: 'Odkurzanie schodów', points: 5 });
+
+  await page.getByRole('button', { name: 'Cofnij' }).click();
+  await expect(page.getByRole('list', { name: 'Lista obowiązków' }).getByRole('listitem')).toHaveCount(3);
+  await expect.poll(() => defsState(account.uid)).toEqual(before);
+});
+
+test('an account without a single chore gets v1\'s list when Chores opens', async ({ page }) => {
+  const account = await createUser({ tag: 'defs-seed-v2' });
+  await openSignedIn(page, account, '#/chores/defs');
+  await expect(page.getByRole('list', { name: 'Lista obowiązków' }).getByRole('listitem')).toHaveCount(8);
+  await expect.poll(async () => (await defsState(account.uid)).length).toBe(8);
+});
+
+test.describe('v1 on a desktop: the list of chores', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('parity: v1 adds the same definition for the same form', async ({ page, context }) => {
+    const account = await choresAccount('defs-v1');
+    await serveCdnFromNpm(context);
+    await signInToApp(page, account);
+    await page.click('.sidebar .nav-item[data-page="settings"]');
+    await page.click('#settings-cat-chores .settings-cat-label');
+    await page.fill('#cd-name', '  Podlanie kwiatów ');
+    await page.fill('#cd-desc', 'salon i kuchnia');
+    await page.fill('#cd-points', '12');
+    await page.click('#cd-emoji-picker button[data-emoji="🪴"]');
+    await page.check('#cd-onetime');
+    await page.click('button[onclick="addChoreDef()"]');
+    expect(await addedDef(account.uid)).toEqual(flowers);
+  });
+
+  test('parity: v1 seeds the same list v2 does', async ({ page, context }) => {
+    const inV2 = await createUser({ tag: 'defs-seed-v2b' });
+    await openSignedIn(page, inV2, '#/chores');
+    await expect.poll(async () => (await defsState(inV2.uid)).length).toBe(8);
+    await page.getByRole('button', { name: 'Wyloguj' }).click();
+    await expect(page.getByRole('heading', { name: 'Zaloguj się' })).toBeVisible();
+
+    const inV1 = await createUser({ tag: 'defs-seed-v1' });
+    await serveCdnFromNpm(context);
+    await signInToApp(page, inV1);
+    await page.click('.sidebar .nav-item[data-page="chores"]');
+    await expect.poll(async () => (await defsState(inV1.uid)).length).toBe(8);
+    expect(await defsState(inV2.uid)).toEqual(await defsState(inV1.uid));
+  });
+
+  test('v1 lists a chore that v2 added', async ({ page, context }) => {
+    const account = await choresAccount('defs-v2-to-v1');
+    await openSignedIn(page, account, '#/chores/defs');
+    await page.getByRole('button', { name: 'Nowy obowiązek' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Nowy obowiązek' });
+    await sheet.getByLabel('Nazwa').fill('Podlanie kwiatów');
+    await sheet.getByLabel('Punkty').fill('12');
+    await sheet.getByRole('button', { name: 'Dodaj obowiązek' }).click();
+    await addedDef(account.uid);
+    await page.getByRole('button', { name: 'Wyloguj' }).click();
+    await expect(page.getByRole('heading', { name: 'Zaloguj się' })).toBeVisible();
+
+    await serveCdnFromNpm(context);
+    await signInToApp(page, account);
+    await page.click('.sidebar .nav-item[data-page="chores"]');
+    await page.click('#chore-fab');
+    await expect(page.locator('#chore-sheet-list')).toContainText('Podlanie kwiatów');
   });
 });

@@ -1,9 +1,27 @@
-// Chore use cases (docs/v2/PLAN.md 9, stage 3b; GOLDEN G8). Logging and deleting
-// touch single entries (plus a one-time definition in the same batch), so they are
-// queued offline like any write and return at once with a `saved` promise. The
-// payout moves money, so it is one transaction, awaited, and needs the server.
-import { addChoreEntry, removeChoreEntry, restoreChoreEntry, settleChoreEntries } from '@/data/repos/chores';
-import type { ChoreDef, ChoreEntry, PayoutPlan } from '@/domain/chores';
+// Chore use cases (docs/v2/PLAN.md 9, stage 3b; GOLDEN G8). Logging, deleting and
+// the definitions touch single documents (plus a one-time definition in the same
+// batch), so they are queued offline like any write and return at once with a
+// `saved` promise. The payout moves money, so it is one transaction, awaited, and
+// needs the server.
+import {
+  addChoreDef,
+  addChoreEntry,
+  removeChoreDef,
+  removeChoreEntry,
+  restoreChoreDef,
+  restoreChoreEntry,
+  seedChoreDefsIfEmpty,
+  settleChoreEntries,
+} from '@/data/repos/chores';
+import {
+  choreDefProblem,
+  newChoreDef,
+  type ChoreDef,
+  type ChoreDefDraft,
+  type ChoreDefProblem,
+  type ChoreEntry,
+  type PayoutPlan,
+} from '@/domain/chores';
 import { utcDayKey } from '@/lib/dates';
 
 /** v1 addChore() for the day already decided (today, or yesterday after asking). */
@@ -29,4 +47,38 @@ export function settleChores(
   now = new Date(),
 ): Promise<PayoutPlan | null> {
   return settleChoreEntries(uid, { entryIds: entries.map((e) => e.id), rate, category, day: utcDayKey(now), now });
+}
+
+export type ChoreDefSaveResult = { ok: true; id: string; saved: Promise<void> } | { ok: false; problem: ChoreDefProblem };
+
+/** v1 addChoreDef(): checked, then written after the last one. */
+export function createChoreDef(uid: string, draft: ChoreDefDraft, defs: readonly ChoreDef[]): ChoreDefSaveResult {
+  const problem = choreDefProblem(draft);
+  if (problem) return { ok: false, problem };
+  return { ok: true, ...addChoreDef(uid, newChoreDef(draft, defs)) };
+}
+
+/** v1 deleteChoreDef() (there behind a confirmation; here with undo, D8). History stays. */
+export function deleteChoreDef(uid: string, def: ChoreDef): { saved: Promise<void>; undo: () => Promise<void> } {
+  return { saved: removeChoreDef(uid, def.id), undo: () => restoreChoreDef(uid, def) };
+}
+
+/** Accounts already checked since the app started (v1: once per page load). */
+const seedChecked = new Set<string>();
+
+/**
+ * v1 ensureChoreDefsSeeded(), which runs when Chores or Settings open: an account
+ * with no definitions gets v1's list. Once per account per app start, like v1, so
+ * deleting the last definition does not bring the list straight back; a failure
+ * (offline) leaves it for the next time.
+ */
+export async function ensureChoreDefs(uid: string): Promise<void> {
+  if (seedChecked.has(uid)) return;
+  seedChecked.add(uid);
+  try {
+    await seedChoreDefsIfEmpty(uid);
+  } catch (error) {
+    seedChecked.delete(uid);
+    throw error;
+  }
 }
