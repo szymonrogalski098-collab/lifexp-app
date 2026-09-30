@@ -55,6 +55,8 @@
 
 .ui-card {
   min-width: 0;
+  /* A card that arrives with its data fades in instead of popping up. */
+  animation: ui-fade-in var(--duration-enter) var(--ease-out);
   border: var(--card-border-width) solid var(--color-border);
   border-radius: var(--card-radius);
   background: var(--color-surface);

@@ -41,7 +41,7 @@ export function BarChart({ label, data }: BarChartProps) {
             class={d.current ? 'ui-bars__item ui-bars__item--current' : 'ui-bars__item'}
             // Focusable so keyboard and touch reach the tooltip; the text is in the list for screen readers.
             tabIndex={0}
-            style={{ '--bar': String(max > 0 ? Math.max(0, d.value) / max : 0) }}
+            style={{ '--bar': String(max > 0 ? Math.max(0, d.value) / max : 0), '--i': String(i) }}
           >
             <span class="visually-hidden">{d.description}</span>
             <span class="ui-bars__plot" aria-hidden="true">

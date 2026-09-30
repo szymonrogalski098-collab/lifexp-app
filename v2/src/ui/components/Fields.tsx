@@ -277,10 +277,13 @@ interface SegmentedControlProps<T extends string> {
 /** 2–4 mutually exclusive options. Native radios underneath: arrow keys and screen readers work as usual. */
 export function SegmentedControl<T extends string>({ label, value, options, onChange }: SegmentedControlProps<T>) {
   const name = useId();
+  const active = options.findIndex((o) => o.value === value);
   return (
     <fieldset class="ui-segmented">
       <legend class="ui-field__label">{label}</legend>
-      <div class="ui-segmented__track">
+      <div class="ui-segmented__track" style={{ '--segments': String(options.length), '--active': String(active) }}>
+        {/* One thumb slides under the options instead of each option lighting up on its own. */}
+        {active >= 0 && <span class="ui-segmented__thumb" aria-hidden="true" />}
         {options.map((o) => (
           <label key={o.value} class="ui-segmented__option">
             <input

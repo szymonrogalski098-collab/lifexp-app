@@ -125,6 +125,7 @@
 }
 
 .ui-segmented__track {
+  position: relative;
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
@@ -134,8 +135,24 @@
   background: var(--color-surface-raised);
 }
 
+/* The selected look is one element that slides: width = one segment, moved by
+   whole segments (its own width plus the 2 px gap) to the chosen one. */
+.ui-segmented__thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px - (var(--segments) - 1) * 2px) / var(--segments));
+  border-radius: calc(var(--field-radius) - 2px);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+  transform: translateX(calc(var(--active) * (100% + 2px)));
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
 .ui-segmented__option {
   position: relative;
+  z-index: 1;
   display: flex;
   min-width: 0;
 }
@@ -162,13 +179,11 @@
   font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: background-color var(--duration-fast) var(--ease-standard);
+  transition: color var(--duration-slow) var(--ease-out);
 }
 
 .ui-segmented__input:checked + .ui-segmented__label {
-  background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
 }
 
 .ui-segmented__input:focus-visible + .ui-segmented__label {

@@ -7,6 +7,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { t } from '@/i18n';
 import { ToastHost } from '@/ui/components/ToastHost';
+import { playEnter } from '@/ui/motion';
 import { dragProgress, releaseVelocity, settlesOpen, TAP_SLOP, type DragSample } from '@/lib/gesture';
 import { AddSheet } from './AddSheet';
 import { NavMenu, type Account } from './NavMenu';
@@ -60,6 +61,7 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
   const shellRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // The drawer position lives in one CSS variable, written directly (not through
@@ -134,6 +136,8 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
   useEffect(() => {
     if (contentRef.current) contentRef.current.scrollTop = 0;
     scrollTo(0, 0);
+    // Every screen change, including the first one after start, rises into place.
+    playEnter(mainRef.current);
   }, [path]);
 
   const onPointerDown = (e: PointerEvent) => {
@@ -217,7 +221,9 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
         <header class="topbar">
           <h1 class="topbar__title">{title}</h1>
         </header>
-        <main class="shell__main">{children}</main>
+        <main ref={mainRef} class="shell__main">
+          {children}
+        </main>
         {drawerMode && (
           <TabBar
             activeId={activeId}

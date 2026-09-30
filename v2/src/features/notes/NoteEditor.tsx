@@ -307,46 +307,48 @@ export function NoteEditor({ uid, id, notes, navigate }: NoteEditorProps) {
             onChange={setMode}
           />
 
-          {mode === 'edit' ? (
-            <TextAreaField
-              label={t('notes.contentLabel')}
-              value={draft.content}
-              onInput={(content) => set({ content })}
-              placeholder={t('notes.contentPh')}
-              error={contentError}
-              textareaRef={textarea}
-              rows={10}
-              toolbar={
-                <div class="notes-toolbar" role="toolbar" aria-label={t('notes.format')}>
-                  {FORMATS.map((kind) => (
-                    <button
-                      key={kind}
-                      type="button"
-                      class={`notes-toolbar__button notes-toolbar__button--${kind}`}
-                      // Keep the textarea's selection: a pressed button must not take the focus first.
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => format(kind)}
-                    >
-                      {t(`notes.formats.${kind}`)}
-                    </button>
-                  ))}
-                </div>
-              }
-            />
-          ) : (
-            <div class="notes-preview" aria-label={t('notes.modePreview')}>
-              {draft.content.trim() ? (
-                <Markdown text={draft.content} />
-              ) : (
-                <p class="notes-preview__empty">{t('notes.previewEmpty')}</p>
-              )}
-              {contentError && (
-                <p class="ui-field__error" role="alert">
-                  {contentError}
-                </p>
-              )}
-            </div>
-          )}
+          <div key={mode} class="notes-pane">
+            {mode === 'edit' ? (
+              <TextAreaField
+                label={t('notes.contentLabel')}
+                value={draft.content}
+                onInput={(content) => set({ content })}
+                placeholder={t('notes.contentPh')}
+                error={contentError}
+                textareaRef={textarea}
+                rows={10}
+                toolbar={
+                  <div class="notes-toolbar" role="toolbar" aria-label={t('notes.format')}>
+                    {FORMATS.map((kind) => (
+                      <button
+                        key={kind}
+                        type="button"
+                        class={`notes-toolbar__button notes-toolbar__button--${kind}`}
+                        // Keep the textarea's selection: a pressed button must not take the focus first.
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => format(kind)}
+                      >
+                        {t(`notes.formats.${kind}`)}
+                      </button>
+                    ))}
+                  </div>
+                }
+              />
+            ) : (
+              <div class="notes-preview" aria-label={t('notes.modePreview')}>
+                {draft.content.trim() ? (
+                  <Markdown text={draft.content} />
+                ) : (
+                  <p class="notes-preview__empty">{t('notes.previewEmpty')}</p>
+                )}
+                {contentError && (
+                  <p class="ui-field__error" role="alert">
+                    {contentError}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
           <Button type="submit" variant="primary" size="lg" block disabled={!dirty}>
             {t('notes.save')}

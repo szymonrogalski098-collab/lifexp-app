@@ -279,6 +279,11 @@
   outline-offset: 2px;
 }
 
+/* Edit ⇄ Preview: the new pane fades in instead of replacing the old one in one frame. */
+.notes-pane {
+  animation: ui-fade-in var(--duration-enter) var(--ease-out);
+}
+
 .notes-preview {
   min-height: 160px;
   padding: var(--space-3) var(--space-4);
