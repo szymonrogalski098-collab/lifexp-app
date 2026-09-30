@@ -71,7 +71,16 @@ export const FEATURES: readonly FeatureDef[] = [
     view: () => import('@/features/tasks/TasksPage'),
   },
   { id: 'goals', labelKey: 'nav.goals', icon: Target, paths: ['/goals'], nav: { group: 'main', order: 30 }, stage: '3d' },
-  { id: 'chores', labelKey: 'nav.chores', icon: ClipboardCheck, paths: ['/chores'], nav: { group: 'main', order: 40 }, tab: 2, stage: '3b' },
+  {
+    id: 'chores',
+    labelKey: 'nav.chores',
+    icon: ClipboardCheck,
+    paths: ['/chores', '/chores/new'],
+    nav: { group: 'main', order: 40 },
+    tab: 2,
+    stage: '3b',
+    view: () => import('@/features/chores/ChoresPage'),
+  },
   { id: 'money', labelKey: 'nav.money', icon: Wallet, paths: ['/money', '/money/loans'], nav: { group: 'main', order: 50 }, tab: 3, stage: '3c' },
   {
     id: 'notes',

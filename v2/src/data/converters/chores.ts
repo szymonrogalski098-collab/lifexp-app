@@ -3,7 +3,7 @@
 // definition).
 import type { DocumentData } from 'firebase/firestore';
 import type { ChoreDef, ChoreEntry } from '@/domain/chores';
-import { dayKeyOrNull, numberOr, stringOr } from './fields';
+import { dateOrNull, dayKeyOrNull, numberOr, stringOr } from './fields';
 
 export function choreDefFromData(id: string, data: DocumentData): ChoreDef {
   return {
@@ -27,5 +27,34 @@ export function choreEntryFromData(id: string, data: DocumentData): ChoreEntry |
     emoji: stringOr(data.choreEmoji),
     points: numberOr(data.points),
     dateISO,
+    // Every entry in production has it (INVENTORY.md); derived only as a fallback.
+    monthKey: typeof data.monthKey === 'string' && /^\d{4}-\d{2}$/.test(data.monthKey) ? data.monthKey : dateISO.slice(0, 7),
+    createdAt: dateOrNull(data.createdAt),
+  };
+}
+
+/** v1 addChore(): the definition is copied into the entry, so the entry outlives it. */
+export function newChoreEntryData(def: ChoreDef, dateISO: string, now: Date): DocumentData {
+  return {
+    choreId: def.id,
+    choreName: def.name,
+    choreEmoji: def.emoji || '',
+    points: def.points,
+    dateISO,
+    monthKey: dateISO.slice(0, 7),
+    createdAt: now,
+  };
+}
+
+/** Undo of a delete: the same entry back, as v1 wrote it. */
+export function choreEntryData(entry: ChoreEntry): DocumentData {
+  return {
+    choreId: entry.choreId,
+    choreName: entry.name,
+    choreEmoji: entry.emoji,
+    points: entry.points,
+    dateISO: entry.dateISO,
+    monthKey: entry.monthKey,
+    createdAt: entry.createdAt ?? new Date(),
   };
 }

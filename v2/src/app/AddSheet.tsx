@@ -18,7 +18,7 @@ interface AddItem {
 
 const ITEMS: readonly AddItem[] = [
   { icon: ListTodo, labelKey: 'add.task', stage: '3a', path: '/tasks/new' },
-  { icon: ClipboardCheck, labelKey: 'add.chore', stage: '3b' },
+  { icon: ClipboardCheck, labelKey: 'add.chore', stage: '3b', path: '/chores/new' },
   { icon: Wallet, labelKey: 'add.expense', stage: '3c' },
   { icon: NotebookPen, labelKey: 'add.note', stage: '3a', path: '/notes/new' },
 ];
