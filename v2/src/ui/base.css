@@ -56,7 +56,7 @@ button {
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 :focus-visible {

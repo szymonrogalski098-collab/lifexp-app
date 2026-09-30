@@ -3,7 +3,13 @@
 // and the IndexedDB cache on this origin (docs/v2/PLAN.md 3.2). SDK pinned to
 // 10.12.x until v1 is retired.
 import { initializeApp } from 'firebase/app';
-import { connectAuthEmulator, getAuth } from 'firebase/auth';
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  connectAuthEmulator,
+  indexedDBLocalPersistence,
+  initializeAuth,
+} from 'firebase/auth';
 import {
   connectFirestoreEmulator,
   initializeFirestore,
@@ -33,7 +39,13 @@ function sessionStorageOrNull(): Storage | null {
 const emulator = emulatorTarget(location.hostname, location.search, sessionStorageOrNull());
 
 export const app = initializeApp(emulator ? { ...FIREBASE_CONFIG, projectId: emulator.projectId } : FIREBASE_CONFIG);
-export const auth = getAuth(app);
+// getAuth() without its popup/redirect helper: that helper loads Google's gapi
+// script and an iframe at every start. The persistence list is getAuth()'s own,
+// so the session stored by v1 is read as before; data/auth.ts passes the helper
+// to the one call that needs it (Google sign-in).
+export const auth = initializeAuth(app, {
+  persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+});
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager({}) }),
 });

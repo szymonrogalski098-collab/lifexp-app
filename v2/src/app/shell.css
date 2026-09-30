@@ -188,7 +188,7 @@
 }
 
 .tabbar__item[aria-current='page'] {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .tabbar__icon {
@@ -315,7 +315,7 @@
 }
 
 .nav__link[aria-current='page'] .nav__icon {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .nav__label {
@@ -365,7 +365,7 @@
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: var(--font-weight-semibold);
 }
 

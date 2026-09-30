@@ -1,5 +1,6 @@
 // Firebase Auth for v2: the same accounts and the same signed-in session as v1.
 import {
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -24,7 +25,8 @@ export async function signInWithEmail(email: string, password: string): Promise<
 
 /** Popup, as in v1. The profile document is created by v1 if it does not exist yet. */
 export async function signInWithGoogle(): Promise<void> {
-  await signInWithPopup(auth, new GoogleAuthProvider());
+  // The popup helper is loaded here, not at start (see firebase.ts).
+  await signInWithPopup(auth, new GoogleAuthProvider(), browserPopupRedirectResolver);
 }
 
 export function signOutUser(): Promise<void> {
