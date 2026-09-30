@@ -206,6 +206,10 @@
   font-size: var(--font-size-xs);
 }
 
+.chores-unpaid__action {
+  margin-top: var(--space-4);
+}
+
 .chores-unpaid__value {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);

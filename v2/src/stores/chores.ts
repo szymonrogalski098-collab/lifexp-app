@@ -1,16 +1,17 @@
-// Chore definitions and unpaid entries, live (stage 3b). The Chores screen starts
+// Chore definitions, unpaid entries and past payouts, live (stage 3b). The Chores screen starts
 // the listeners when it mounts and stops them when it leaves.
 import { signal } from '@preact/signals';
-import type { ChoreDef, ChoreEntry } from '@/domain/chores';
+import type { ChoreDef, ChoreEntry, ChorePayout } from '@/domain/chores';
 
 /** undefined = still loading. */
 export interface ChoresState {
   defs: readonly ChoreDef[] | undefined;
   entries: readonly ChoreEntry[] | undefined;
+  payouts: readonly ChorePayout[] | undefined;
   failed: boolean;
 }
 
-const EMPTY: ChoresState = { defs: undefined, entries: undefined, failed: false };
+const EMPTY: ChoresState = { defs: undefined, entries: undefined, payouts: undefined, failed: false };
 
 export const chores = signal<ChoresState>(EMPTY);
 
@@ -22,12 +23,13 @@ export function watchChores(uid: string): () => void {
     if (!stopped) chores.value = { ...chores.value, ...patch };
   };
   const fail = () => set({ failed: true });
-  void import('@/data/repos/today')
-    .then((repo) => {
+  void Promise.all([import('@/data/repos/today'), import('@/data/repos/chores')])
+    .then(([todayRepo, choresRepo]) => {
       if (stopped) return;
       stops.push(
-        repo.watchChoreDefs(uid, (defs) => set({ defs }), fail),
-        repo.watchChoreEntries(uid, (entries) => set({ entries }), fail),
+        todayRepo.watchChoreDefs(uid, (defs) => set({ defs }), fail),
+        todayRepo.watchChoreEntries(uid, (entries) => set({ entries }), fail),
+        choresRepo.watchChorePayouts(uid, (payouts) => set({ payouts }), fail),
       );
     })
     .catch(fail);

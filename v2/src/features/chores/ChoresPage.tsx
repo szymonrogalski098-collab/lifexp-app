@@ -1,7 +1,7 @@
 // Chores (docs/v2/PLAN.md 9, stage 3b; GOLDEN G8): what this or last month earned,
-// the month's calendar with each day's entries, what is left to pay out, and
-// logging a chore from the list. Entries keep v1's shape, so both versions show
-// the same calendar. Paying out comes with the next part of stage 3b.
+// the month's calendar with each day's entries, what is left to pay out (and paying
+// it into Money), the payout history, and logging a chore from the list. Documents
+// keep v1's shape, so both versions show the same calendar and history.
 import { Plus } from 'lucide-preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
@@ -12,21 +12,23 @@ import {
   monthEarnings,
   monthKeyOf,
   monthKeys,
+  payoutHistory,
   unpaidChores,
   type ChoreDef,
   type ChoreEntry,
 } from '@/domain/chores';
 import { formatInteger } from '@/lib/format';
 import { locale, t } from '@/i18n';
-import { addDays, formatDayMonth, formatMonthKey, localDayKey } from '@/lib/dates';
+import { addDays, formatDayMonth, formatMonthKey, formatShortDate, localDayKey } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import type { RouteProps } from '@/lib/route-match';
-import { deleteChoreEntry, logChore } from '@/services/chores';
+import { deleteChoreEntry, logChore, settleChores } from '@/services/chores';
 import { chores as choresState, watchChores } from '@/stores/chores';
 import { account } from '@/stores/session';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
 import { Button } from '@/ui/components/Button';
-import { Skeleton } from '@/ui/components/Display';
+import { ConfirmDialog } from '@/ui/components/ConfirmDialog';
+import { EmptyState, List, ListRow, Skeleton } from '@/ui/components/Display';
 import { SegmentedControl } from '@/ui/components/Fields';
 import { Card, Page, Section, Stack } from '@/ui/components/Layout';
 import { ChoreCalendar } from './ChoreCalendar';
@@ -66,9 +68,11 @@ export default function ChoresPage({ path, navigate }: RouteProps) {
   const [month, setMonth] = useState<Month>('current');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [sheet, setSheet] = useState({ open: false, key: 0 });
+  const [confirming, setConfirming] = useState(false);
+  const [settling, setSettling] = useState(false);
   const lastToast = useRef<number | null>(null);
 
-  const { defs, entries, failed } = choresState.value;
+  const { defs, entries, payouts, failed } = choresState.value;
   const today = localDayKey(new Date());
   const yesterday = addDays(today, -1);
   const months = monthKeys(today);
@@ -109,6 +113,18 @@ export default function ChoresPage({ path, navigate }: RouteProps) {
       message: t('chores.deleted'),
       action: { label: t('ui.undo'), onAction: () => void undo().catch(saveFailed) },
     });
+  };
+
+  const settle = () => {
+    if (!entries) return;
+    setConfirming(false);
+    setSettling(true);
+    settleChores(uid, entries, rate, t('chores.incomeCategory'))
+      .then((paid) => {
+        if (paid) notify({ message: t('chores.settled', { amount: formatMoney(paid.grosze, lang) }), tone: 'positive' });
+      })
+      .catch(() => notify({ message: t('chores.settleFailed'), tone: 'negative' }))
+      .finally(() => setSettling(false));
   };
 
   if (!defs || !entries) {
@@ -207,8 +223,59 @@ export default function ChoresPage({ path, navigate }: RouteProps) {
               })}
             </p>
           </div>
+          <div class="chores-unpaid__action">
+            <Button
+              variant="primary"
+              block
+              busy={settling}
+              disabled={unpaid.points === 0 || settling}
+              onClick={() => setConfirming(true)}
+            >
+              {t('chores.settle')}
+            </Button>
+          </div>
         </Card>
+
+        <Section title={t('chores.history')}>
+          <Card padding="none">
+            {!payouts ? (
+              <Skeleton lines={2} />
+            ) : payouts.length === 0 ? (
+              <EmptyState title={t('chores.noPayouts')} />
+            ) : (
+              <List label={t('chores.history')}>
+                {payoutHistory(payouts).map((p) => (
+                  <ListRow
+                    key={p.id}
+                    title={formatMoney(p.grosze, lang)}
+                    meta={[
+                      p.createdAt ? formatShortDate(p.createdAt, lang) : '',
+                      p.fromISO && p.toISO
+                        ? t('chores.payoutPeriod', {
+                            from: formatDayMonth(p.fromISO, lang),
+                            to: formatDayMonth(p.toISO, lang),
+                          })
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                    value={t('units.points', { points: formatInteger(p.points, lang) })}
+                  />
+                ))}
+              </List>
+            )}
+          </Card>
+        </Section>
       </Stack>
+
+      <ConfirmDialog
+        open={confirming}
+        title={t('chores.settleTitle', { amount: formatMoney(unpaid.grosze, lang) })}
+        body={t('chores.settleBody', { points: formatInteger(unpaid.points, lang) })}
+        confirmLabel={t('chores.settle')}
+        onConfirm={settle}
+        onCancel={() => setConfirming(false)}
+      />
 
       {sheet.key > 0 && (
         <LogChoreSheet

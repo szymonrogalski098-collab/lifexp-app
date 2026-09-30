@@ -149,3 +149,41 @@ export function entryDay(
   const sameMonth = monthKeyOf(today) === monthKeyOf(yesterday);
   return has(today) && sameMonth && !has(yesterday) ? 'ask' : 'today';
 }
+
+// ── Payout (stage 3b-2; G8.5–G8.7) ──
+
+/** users/{uid}/chorePayouts/{id}: one settlement, kept for the history. */
+export interface ChorePayout {
+  id: string;
+  points: number;
+  /** v1 amountPln, in grosze. */
+  grosze: number;
+  /** First and last local day of the entries it paid. */
+  fromISO: string | null;
+  toISO: string | null;
+  createdAt: Date | null;
+}
+
+export interface PayoutPlan {
+  points: number;
+  grosze: number;
+  fromISO: string;
+  toISO: string;
+}
+
+/**
+ * v1 settleChores(): every unpaid entry, at the CURRENT rate (G8.7), rounded to
+ * grosze; the period runs from the earliest to the latest entry day. Nothing to
+ * pay → null (v1 does nothing then).
+ */
+export function payoutPlan(entries: readonly ChoreEntry[], rate: number): PayoutPlan | null {
+  const { points, grosze } = unpaidChores(entries, rate);
+  if (points === 0 || entries.length === 0) return null;
+  const days = entries.map((e) => e.dateISO).sort();
+  return { points, grosze, fromISO: days[0] as string, toISO: days[days.length - 1] as string };
+}
+
+/** Newest first (v1 sorts by createdAt). */
+export function payoutHistory(payouts: readonly ChorePayout[]): ChorePayout[] {
+  return [...payouts].sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+}

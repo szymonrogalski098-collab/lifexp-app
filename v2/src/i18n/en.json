@@ -267,7 +267,16 @@
     "delete": "Delete",
     "deleteNamed": "Delete: {{name}}",
     "deleted": "Entry deleted.",
-    "loadFailed": "Could not load the chores. Check your connection."
+    "loadFailed": "Could not load the chores. Check your connection.",
+    "settle": "Pay out",
+    "settleTitle": "Pay out {{amount}}?",
+    "settleBody": "{{points}} pts. The entries move to the payout history and leave the calendar, and the amount goes to your Money balance.",
+    "settled": "Paid out {{amount}}",
+    "settleFailed": "The payout failed and nothing was changed. Check your connection and try again.",
+    "history": "Payout history",
+    "noPayouts": "No payouts yet.",
+    "payoutPeriod": "for {{from}}–{{to}}",
+    "incomeCategory": "Household chores"
   },
   "add": {
     "title": "Add",
