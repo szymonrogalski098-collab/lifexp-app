@@ -7,16 +7,16 @@ import { Button } from '@/ui/components/Button';
 import { EmptyState, Skeleton } from '@/ui/components/Display';
 import { Page } from '@/ui/components/Layout';
 
-type Loader = () => Promise<{ default: ComponentType }>;
-
-interface LazyViewProps {
-  load: Loader;
+interface LazyViewProps<P extends object> {
+  load: () => Promise<{ default: ComponentType<P> }>;
+  /** Passed to the screen, e.g. the route; a change re-renders it without reloading. */
+  props: P;
   /** Shown while the chunk arrives; a skeleton page by default. */
   fallback?: ComponentChildren;
 }
 
-export function LazyView({ load, fallback }: LazyViewProps) {
-  const [View, setView] = useState<ComponentType | null>(null);
+export function LazyView<P extends object>({ load, props, fallback }: LazyViewProps<P>) {
+  const [View, setView] = useState<ComponentType<P> | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
@@ -32,7 +32,7 @@ export function LazyView({ load, fallback }: LazyViewProps) {
     };
   }, [load, attempt]);
 
-  if (View) return <View />;
+  if (View) return <View {...props} />;
   if (!failed && fallback) return <>{fallback}</>;
   return (
     <Page>

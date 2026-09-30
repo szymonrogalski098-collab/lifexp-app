@@ -31,7 +31,7 @@ function GateScreen({ gate }: { gate: Exclude<Gate, { kind: 'ready' }> }) {
     case 'boot':
       return <BootScreen />;
     case 'login':
-      return <LazyView load={loadLoginPage} fallback={<BootScreen />} />;
+      return <LazyView load={loadLoginPage} props={{}} fallback={<BootScreen />} />;
     case 'verify':
       return <GatePage kind="verify" email={gate.email} onSignOut={signOut} />;
     case 'finishSetup':
@@ -65,7 +65,11 @@ export function App() {
   const account = { name: gate.profile.name, email: gate.user.email };
   return (
     <AppShell title={title} activeId={route.feature.id} path={path} account={account} onSignOut={signOut}>
-      {route.feature.view ? <LazyView load={route.feature.view} /> : <ComingSoonPage feature={route.feature} />}
+      {route.feature.view ? (
+        <LazyView load={route.feature.view} props={{ path, params: route.params }} />
+      ) : (
+        <ComingSoonPage feature={route.feature} />
+      )}
     </AppShell>
   );
 }

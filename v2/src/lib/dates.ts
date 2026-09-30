@@ -38,6 +38,18 @@ export function formatWeekdayShort(key: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' }).format(keyToUtcDate(key));
 }
 
+/** "wtorek" / "Tuesday" for a day key, independent of the device's time zone. */
+export function formatWeekdayLong(key: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' }).format(keyToUtcDate(key));
+}
+
+/** "wtorek, 29 września" for a day key, independent of the device's time zone. */
+export function formatDayKey(key: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(
+    keyToUtcDate(key),
+  );
+}
+
 /** "wtorek, 29 września" for the device's current day. */
 export function formatLongDate(date: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(date);

@@ -149,3 +149,13 @@ export function Skeleton({ lines = 3 }: { lines?: number }) {
     </div>
   );
 }
+
+/**
+ * A translated sentence whose `<b>…</b>` part is emphasised (v1's facts put the key
+ * number in bold). Only text nodes and <strong> come out — never markup from the
+ * string — so interpolated user text cannot inject anything.
+ */
+export function EmphasisText({ text }: { text: string }) {
+  const parts = text.split(/<b>(.*?)<\/b>/s);
+  return <>{parts.map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : part))}</>;
+}
