@@ -44,7 +44,8 @@
 }
 
 .ui-field__textarea {
-  min-height: 160px;
+  /* At least `rows` lines; it grows with the text (field-sizing) up to most of the screen. */
+  min-height: calc(var(--rows, 6) * 1.5em + 2 * var(--space-3));
   max-height: 70dvh;
   padding: var(--space-3) var(--space-4);
   line-height: 1.5;

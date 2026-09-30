@@ -76,7 +76,8 @@ ui (design system) i i18n nie znają domeny ani danych
 - Zapis nie czeka na serwer: serwis zwraca wynik od razu i `saved` (Promise); ekran idzie dalej, a odrzucone `saved`
   zgłasza toastem. Offline zapisy kolejkuje Firestore, a nasłuch pokazuje je od razu.
 - Ruch (decyzja właściciela: wszystkie animacje płynne): każda zmiana stanu przechodzi płynnie, nic nie przeskakuje.
-  Animuj tylko `transform` i `opacity`, czasy i krzywe wyłącznie z tokenów (`--duration-enter/exit`, `--ease-out/in`);
+  Ruch (przesunięcie, pojawienie się, wzrost) tylko przez `transform` i `opacity`; kolor przy hover/press może
+  przechodzić `transition`. Czasy i krzywe wyłącznie z tokenów (`--duration-enter/exit`, `--ease-out/in`);
   wejście zwalnia do miejsca, wyjście jest krótsze. `prefers-reduced-motion` = 0 ms (tokeny robią to same). Czego nie
   zrobi CSS, to `ui/motion.ts` (`playEnter`, `cssDurationMs`). Test: `tests/v2/motion.spec.js`.
 - Wykresy: `ui/components/BarChart` (jedna seria, jedna oś od zera, każda wartość także w tekście). Dwie miary

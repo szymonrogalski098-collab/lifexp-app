@@ -32,6 +32,7 @@ describe('profile converter', () => {
       rateGeneral: { zloty: 2, points: 10 },
       rateChores: { zloty: 0.5, points: 1 },
       streakFreezeLastUsed: '2026-09-20',
+      pcBuild: null,
     });
   });
 
@@ -80,6 +81,7 @@ describe('profile converter', () => {
       rateGeneral: { zloty: null, points: null },
       rateChores: { zloty: null, points: null },
       streakFreezeLastUsed: null,
+      pcBuild: null,
     });
   });
 });

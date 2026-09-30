@@ -316,7 +316,7 @@ export function NoteEditor({ uid, id, notes, navigate }: NoteEditorProps) {
                 placeholder={t('notes.contentPh')}
                 error={contentError}
                 textareaRef={textarea}
-                rows={10}
+                rows={8}
                 toolbar={
                   <div class="notes-toolbar" role="toolbar" aria-label={t('notes.format')}>
                     {FORMATS.map((kind) => (

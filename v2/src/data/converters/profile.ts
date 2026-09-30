@@ -4,6 +4,7 @@
 // (PLAN.md 5.1).
 import type { DocumentData } from 'firebase/firestore';
 import type { Profile } from '@/domain/profile';
+import { pcBuildOrNull } from '@/domain/tasks';
 import { dayKeyOrNull, numberOr, numberOrNull } from './fields';
 
 /** v1's name for a profile without one (index.html, core.js). */
@@ -33,5 +34,6 @@ export function profileFromData(data: DocumentData): Profile {
     rateGeneral: { zloty: numberOrNull(data.pointsRateGeneralZl), points: numberOrNull(data.pointsRateGeneralPts) },
     rateChores: { zloty: numberOrNull(data.pointsRateChoresZl), points: numberOrNull(data.pointsRateChoresPts) },
     streakFreezeLastUsed: dayKeyOrNull(data.streakFreezeLastUsed),
+    pcBuild: pcBuildOrNull(data.pcBuild),
   };
 }
