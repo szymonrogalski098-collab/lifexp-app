@@ -258,3 +258,42 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── Chores today: the reference's duty list ── */
+
+.today-chore__emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.today-check {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-on-accent);
+}
+
+.today-check svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 3;
+}
+
+.today-check--done {
+  border-color: transparent;
+  background: var(--color-accent);
+}
+
+.today-chores__unpaid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-separator);
+  font-weight: var(--font-weight-semibold);
+}

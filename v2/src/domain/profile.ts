@@ -29,6 +29,8 @@ export interface Profile {
   dailyLimit: number | null;
   /** Złoty and points of the general rate; v1 uses them only when both are set. */
   rateGeneral: { zloty: number | null; points: number | null };
+  /** The same for chores (v1 rateChores). */
+  rateChores: { zloty: number | null; points: number | null };
   /** UTC day key of the last streak freeze, if any (G3). */
   streakFreezeLastUsed: string | null;
 }

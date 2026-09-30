@@ -15,6 +15,7 @@ const ready: Profile = {
   points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
   dailyLimit: null,
   rateGeneral: { zloty: null, points: null },
+  rateChores: { zloty: null, points: null },
   streakFreezeLastUsed: null,
 };
 

@@ -55,13 +55,15 @@ interface ListRowProps {
   /** Right-hand value, e.g. an amount. */
   value?: string;
   valueTone?: Tone;
+  /** After the value, e.g. a done mark; decorative, the text says the same. */
+  trailing?: ComponentChildren;
   /** Makes the row a button (shows ›). */
   onClick?: () => void;
   /** Makes the row a link (shows ›). */
   href?: string;
 }
 
-export function ListRow({ leading, title, meta, value, valueTone = 'default', onClick, href }: ListRowProps) {
+export function ListRow({ leading, title, meta, value, valueTone = 'default', trailing, onClick, href }: ListRowProps) {
   const interactive = Boolean(onClick || href);
   const body = (
     <>
@@ -71,6 +73,7 @@ export function ListRow({ leading, title, meta, value, valueTone = 'default', on
         {meta && <span class="ui-list__meta user-text clamp-1">{meta}</span>}
       </span>
       {value && <span class={`ui-list__value numeric tone-${valueTone}`}>{value}</span>}
+      {trailing}
       {interactive && (
         <span class="ui-list__chevron" aria-hidden="true">
           ›

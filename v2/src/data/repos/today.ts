@@ -2,8 +2,10 @@
 // source; each returns its unsubscribe. Nothing here writes.
 import { collection, doc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import type { Activity, DayLog } from '@/domain/activity';
+import type { ChoreDef, ChoreEntry } from '@/domain/chores';
 import { groszeFromZloty } from '@/lib/money';
 import { activityDefName, activityFromData, dayLogFromData } from '../converters/activity';
+import { choreDefFromData, choreEntryFromData } from '../converters/chores';
 import { numberOr } from '../converters/fields';
 import { db } from '../firebase';
 
@@ -54,6 +56,24 @@ export function watchMoneyBalance(uid: string, onChange: (grosze: number | null)
   return onSnapshot(
     doc(db, 'users', uid, 'money', 'balance'),
     (snap) => onChange(snap.exists() ? groszeFromZloty(numberOr(snap.data().current)) : null),
+    onError,
+  );
+}
+
+/** users/{uid}/choreDefs in v1's order. v1 seeds them when empty; v2 does not. */
+export function watchChoreDefs(uid: string, onChange: (defs: ChoreDef[]) => void, onError: OnError) {
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'choreDefs'), orderBy('order', 'asc')),
+    (snap) => onChange(snap.docs.map((d) => choreDefFromData(d.id, d.data()))),
+    onError,
+  );
+}
+
+/** users/{uid}/chores: every unpaid entry (v1 deletes entries when it pays out). */
+export function watchChoreEntries(uid: string, onChange: (entries: ChoreEntry[]) => void, onError: OnError) {
+  return onSnapshot(
+    collection(db, 'users', uid, 'chores'),
+    (snap) => onChange(snap.docs.flatMap((d) => choreEntryFromData(d.id, d.data()) ?? [])),
     onError,
   );
 }

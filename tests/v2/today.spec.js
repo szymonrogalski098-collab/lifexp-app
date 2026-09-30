@@ -127,3 +127,76 @@ test('shortcuts follow the modules turned on in v1', async ({ page }) => {
   await expect(page.locator('.today-shortcut')).toHaveText(['Notatki']);
   await expect(page.locator('.today-shortcut')).toHaveAttribute('href', '#/notes');
 });
+
+/** v1 dateISOLocal(): chores use the local day (G8, G13). */
+function localDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Three definitions; the first logged twice today, the third yesterday, and a
+ * one-time chore (definition already gone) today: 45 unpaid points = 20,25 zł at
+ * v1's default chores rate.
+ */
+async function choresAccount() {
+  const account = await createUser({ tag: 'chores' });
+  const user = db.doc(`users/${account.uid}`);
+  const defs = [
+    ['vacuum', 'Odkurzanie', '🧹', 10],
+    ['dishes', 'Zmywarka', '🍽️', 15],
+    ['trash', 'Śmieci', '🗑️', 5],
+  ];
+  for (const [id, name, emoji, points] of defs) {
+    await user.collection('choreDefs').doc(id).set({ name, emoji, desc: '', points, oneTime: false, order: defs.findIndex((d) => d[0] === id) });
+  }
+  const entries = [
+    ['vacuum', 'Odkurzanie', '🧹', 10, 0],
+    ['vacuum', 'Odkurzanie', '🧹', 10, 0],
+    ['trash', 'Śmieci', '🗑️', 5, 1],
+    ['window_once', 'Mycie okien', '🪟', 20, 0],
+  ];
+  for (const [choreId, choreName, choreEmoji, points, ago] of entries) {
+    const dateISO = localDaysAgo(ago);
+    await user.collection('chores').add({ choreId, choreName, choreEmoji, points, dateISO, monthKey: dateISO.slice(0, 7), createdAt: new Date() });
+  }
+  return account;
+}
+
+test('chores today: v1 definitions marked when done today, and what is left to pay out', async ({ page }) => {
+  const account = await choresAccount();
+  const before = await snapshotAccount(account.uid);
+
+  await openSignedIn(page, account, '#/today');
+  const chores = page.getByRole('list', { name: 'Obowiązki dziś' }).getByRole('listitem');
+  await expect(chores).toHaveCount(4);
+  await expect(page.getByTestId('chores-progress')).toHaveText('2 z 4 dziś');
+  await expect(chores.nth(0)).toContainText('Odkurzanie');
+  await expect(chores.nth(0)).toContainText('Zrobione dziś ×2');
+  await expect(chores.nth(0)).toContainText('+10 pkt');
+  await expect(chores.nth(1)).toContainText('Zmywarka');
+  await expect(chores.nth(1)).not.toContainText('Zrobione');
+  // Done yesterday is not done today.
+  await expect(chores.nth(2)).not.toContainText('Zrobione');
+  // A one-time chore logged today stays on the list after its definition is gone.
+  await expect(chores.nth(3)).toContainText('Mycie okien');
+  await expect(chores.nth(3)).toContainText('Zrobione dziś');
+  expect(await text(page.getByTestId('chores-unpaid'))).toBe('45 pkt · 20,25 zł');
+
+  await page.waitForTimeout(500);
+  expect(await snapshotAccount(account.uid)).toEqual(before);
+});
+
+test.describe('v1 on a desktop', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('v1 shows the same amount to pay out', async ({ page, context }) => {
+    const account = await choresAccount();
+    await serveCdnFromNpm(context);
+    await signInToApp(page, account);
+    await page.click('.sidebar .nav-item[data-page="chores"]');
+    await expect(page.locator('#chore-outstanding-pts')).toHaveText('45');
+    await expect(page.locator('#chore-outstanding')).toHaveText('20,25 zł');
+  });
+});

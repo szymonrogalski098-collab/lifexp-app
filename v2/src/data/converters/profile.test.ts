@@ -15,6 +15,8 @@ describe('profile converter', () => {
         dailyLimit: 120,
         pointsRateGeneralZl: 2,
         pointsRateGeneralPts: 10,
+        pointsRateChoresZl: 0.5,
+        pointsRateChoresPts: 1,
         streakFreezeLastUsed: '2026-09-20',
       }),
     ).toEqual({
@@ -28,6 +30,7 @@ describe('profile converter', () => {
       points: { total: 1234, earnedAllTime: 620, spentAllTime: 50 },
       dailyLimit: 120,
       rateGeneral: { zloty: 2, points: 10 },
+      rateChores: { zloty: 0.5, points: 1 },
       streakFreezeLastUsed: '2026-09-20',
     });
   });
@@ -75,6 +78,7 @@ describe('profile converter', () => {
       points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
       dailyLimit: null,
       rateGeneral: { zloty: null, points: null },
+      rateChores: { zloty: null, points: null },
       streakFreezeLastUsed: null,
     });
   });

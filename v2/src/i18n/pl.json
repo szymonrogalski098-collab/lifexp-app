@@ -65,6 +65,13 @@
     "noRecent": "Brak aktywności. Zacznij zarabiać punkty!",
     "pointsGained": "+{{points}} pkt",
     "balance": "Saldo",
+    "chores": "Obowiązki dziś",
+    "choresProgress": "{{done}} z {{total}} dziś",
+    "choreDone": "Zrobione dziś",
+    "choreDoneTimes": "Zrobione dziś ×{{count}}",
+    "choresUnpaid": "Do wypłaty",
+    "choresUnpaidValue": "{{points}} pkt · {{amount}}",
+    "noChores": "Brak obowiązków. Dodasz je w obecnej wersji LifeXP.",
     "loadFailed": "Nie udało się wczytać części danych. Sprawdź połączenie."
   },
   "add": {
