@@ -218,3 +218,22 @@ poprzedni = dziś − 13 … dziś − 7 (to ostatnie 7 dni, nie tydzień kalend
 e2e = `tests/v2/stats.spec.js` sprawdza v1 i v2 na tym samym koncie w emulatorze.
 v2: historia czyta stronę kursorem (`limit(16)` + `startAfter`) zamiast całej kolekcji (B16), licznik z
 `count()` na serwerze; usuwanie wpisu z historii przychodzi z etapem 3e.
+
+## G15. Notatki
+
+`notes.js:370-559`. Dokument `{title, content, icon, color, createdAt (ISO string), archived}`; lista
+`orderBy('createdAt', 'desc')`.
+
+| # | Sytuacja | Wynik | Status |
+|---|---|---|---|
+| G15.1 | tytuł pusty albo same spacje | brak zapisu, „Nadaj notatce tytuł.”; tytuł zapisywany po `trim()`, treść bez zmian | e2e |
+| G15.2 | treść > 1000 linii | brak zapisu, komunikat z liczbą linii | kod |
+| G15.3 | 30 aktywnych notatek | nowa notatka zablokowana; zarchiwizowane się nie liczą; przywrócenie z archiwum limitu nie sprawdza (kod) | e2e |
+| G15.4 | nowa notatka bez wybranej ikony / koloru | `icon: ""`, `color: ""`, `archived: false`, `createdAt` = ISO | e2e |
+| G15.5 | edycja | `updateDoc({title, content, icon, color})`; v2 nie edytuje ikony i nie zapisuje pola `icon`, więc zostaje stare | e2e |
+| G15.6 | archiwizacja / przywrócenie | jedno pole `archived` | e2e |
+| G15.7 | usunięcie | `deleteDoc` po potwierdzeniu; w archiwum „Usuń trwale” | e2e |
+| G15.8 | treść | Markdown (`breaks: true`) przez marked + DOMPurify; bez bibliotek — zwykły tekst | e2e |
+
+e2e = `tests/v2/notes.spec.js`: ten sam scenariusz w v1 i v2 daje ten sam dokument (bez id i `createdAt`),
+a v1 pokazuje notatkę zapisaną przez v2.

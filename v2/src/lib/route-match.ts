@@ -3,10 +3,16 @@
 
 export type RouteParams = Record<string, string>;
 
-/** What a module's screen gets from the router: the current path and its params. */
+export type Navigate = (path: string, options?: { replace?: boolean }) => void;
+
+/**
+ * What a module's screen gets from the router: the current path, its params and
+ * a way to move on (features cannot import the app layer, so it is passed in).
+ */
 export interface RouteProps {
   path: string;
   params: RouteParams;
+  navigate: Navigate;
 }
 
 /** "#/tasks?x=1" → "/tasks"; anything without a leading slash → "". */

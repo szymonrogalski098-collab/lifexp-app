@@ -229,7 +229,15 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
           />
         )}
       </div>
-      <AddSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onPick={(target) => {
+          // Replace the sheet's history entry first, so closing it does not step Back.
+          navigate(target, { replace: true });
+          setAddOpen(false);
+        }}
+      />
 
       {modal && (
         <button type="button" class="shell__closer" tabIndex={-1} aria-label={t('nav.closeMenu')} {...gestureHandlers} />

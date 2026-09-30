@@ -1,0 +1,199 @@
+/* Notes (stage 3a). */
+
+.notes-error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-negative) 12%, transparent);
+  color: var(--color-negative);
+  font-weight: var(--font-weight-medium);
+}
+
+.notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.notes-count {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.notes-head .ui-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The note's saved colour: its only visual identity (PLAN.md 7.1). */
+.notes-mark {
+  flex-shrink: 0;
+  width: 6px;
+  height: 36px;
+  border-radius: 3px;
+  background: var(--note-color);
+}
+
+/* ── One note ── */
+
+.notes-back {
+  display: flex;
+  margin: calc(-1 * var(--space-3)) 0 calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
+}
+
+.notes-editor__head {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+.notes-editor__head .notes-mark {
+  height: auto;
+  min-height: 32px;
+}
+
+.notes-editor__heading {
+  min-width: 0;
+}
+
+.notes-editor__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.notes-editor__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.notes-editor__badge {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.notes-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ── Colour: radios drawn as swatches, the chosen name in the legend ── */
+
+.notes-colors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.notes-colors__current {
+  color: var(--color-text);
+}
+
+.notes-colors__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.notes-colors__option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  cursor: pointer;
+}
+
+.notes-colors__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.notes-colors__swatch {
+  width: 28px;
+  height: 28px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--note-color);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.notes-colors__swatch--none {
+  background:
+    linear-gradient(135deg, transparent calc(50% - 1px), var(--color-text-tertiary) 50%, transparent calc(50% + 1px)),
+    var(--color-surface);
+}
+
+.notes-colors__input:checked + .notes-colors__swatch {
+  border-color: var(--color-surface);
+  box-shadow: 0 0 0 2px var(--color-text);
+}
+
+.notes-colors__input:focus-visible + .notes-colors__swatch {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+/* ── Markdown toolbar: text buttons (D9), scrolls sideways on a narrow screen ── */
+
+.notes-toolbar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.notes-toolbar__button {
+  flex-shrink: 0;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.notes-toolbar__button--bold {
+  font-weight: var(--font-weight-bold);
+}
+
+.notes-toolbar__button--italic {
+  font-style: italic;
+}
+
+.notes-toolbar__button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.notes-preview {
+  min-height: 160px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--field-radius);
+}
+
+.notes-preview__empty {
+  color: var(--color-text-tertiary);
+}
