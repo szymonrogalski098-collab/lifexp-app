@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { addDays, formatDayKey, formatWeekdayLong, formatWeekdayShort, localDayKey, utcDayKey, weekOf } from './dates';
+import { addDays, formatDayKey, formatDayMonth, formatMonthKey, formatWeekdayLong, formatWeekdayShort, localDayKey, utcDayKey, weekOf } from './dates';
 
 describe('day keys', () => {
   test('the UTC day is v1 todayStr: after 22:00 UTC it is already tomorrow in Poland, not in UTC', () => {
@@ -40,5 +40,13 @@ describe('day key labels', () => {
     expect(formatWeekdayLong('2026-09-30', 'pl-PL')).toBe('środa');
     expect(formatWeekdayLong('2026-09-30', 'en-GB')).toBe('Wednesday');
     expect(formatDayKey('2026-09-29', 'pl-PL')).toBe('wtorek, 29 września');
+  });
+});
+
+describe('day and month labels', () => {
+  test('the key\'s own calendar, whatever the time zone', () => {
+    expect(formatDayMonth('2026-09-29', 'pl-PL')).toBe('29 września');
+    expect(formatMonthKey('2026-09', 'pl-PL')).toBe('wrzesień 2026');
+    expect(formatMonthKey('2027-01', 'en-GB')).toBe('January 2027');
   });
 });

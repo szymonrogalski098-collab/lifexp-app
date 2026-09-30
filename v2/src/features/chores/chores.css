@@ -1,0 +1,226 @@
+/* Chores (stage 3b). */
+
+.chores-error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-negative) 12%, transparent);
+  color: var(--color-negative);
+  font-weight: var(--font-weight-medium);
+}
+
+.chores-emoji {
+  flex-shrink: 0;
+  width: 28px;
+  font-size: 20px;
+  line-height: 1;
+  text-align: center;
+}
+
+/* ── Month summary ── */
+
+.chores-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.chores-summary .ui-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chores-summary__label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.chores-summary__month {
+  display: inline-block;
+}
+
+.chores-summary__month::first-letter {
+  text-transform: uppercase;
+}
+
+.chores-summary__value {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.chores-summary__money {
+  color: var(--color-positive);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.chores-summary__rate {
+  margin-top: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+/* ── Calendar: Monday first, days with entries in the accent ── */
+
+.chores-cal__weekdays,
+.chores-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.chores-cal__weekdays {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+.chores-cal__grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chores-cal__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 2px 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chores-cal__day--today {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.chores-cal__day--has {
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.chores-cal__day--has:active {
+  transform: scale(0.94);
+}
+
+.chores-cal__day--has[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.chores-cal__day:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.chores-cal__num {
+  line-height: 1.1;
+}
+
+.chores-cal__pts {
+  color: var(--color-accent-text);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.chores-cal__day--has[aria-pressed='true'] .chores-cal__pts {
+  color: inherit;
+}
+
+.chores-cal__hint {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* ── The chosen day's entries ── */
+
+.chores-day {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-separator);
+  animation: ui-rise-in var(--duration-enter) var(--ease-out);
+}
+
+.chores-day__title {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.chores-day__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chores-day__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+}
+
+.chores-day__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.chores-day__points {
+  color: var(--color-positive);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ── To pay out ── */
+
+.chores-unpaid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.chores-unpaid__note {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.chores-unpaid__value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  text-align: right;
+}
+
+/* ── Sheet ── */
+
+.chores-sheet__hint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.chores-when__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}

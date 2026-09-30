@@ -24,6 +24,9 @@ export interface ChoreEntry {
   points: number;
   /** Local day "YYYY-MM-DD". */
   dateISO: string;
+  /** "YYYY-MM" of dateISO; v1 filters months by this field. */
+  monthKey: string;
+  createdAt: Date | null;
 }
 
 /** v1 rateChores(): złoty per point, 0,45 zł / 1 pkt unless both profile fields are set. */
@@ -77,4 +80,72 @@ export interface Unpaid {
 export function unpaidChores(entries: readonly ChoreEntry[], rate: number): Unpaid {
   const points = entries.reduce((sum, e) => sum + e.points, 0);
   return { points, grosze: Math.round(points * rate * 100) };
+}
+
+// ── The Chores screen (stage 3b): months, calendar, logging ──
+
+/** v1 monthKeyOf(): "2026-09-30" → "2026-09". */
+export function monthKeyOf(dateISO: string): string {
+  return dateISO.slice(0, 7);
+}
+
+/** v1 monthKeys(): this month and the one before, on this device's calendar. */
+export function monthKeys(today: string): { cur: string; prev: string } {
+  const [y, m] = today.split('-').map(Number) as [number, number];
+  const prevY = m === 1 ? y - 1 : y;
+  const prevM = m === 1 ? 12 : m - 1;
+  return { cur: monthKeyOf(today), prev: `${prevY}-${String(prevM).padStart(2, '0')}` };
+}
+
+export function entriesInMonth(entries: readonly ChoreEntry[], monthKey: string): ChoreEntry[] {
+  return entries.filter((e) => e.monthKey === monthKey);
+}
+
+/** Points and złoty earned in a month at the current rate (v1 renderChores summary). */
+export function monthEarnings(entries: readonly ChoreEntry[], monthKey: string, rate: number): Unpaid {
+  return unpaidChores(entriesInMonth(entries, monthKey), rate);
+}
+
+export interface CalendarMonth {
+  /** Empty cells before the 1st: Monday = 0 (v1 renderCalendar). */
+  leadingBlanks: number;
+  /** Every day of the month as "YYYY-MM-DD". */
+  days: string[];
+}
+
+export function calendarMonth(monthKey: string): CalendarMonth {
+  const [y, m] = monthKey.split('-').map(Number) as [number, number];
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const leadingBlanks = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+  const days = Array.from({ length: daysInMonth }, (_, i) => `${monthKey}-${String(i + 1).padStart(2, '0')}`);
+  return { leadingBlanks, days };
+}
+
+/** Points per day, for the days that have entries. */
+export function pointsByDay(entries: readonly ChoreEntry[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const e of entries) out.set(e.dateISO, (out.get(e.dateISO) ?? 0) + e.points);
+  return out;
+}
+
+/** One day's entries in the order they were logged (v1 renderDayDetail). */
+export function dayEntries(entries: readonly ChoreEntry[], day: string): ChoreEntry[] {
+  return entries
+    .filter((e) => e.dateISO === day)
+    .sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
+}
+
+/**
+ * v1 addChore() (G8.2, G8.3): log for today, unless the chore is already logged
+ * today, not yet yesterday, and yesterday is in the same month — then ask.
+ */
+export function entryDay(
+  choreId: string,
+  entries: readonly ChoreEntry[],
+  today: string,
+  yesterday: string,
+): 'today' | 'ask' {
+  const has = (day: string) => entries.some((e) => e.choreId === choreId && e.dateISO === day);
+  const sameMonth = monthKeyOf(today) === monthKeyOf(yesterday);
+  return has(today) && sameMonth && !has(yesterday) ? 'ask' : 'today';
 }

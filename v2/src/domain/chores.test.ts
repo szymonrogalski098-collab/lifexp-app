@@ -1,5 +1,17 @@
 import { describe, expect, test } from 'vitest';
-import { choresRate, todayChores, unpaidChores, type ChoreDef, type ChoreEntry } from './chores';
+import {
+  calendarMonth,
+  choresRate,
+  dayEntries,
+  entryDay,
+  monthEarnings,
+  monthKeys,
+  pointsByDay,
+  todayChores,
+  unpaidChores,
+  type ChoreDef,
+  type ChoreEntry,
+} from './chores';
 
 const TODAY = '2026-09-30';
 
@@ -20,6 +32,8 @@ const entry = (choreId: string, dateISO: string, points = 10): ChoreEntry => ({
   emoji: '🧽',
   points,
   dateISO,
+  monthKey: dateISO.slice(0, 7),
+  createdAt: new Date(`${dateISO}T10:00:00`),
 });
 
 describe('G8 payout amount (v1 renderOutstanding)', () => {
@@ -70,5 +84,57 @@ describe("today's chores", () => {
 
   test('an old entry of a deleted definition does not come back', () => {
     expect(todayChores([], [entry('gone', '2026-09-01')], TODAY)).toEqual([]);
+  });
+});
+
+describe('G8.2/G8.3 today or yesterday (v1 addChore)', () => {
+  const YESTERDAY = '2026-09-29';
+
+  test('first time today → today, no question', () => {
+    expect(entryDay('a', [], TODAY, YESTERDAY)).toBe('today');
+  });
+
+  test('G8.2: already today, not yet yesterday, same month → ask', () => {
+    expect(entryDay('a', [entry('a', TODAY)], TODAY, YESTERDAY)).toBe('ask');
+  });
+
+  test('already today and yesterday → today, no question', () => {
+    expect(entryDay('a', [entry('a', TODAY), entry('a', YESTERDAY)], TODAY, YESTERDAY)).toBe('today');
+  });
+
+  test('G8.3: yesterday was last month → today, no question', () => {
+    expect(entryDay('a', [entry('a', '2026-10-01')], '2026-10-01', '2026-09-30')).toBe('today');
+  });
+
+  test('another chore today does not count', () => {
+    expect(entryDay('a', [entry('b', TODAY)], TODAY, YESTERDAY)).toBe('today');
+  });
+});
+
+describe('months and calendar (v1 renderChores, renderCalendar)', () => {
+  test('this month and the one before, across a year', () => {
+    expect(monthKeys('2026-09-30')).toEqual({ cur: '2026-09', prev: '2026-08' });
+    expect(monthKeys('2027-01-15')).toEqual({ cur: '2027-01', prev: '2026-12' });
+  });
+
+  test('September 2026 starts on a Tuesday (one blank, Monday first) and has 30 days', () => {
+    const m = calendarMonth('2026-09');
+    expect(m.leadingBlanks).toBe(1);
+    expect(m.days).toHaveLength(30);
+    expect(m.days[0]).toBe('2026-09-01');
+    expect(calendarMonth('2028-02').days).toHaveLength(29);
+    expect(calendarMonth('2026-11').leadingBlanks).toBe(6); // a Sunday
+  });
+
+  test('month earnings count only that month, at the current rate', () => {
+    const entries = [entry('a', '2026-09-02', 10), entry('b', '2026-09-30', 20), entry('c', '2026-08-31', 40)];
+    expect(monthEarnings(entries, '2026-09', 0.45)).toEqual({ points: 30, grosze: 1350 });
+  });
+
+  test('points per day and a day in logging order', () => {
+    const first = { ...entry('a', TODAY, 5), createdAt: new Date('2026-09-30T08:00:00') };
+    const second = { ...entry('b', TODAY, 7), createdAt: new Date('2026-09-30T09:00:00') };
+    expect(pointsByDay([second, first, entry('c', '2026-09-01', 3)]).get(TODAY)).toBe(12);
+    expect(dayEntries([second, first], TODAY).map((e) => e.choreId)).toEqual(['a', 'b']);
   });
 });

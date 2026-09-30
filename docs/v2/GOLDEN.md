@@ -147,14 +147,19 @@ Daty wpisów lokalne (`dateISOLocal`), inaczej niż `dailyLog`.
 | # | Sytuacja | Wynik | Status |
 |---|---|---|---|
 | G8.1 | dodanie obowiązku | wpis `{choreId, choreName, choreEmoji, points, dateISO (lokalnie), monthKey, createdAt}` | kod |
-| G8.2 | ten sam obowiązek już dziś, wczoraj jeszcze nie, ten sam miesiąc | pytanie „dziś / wczoraj” | kod |
-| G8.3 | jak G8.2, ale wczoraj był poprzedni miesiąc | zapis na dziś bez pytania | kod |
-| G8.4 | obowiązek jednorazowy | definicja kasowana po dodaniu wpisu | kod |
+| G8.2 | ten sam obowiązek już dziś, wczoraj jeszcze nie, ten sam miesiąc | pytanie „dziś / wczoraj” | e2e |
+| G8.3 | jak G8.2, ale wczoraj był poprzedni miesiąc | zapis na dziś bez pytania | e2e |
+| G8.4 | obowiązek jednorazowy | definicja kasowana po dodaniu wpisu | e2e |
 | G8.5 | rozliczenie 10 + 30 pkt | payout `{points: 40, amountPln: 18, fromISO, toISO}`; wpisy skasowane; saldo +18; transakcja income 18 `source: 'chore_payout'`; moneyIncomeAllTime +18 | e2e |
 | G8.6 | rozliczenie 7 pkt | 3,15 zł | kod |
 | G8.7 | zmiana kursu przed rozliczeniem | rozliczenie liczone po **bieżącym** kursie dla wszystkich wpisów | kod |
 | G8.8 | kategoria transakcji z rozliczenia | tekst z i18n w języku ustawionym w chwili rozliczenia | kod |
 | G8.9 | offline | szkic z datą lokalną, bez pytania „wczoraj” | kod |
+
+v2 (etap 3b-1, `tests/v2/chores.spec.js`): ten sam wpis co v1 (bez id i `createdAt`), v1 pokazuje wpis z v2;
+G8.2 i G8.3 zależnie od dnia uruchomienia (1. dnia miesiąca wychodzi G8.3). Wpis i usunięcie jednorazowej
+definicji idą jednym batchem — v1 zapisuje je po kolei i połyka błąd kasowania definicji. Usunięcie wpisu
+z „Cofnij” przywraca ten sam dokument.
 
 Rozliczenie obejmuje wszystkie nierozliczone wpisy ze wszystkich miesięcy. Kasowanie wpisów połyka błędy
 (`chores.js:150-152`) — przy awarii w połowie możliwa niespójność (B3).

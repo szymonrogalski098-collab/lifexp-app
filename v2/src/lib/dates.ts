@@ -50,6 +50,18 @@ export function formatDayKey(key: string, locale: string): string {
   );
 }
 
+/** "29 września" for a day key, independent of the device's time zone. */
+export function formatDayMonth(key: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(keyToUtcDate(key));
+}
+
+/** "wrzesień 2026" for a month key "2026-09". */
+export function formatMonthKey(monthKey: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+    keyToUtcDate(`${monthKey}-01`),
+  );
+}
+
 /** "wtorek, 29 września" for the device's current day. */
 export function formatLongDate(date: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(date);
