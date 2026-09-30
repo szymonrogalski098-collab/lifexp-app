@@ -1,16 +1,21 @@
 import { describe, expect, test } from 'vitest';
 import {
+  CHORE_SEEDS,
   calendarMonth,
+  choreDefProblem,
   choresRate,
   dayEntries,
   entryDay,
   monthEarnings,
   monthKeys,
+  newChoreDef,
+  nextChoreOrder,
   payoutPlan,
   pointsByDay,
   todayChores,
   unpaidChores,
   type ChoreDef,
+  type ChoreDefDraft,
   type ChoreEntry,
 } from './chores';
 
@@ -19,6 +24,7 @@ const TODAY = '2026-09-30';
 const def = (id: string, order: number, points = 10): ChoreDef => ({
   id,
   name: id,
+  desc: '',
   emoji: '🧹',
   points,
   oneTime: false,
@@ -161,5 +167,56 @@ describe('G8.5–G8.7 payout plan (v1 settleChores)', () => {
   test('nothing to pay → no payout', () => {
     expect(payoutPlan([], 0.45)).toBeNull();
     expect(payoutPlan([entry('a', TODAY, 0)], 0.45)).toBeNull();
+  });
+});
+
+describe('definitions (v1 addChoreDef, ensureChoreDefsSeeded)', () => {
+  const draft = (patch: Partial<ChoreDefDraft> = {}): ChoreDefDraft => ({
+    name: 'Podlanie kwiatów',
+    desc: '',
+    emoji: '🪴',
+    points: 12,
+    oneTime: false,
+    ...patch,
+  });
+
+  test('a name and whole points above zero are required; the field stops at 10 000', () => {
+    expect(choreDefProblem(draft())).toBeNull();
+    expect(choreDefProblem(draft({ name: '   ' }))).toBe('nameRequired');
+    expect(choreDefProblem(draft({ points: null }))).toBe('pointsRequired');
+    expect(choreDefProblem(draft({ points: 0 }))).toBe('pointsRequired');
+    expect(choreDefProblem(draft({ points: 10000 }))).toBeNull();
+    expect(choreDefProblem(draft({ points: 10001 }))).toBe('pointsTooMany');
+  });
+
+  test('a new definition goes after the last one, trimmed, as v1 writes it', () => {
+    expect(nextChoreOrder([])).toBe(0);
+    expect(nextChoreOrder([def('a', 3), def('b', 7), def('c', 0)])).toBe(8);
+    expect(newChoreDef(draft({ name: '  Kwiaty ', desc: ' salon ', oneTime: true }), [def('a', 2)])).toEqual({
+      name: 'Kwiaty',
+      desc: 'salon',
+      emoji: '🪴',
+      points: 12,
+      oneTime: true,
+      order: 3,
+    });
+  });
+
+  test('only a preset emoji is kept', () => {
+    expect(newChoreDef(draft({ emoji: '' }), []).emoji).toBe('');
+    expect(newChoreDef(draft({ emoji: 'x' }), []).emoji).toBe('');
+  });
+
+  test("the seed is v1's list: 8 definitions under the old ids, in order", () => {
+    expect(CHORE_SEEDS.map((d) => [d.id, d.points, d.order])).toEqual([
+      ['entryway', 10, 0],
+      ['vacuum_stairs', 5, 1],
+      ['wash_stairs', 30, 2],
+      ['vacuum_ground', 40, 3],
+      ['room_quick', 30, 4],
+      ['room_deep', 60, 5],
+      ['trash_segregated', 40, 6],
+      ['dishwasher', 15, 7],
+    ]);
   });
 });

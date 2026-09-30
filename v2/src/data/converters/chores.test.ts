@@ -1,15 +1,20 @@
 import { describe, expect, test } from 'vitest';
-import { choreDefFromData, choreEntryFromData, newChoreEntryData } from './chores';
+import { choreDefData, choreDefFromData, choreEntryFromData, newChoreEntryData } from './chores';
 
 describe('chore converters', () => {
   test('a seeded definition as v1 writes it', () => {
     expect(
       choreDefFromData('room_deep', { name: 'Pokój (dokładnie)', emoji: '🧹', desc: '', points: 30, oneTime: false, order: 0 }),
-    ).toEqual({ id: 'room_deep', name: 'Pokój (dokładnie)', emoji: '🧹', points: 30, oneTime: false, order: 0 });
+    ).toEqual({ id: 'room_deep', name: 'Pokój (dokładnie)', desc: '', emoji: '🧹', points: 30, oneTime: false, order: 0 });
+  });
+
+  test('a definition is written back in the same shape, without its id', () => {
+    const data = { name: 'Kwiaty', desc: 'salon', emoji: '🪴', points: 12, oneTime: true, order: 8 };
+    expect(choreDefData(choreDefFromData('abc', data))).toEqual(data);
   });
 
   test('a definition missing fields gets v1-compatible defaults', () => {
-    expect(choreDefFromData('x', {})).toEqual({ id: 'x', name: 'x', emoji: '', points: 0, oneTime: false, order: 0 });
+    expect(choreDefFromData('x', {})).toEqual({ id: 'x', name: 'x', desc: '', emoji: '', points: 0, oneTime: false, order: 0 });
   });
 
   test('an entry keeps its own copy of the name and emoji', () => {
@@ -40,7 +45,7 @@ describe('chore converters', () => {
 
   test('a new entry is written in v1 addChore()\'s shape', () => {
     const now = new Date('2026-09-30T08:00:00Z');
-    const def = { id: 'dishwasher', name: 'Zmywarka', emoji: '🍽️', points: 15, oneTime: false, order: 7 };
+    const def = { id: 'dishwasher', name: 'Zmywarka', desc: '', emoji: '🍽️', points: 15, oneTime: false, order: 7 };
     expect(newChoreEntryData(def, '2026-09-29', now)).toEqual({
       choreId: 'dishwasher',
       choreName: 'Zmywarka',

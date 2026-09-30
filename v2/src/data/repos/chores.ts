@@ -1,12 +1,14 @@
 // Writes for users/{uid}/chores, choreDefs and chorePayouts (docs/v2/PLAN.md 9, stage
-// 3b; GOLDEN G8). Definitions and entries are read in repos/today.ts. Single-entry
+// 3b; GOLDEN G8). Definitions and entries are read in repos/today.ts. Single-document
 // writes resolve when the server has them; offline Firestore queues them and the
-// listeners show them at once. The payout is a transaction and needs the server.
+// listeners show them at once. The payout and the seed need the server.
 import {
   collection,
   deleteDoc,
   doc,
+  getDocsFromServer,
   increment,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -14,9 +16,22 @@ import {
   setDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { payoutPlan, type ChoreDef, type ChoreEntry, type ChorePayout, type PayoutPlan } from '@/domain/chores';
+import {
+  CHORE_SEEDS,
+  payoutPlan,
+  type ChoreDef,
+  type ChoreEntry,
+  type ChorePayout,
+  type PayoutPlan,
+} from '@/domain/chores';
 import { groszeFromZloty, zlotyFromGrosze } from '@/lib/money';
-import { choreEntryData, choreEntryFromData, chorePayoutFromData, newChoreEntryData } from '../converters/chores';
+import {
+  choreDefData,
+  choreEntryData,
+  choreEntryFromData,
+  chorePayoutFromData,
+  newChoreEntryData,
+} from '../converters/chores';
 import { numberOr } from '../converters/fields';
 import { db } from '../firebase';
 
@@ -44,6 +59,37 @@ export function removeChoreEntry(uid: string, id: string): Promise<void> {
 
 export function restoreChoreEntry(uid: string, entry: ChoreEntry): Promise<void> {
   return setDoc(doc(entriesOf(uid), entry.id), choreEntryData(entry));
+}
+
+/** v1 addChoreDef(): a new document under a generated id. */
+export function addChoreDef(uid: string, def: Omit<ChoreDef, 'id'>): { id: string; saved: Promise<void> } {
+  const ref = doc(defsOf(uid));
+  return { id: ref.id, saved: setDoc(ref, choreDefData(def)) };
+}
+
+/** v1 deleteChoreDef(): entries keep their own copy of the name, so they are left alone. */
+export function removeChoreDef(uid: string, id: string): Promise<void> {
+  return deleteDoc(doc(defsOf(uid), id));
+}
+
+export function restoreChoreDef(uid: string, def: ChoreDef): Promise<void> {
+  const { id, ...data } = def;
+  return setDoc(doc(defsOf(uid), id), choreDefData(data));
+}
+
+/**
+ * v1 ensureChoreDefsSeeded(): an account without a single definition gets v1's
+ * list. Asked of the server only — an empty cache offline says nothing about
+ * the account, so offline this rejects and seeds nothing. Resolves to whether
+ * it seeded.
+ */
+export async function seedChoreDefsIfEmpty(uid: string): Promise<boolean> {
+  const snap = await getDocsFromServer(query(defsOf(uid), limit(1)));
+  if (!snap.empty) return false;
+  const batch = writeBatch(db);
+  for (const { id, ...data } of CHORE_SEEDS) batch.set(doc(defsOf(uid), id), choreDefData(data));
+  await batch.commit();
+  return true;
 }
 
 /** users/{uid}/chorePayouts, newest first. */
