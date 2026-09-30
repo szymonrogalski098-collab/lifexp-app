@@ -65,6 +65,13 @@
     "noRecent": "No activities yet. Start earning points!",
     "pointsGained": "+{{points}} pts",
     "balance": "Balance",
+    "chores": "Chores today",
+    "choresProgress": "{{done}} of {{total}} today",
+    "choreDone": "Done today",
+    "choreDoneTimes": "Done today ×{{count}}",
+    "choresUnpaid": "To be paid out",
+    "choresUnpaidValue": "{{points}} pts · {{amount}}",
+    "noChores": "No chores yet. Add them in the current version of LifeXP.",
     "loadFailed": "Some data could not be loaded. Check your connection."
   },
   "add": {

@@ -31,6 +31,7 @@ export function profileFromData(data: DocumentData): Profile {
     // v1 reads `dailyLimit || DEFAULT`, so 0 means "default" too.
     dailyLimit: numberOrNull(data.dailyLimit) || null,
     rateGeneral: { zloty: numberOrNull(data.pointsRateGeneralZl), points: numberOrNull(data.pointsRateGeneralPts) },
+    rateChores: { zloty: numberOrNull(data.pointsRateChoresZl), points: numberOrNull(data.pointsRateChoresPts) },
     streakFreezeLastUsed: dayKeyOrNull(data.streakFreezeLastUsed),
   };
 }

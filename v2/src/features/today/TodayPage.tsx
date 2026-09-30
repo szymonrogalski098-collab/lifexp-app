@@ -2,14 +2,25 @@
 // only. Same numbers as v1's dashboard (docs/v2/GOLDEN.md G1-G3) in the owner's
 // reference layout: points hero, level, the week's streak, today's limit,
 // shortcuts and the latest activities. Nothing here writes.
-import { Check, Flame, Gamepad2, type LucideIcon, NotebookPen, Sparkles, Wallet, Zap } from 'lucide-preact';
+import {
+  Check,
+  ClipboardCheck,
+  Flame,
+  Gamepad2,
+  type LucideIcon,
+  NotebookPen,
+  Sparkles,
+  Wallet,
+  Zap,
+} from 'lucide-preact';
 import { useEffect } from 'preact/hooks';
 import { activeDays, activityName, type Activity, type DayLog } from '@/domain/activity';
+import { choresRate, todayChores, unpaidChores, type ChoreDef, type ChoreEntry } from '@/domain/chores';
 import type { Profile } from '@/domain/profile';
 import { dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
 import { calculateStreak, isFreezeAvailable } from '@/domain/streak';
 import { locale, t } from '@/i18n';
-import { formatLongDate, formatShortDate, formatWeekdayShort, utcDayKey, weekOf } from '@/lib/dates';
+import { formatLongDate, formatShortDate, formatWeekdayShort, localDayKey, utcDayKey, weekOf } from '@/lib/dates';
 import { formatInteger, splitMinutes } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { account } from '@/stores/session';
@@ -138,6 +149,71 @@ function TodayCard({ profile, day }: { profile: Profile; day: DayLog | undefined
   );
 }
 
+interface ChoresCardProps {
+  profile: Profile;
+  defs: readonly ChoreDef[];
+  entries: readonly ChoreEntry[];
+}
+
+/** The reference's "Today's duties": v1's chore definitions, marked when logged today (local day, G8). */
+function ChoresCard({ profile, defs, entries }: ChoresCardProps) {
+  const rows = todayChores(defs, entries, localDayKey(new Date()));
+  const unpaid = unpaidChores(entries, choresRate(profile.rateChores.zloty, profile.rateChores.points));
+  const done = rows.filter((row) => row.doneToday > 0).length;
+  return (
+    <Section
+      title={t('today.chores')}
+      action={
+        rows.length > 0 && (
+          <span class="today-card__meta" data-testid="chores-progress">
+            {t('today.choresProgress', { done, total: rows.length })}
+          </span>
+        )
+      }
+    >
+      <Card padding="none">
+        {rows.length === 0 ? (
+          <EmptyState title={t('today.noChores')} />
+        ) : (
+          <List label={t('today.chores')}>
+            {rows.map((row) => (
+              <ListRow
+                key={row.choreId}
+                leading={
+                  <IconTile>{row.emoji ? <span class="today-chore__emoji">{row.emoji}</span> : <ClipboardCheck />}</IconTile>
+                }
+                title={row.name}
+                meta={
+                  row.doneToday > 1
+                    ? t('today.choreDoneTimes', { count: row.doneToday })
+                    : row.doneToday === 1
+                      ? t('today.choreDone')
+                      : undefined
+                }
+                value={t('today.pointsGained', { points: row.points })}
+                trailing={
+                  <span class={`today-check${row.doneToday > 0 ? ' today-check--done' : ''}`} aria-hidden="true">
+                    {row.doneToday > 0 && <Check />}
+                  </span>
+                }
+              />
+            ))}
+          </List>
+        )}
+        <div class="today-chores__unpaid">
+          <span>{t('today.choresUnpaid')}</span>
+          <span class="numeric" data-testid="chores-unpaid">
+            {t('today.choresUnpaidValue', {
+              points: formatInteger(unpaid.points, locale()),
+              amount: formatMoney(unpaid.grosze, locale()),
+            })}
+          </span>
+        </div>
+      </Card>
+    </Section>
+  );
+}
+
 interface Shortcut {
   /** v1 module id in users.enabledModules. */
   module: string;
@@ -258,6 +334,15 @@ export default function TodayPage() {
             <Skeleton lines={4} />
           </Card>
         )}
+
+        {moduleOn(profile, 'chores') &&
+          (sources.choreDefs && sources.choreEntries ? (
+            <ChoresCard profile={profile} defs={sources.choreDefs} entries={sources.choreEntries} />
+          ) : (
+            <Card>
+              <Skeleton />
+            </Card>
+          ))}
 
         {moduleOn(profile, 'money') && typeof sources.balance === 'number' && <Balance grosze={sources.balance} />}
 

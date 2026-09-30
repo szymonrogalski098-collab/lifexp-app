@@ -3,6 +3,7 @@
 // its own, so the page shows what has arrived instead of waiting for everything.
 import { signal } from '@preact/signals';
 import type { Activity, DayLog } from '@/domain/activity';
+import type { ChoreDef, ChoreEntry } from '@/domain/chores';
 
 /** undefined = still loading. */
 export interface TodaySources {
@@ -11,6 +12,9 @@ export interface TodaySources {
   activityNames: ReadonlyMap<string, string> | undefined;
   /** Grosze; null = no money/balance document. */
   balance: number | null | undefined;
+  choreDefs: readonly ChoreDef[] | undefined;
+  /** Every unpaid chore entry. */
+  choreEntries: readonly ChoreEntry[] | undefined;
   failed: boolean;
 }
 
@@ -19,6 +23,8 @@ const EMPTY: TodaySources = {
   recent: undefined,
   activityNames: undefined,
   balance: undefined,
+  choreDefs: undefined,
+  choreEntries: undefined,
   failed: false,
 };
 
@@ -44,6 +50,8 @@ export function watchToday(uid: string): () => void {
         repo.watchRecentActivities(uid, RECENT_COUNT, (recent) => set({ recent }), fail),
         repo.watchActivityDefNames(uid, (activityNames) => set({ activityNames }), fail),
         repo.watchMoneyBalance(uid, (balance) => set({ balance }), fail),
+        repo.watchChoreDefs(uid, (choreDefs) => set({ choreDefs }), fail),
+        repo.watchChoreEntries(uid, (choreEntries) => set({ choreEntries }), fail),
       );
     })
     .catch(fail);
