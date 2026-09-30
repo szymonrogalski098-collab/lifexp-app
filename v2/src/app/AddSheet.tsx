@@ -1,5 +1,5 @@
-// What the tab bar's "+" opens (D10). v2 writes nothing until the modules land
-// (stage 3), so for now it lists what will be added here and hands over to v1.
+// What the tab bar's "+" opens (D10). Each kind of item moves here with its module
+// (stage 3); until then the row says when, and the footer hands over to v1.
 import { ClipboardCheck, ListTodo, type LucideIcon, NotebookPen, Wallet } from 'lucide-preact';
 import { t } from '@/i18n';
 import { ButtonLink } from '@/ui/components/ButtonLink';
@@ -12,16 +12,25 @@ interface AddItem {
   labelKey: 'add.task' | 'add.chore' | 'add.expense' | 'add.note';
   /** Stage of docs/v2/PLAN.md 9 that brings adding it in v2. */
   stage: string;
+  /** Where v2 adds it, once the module is here. */
+  path?: string;
 }
 
 const ITEMS: readonly AddItem[] = [
   { icon: ListTodo, labelKey: 'add.task', stage: '3a' },
   { icon: ClipboardCheck, labelKey: 'add.chore', stage: '3b' },
   { icon: Wallet, labelKey: 'add.expense', stage: '3c' },
-  { icon: NotebookPen, labelKey: 'add.note', stage: '3a' },
+  { icon: NotebookPen, labelKey: 'add.note', stage: '3a', path: '/notes/new' },
 ];
 
-export function AddSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+interface AddSheetProps {
+  open: boolean;
+  onClose: () => void;
+  /** Opens where an item is added; the sheet's history entry becomes that screen. */
+  onPick: (path: string) => void;
+}
+
+export function AddSheet({ open, onClose, onPick }: AddSheetProps) {
   return (
     <Sheet
       open={open}
@@ -36,7 +45,7 @@ export function AddSheet({ open, onClose }: { open: boolean; onClose: () => void
       <p class="add-sheet__intro">{t('add.intro')}</p>
       <Card padding="none">
         <List>
-          {ITEMS.map(({ icon: Icon, labelKey, stage }) => (
+          {ITEMS.map(({ icon: Icon, labelKey, stage, path }) => (
             <ListRow
               key={labelKey}
               leading={
@@ -45,7 +54,8 @@ export function AddSheet({ open, onClose }: { open: boolean; onClose: () => void
                 </IconTile>
               }
               title={t(labelKey)}
-              meta={t('add.comingIn', { stage })}
+              meta={path ? undefined : t('add.comingIn', { stage })}
+              onClick={path ? () => onPick(path) : undefined}
             />
           ))}
         </List>

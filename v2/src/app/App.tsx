@@ -66,7 +66,7 @@ export function App() {
   return (
     <AppShell title={title} activeId={route.feature.id} path={path} account={account} onSignOut={signOut}>
       {route.feature.view ? (
-        <LazyView load={route.feature.view} props={{ path, params: route.params }} />
+        <LazyView load={route.feature.view} props={{ path, params: route.params, navigate }} />
       ) : (
         <ComingSoonPage feature={route.feature} />
       )}

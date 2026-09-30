@@ -80,3 +80,19 @@ export function useModal(open: boolean, onClose: () => void) {
 
   return ref;
 }
+
+/**
+ * Runs `fn` once no modal history entry is on top: at once, or after the Back
+ * that a closing modal has just started. For a navigation that follows a
+ * confirmation (e.g. leave a deleted note), so it replaces the screen's entry
+ * and not the dialog's. Returns a cancel function.
+ */
+export function afterModalHistory(fn: () => void): () => void {
+  if (topEntryId() === null) {
+    fn();
+    return () => {};
+  }
+  const onPopState = () => fn();
+  addEventListener('popstate', onPopState, { once: true });
+  return () => removeEventListener('popstate', onPopState);
+}

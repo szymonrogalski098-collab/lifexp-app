@@ -1,7 +1,7 @@
 // Form fields (docs/v2/PLAN.md 7.5, U13). Each field owns its label, hint and
 // error, so forms stay a single column of these with no extra markup. All inputs
 // are ≥ 16 px (base.css), so iOS never zooms into them.
-import type { ComponentChildren } from 'preact';
+import type { ComponentChildren, Ref } from 'preact';
 import { useEffect, useId, useState } from 'preact/hooks';
 import { t } from '@/i18n';
 import { formatMoneyInput, parseMoneyInput } from '@/lib/money';
@@ -62,6 +62,42 @@ export function TextField({ label, value, onInput, type = 'text', hint, error, .
         id={id}
         class="ui-field__input"
         type={type}
+        value={value}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={described(id, hint, error)}
+        onInput={(e) => onInput(e.currentTarget.value)}
+      />
+    </FieldFrame>
+  );
+}
+
+interface TextAreaFieldProps {
+  label: string;
+  value: string;
+  onInput: (value: string) => void;
+  hint?: string;
+  error?: string | null;
+  placeholder?: string;
+  /** Visible lines before it scrolls; it grows with the text up to the screen (CSS). */
+  rows?: number;
+  /** Between the label and the field, e.g. a formatting toolbar. */
+  toolbar?: ComponentChildren;
+  /** For callers that edit the selection (the Markdown toolbar). */
+  textareaRef?: Ref<HTMLTextAreaElement>;
+}
+
+/** Multi-line text, e.g. a note. */
+export function TextAreaField({ label, value, onInput, hint, error, toolbar, textareaRef, rows = 8, ...rest }: TextAreaFieldProps) {
+  const id = useId();
+  return (
+    <FieldFrame id={id} label={label} hint={hint} error={error}>
+      {toolbar}
+      <textarea
+        {...rest}
+        ref={textareaRef}
+        id={id}
+        class="ui-field__input ui-field__textarea"
+        rows={rows}
         value={value}
         aria-invalid={error ? true : undefined}
         aria-describedby={described(id, hint, error)}

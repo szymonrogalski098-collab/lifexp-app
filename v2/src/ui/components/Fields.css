@@ -43,6 +43,15 @@
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
+.ui-field__textarea {
+  min-height: 160px;
+  max-height: 70dvh;
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.5;
+  resize: vertical;
+  field-sizing: content;
+}
+
 /* Inside a control frame the frame draws the border and focus ring. */
 .ui-field__control .ui-field__input {
   flex: 1;
