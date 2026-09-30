@@ -1,14 +1,30 @@
-// Writes for users/{uid}/chores and choreDefs (docs/v2/PLAN.md 9, stage 3b; GOLDEN G8).
-// Reads live in repos/today.ts (watchChoreDefs, watchChoreEntries). Writes resolve
-// when the server has them; offline Firestore queues them and the listeners show
-// them at once.
-import { collection, deleteDoc, doc, setDoc, writeBatch } from 'firebase/firestore';
-import type { ChoreDef, ChoreEntry } from '@/domain/chores';
-import { choreEntryData, newChoreEntryData } from '../converters/chores';
+// Writes for users/{uid}/chores, choreDefs and chorePayouts (docs/v2/PLAN.md 9, stage
+// 3b; GOLDEN G8). Definitions and entries are read in repos/today.ts. Single-entry
+// writes resolve when the server has them; offline Firestore queues them and the
+// listeners show them at once. The payout is a transaction and needs the server.
+import {
+  collection,
+  deleteDoc,
+  doc,
+  increment,
+  onSnapshot,
+  orderBy,
+  query,
+  runTransaction,
+  setDoc,
+  writeBatch,
+} from 'firebase/firestore';
+import { payoutPlan, type ChoreDef, type ChoreEntry, type ChorePayout, type PayoutPlan } from '@/domain/chores';
+import { groszeFromZloty, zlotyFromGrosze } from '@/lib/money';
+import { choreEntryData, choreEntryFromData, chorePayoutFromData, newChoreEntryData } from '../converters/chores';
+import { numberOr } from '../converters/fields';
 import { db } from '../firebase';
+
+type OnError = (error: unknown) => void;
 
 const entriesOf = (uid: string) => collection(db, 'users', uid, 'chores');
 const defsOf = (uid: string) => collection(db, 'users', uid, 'choreDefs');
+const payoutsOf = (uid: string) => collection(db, 'users', uid, 'chorePayouts');
 
 /**
  * v1 addChore(): the entry, and for a one-time chore the removal of its
@@ -28,4 +44,74 @@ export function removeChoreEntry(uid: string, id: string): Promise<void> {
 
 export function restoreChoreEntry(uid: string, entry: ChoreEntry): Promise<void> {
   return setDoc(doc(entriesOf(uid), entry.id), choreEntryData(entry));
+}
+
+/** users/{uid}/chorePayouts, newest first. */
+export function watchChorePayouts(uid: string, onChange: (payouts: ChorePayout[]) => void, onError: OnError) {
+  return onSnapshot(
+    query(payoutsOf(uid), orderBy('createdAt', 'desc')),
+    (snap) => onChange(snap.docs.map((d) => chorePayoutFromData(d.id, d.data()))),
+    onError,
+  );
+}
+
+export interface SettleInput {
+  /** The unpaid entries the person saw; each is read again inside the transaction. */
+  entryIds: readonly string[];
+  /** Złoty per point (choresRate), current at the time of paying (G8.7). */
+  rate: number;
+  /** Money category of the income, in the app's language (G8.8). */
+  category: string;
+  /** UTC day of the income (v1 todayStr()). */
+  day: string;
+  now: Date;
+}
+
+/**
+ * v1 settleChores() as one transaction: the payout record, every entry deleted,
+ * the balance, the income transaction and moneyIncomeAllTime change together or
+ * not at all. v1 writes them one by one (a failure half-way leaves entries paid
+ * but not deleted, or money without a record — B3), and reads the balance outside
+ * any transaction (B4). Entries another device already paid are skipped; entries
+ * logged meanwhile stay for the next payout. Resolves to what was paid, or null
+ * when nothing was left.
+ */
+export function settleChoreEntries(uid: string, input: SettleInput): Promise<PayoutPlan | null> {
+  return runTransaction(db, async (tx) => {
+    const balanceRef = doc(db, 'users', uid, 'money', 'balance');
+    const balance = await tx.get(balanceRef);
+    const snaps = [];
+    for (const id of input.entryIds) snaps.push(await tx.get(doc(entriesOf(uid), id)));
+    const entries = snaps.flatMap((s) => (s.exists() ? (choreEntryFromData(s.id, s.data()) ?? []) : []));
+    const plan = payoutPlan(entries, input.rate);
+    if (!plan) return null;
+
+    const amount = zlotyFromGrosze(plan.grosze);
+    tx.set(doc(payoutsOf(uid)), {
+      points: plan.points,
+      amountPln: amount,
+      fromISO: plan.fromISO,
+      toISO: plan.toISO,
+      createdAt: input.now,
+    });
+    for (const entry of entries) tx.delete(doc(entriesOf(uid), entry.id));
+    // v1 updateMoneyCurrent(): round2(current + amount), or a new document with just `current`.
+    if (balance.exists()) {
+      const current = groszeFromZloty(numberOr(balance.data().current));
+      tx.update(balanceRef, { current: zlotyFromGrosze(current + plan.grosze) });
+    } else {
+      tx.set(balanceRef, { current: amount });
+    }
+    tx.set(doc(collection(db, 'users', uid, 'moneyTransactions')), {
+      type: 'income',
+      amount,
+      category: input.category,
+      note: '',
+      date: input.day,
+      source: 'chore_payout',
+      createdAt: input.now,
+    });
+    tx.update(doc(db, 'users', uid), { moneyIncomeAllTime: increment(amount) });
+    return plan;
+  });
 }

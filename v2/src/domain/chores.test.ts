@@ -6,6 +6,7 @@ import {
   entryDay,
   monthEarnings,
   monthKeys,
+  payoutPlan,
   pointsByDay,
   todayChores,
   unpaidChores,
@@ -136,5 +137,29 @@ describe('months and calendar (v1 renderChores, renderCalendar)', () => {
     const second = { ...entry('b', TODAY, 7), createdAt: new Date('2026-09-30T09:00:00') };
     expect(pointsByDay([second, first, entry('c', '2026-09-01', 3)]).get(TODAY)).toBe(12);
     expect(dayEntries([second, first], TODAY).map((e) => e.choreId)).toEqual(['a', 'b']);
+  });
+});
+
+describe('G8.5–G8.7 payout plan (v1 settleChores)', () => {
+  test('G8.5: 10 + 30 points → 18,00 zł, the period from the first to the last day', () => {
+    expect(payoutPlan([entry('a', '2026-09-20', 10), entry('b', '2026-08-03', 30)], 0.45)).toEqual({
+      points: 40,
+      grosze: 1800,
+      fromISO: '2026-08-03',
+      toISO: '2026-09-20',
+    });
+  });
+
+  test('G8.6: 7 points → 3,15 zł', () => {
+    expect(payoutPlan([entry('a', TODAY, 7)], 0.45)?.grosze).toBe(315);
+  });
+
+  test('G8.7: the current rate applies to every entry', () => {
+    expect(payoutPlan([entry('a', '2026-01-01', 10), entry('b', TODAY, 10)], 1)?.grosze).toBe(2000);
+  });
+
+  test('nothing to pay → no payout', () => {
+    expect(payoutPlan([], 0.45)).toBeNull();
+    expect(payoutPlan([entry('a', TODAY, 0)], 0.45)).toBeNull();
   });
 });

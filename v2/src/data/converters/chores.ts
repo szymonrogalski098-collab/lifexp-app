@@ -2,7 +2,8 @@
 // definitions, all seeds, `desc` always ""; 14 entries, 2 pointing at a deleted
 // definition).
 import type { DocumentData } from 'firebase/firestore';
-import type { ChoreDef, ChoreEntry } from '@/domain/chores';
+import type { ChoreDef, ChoreEntry, ChorePayout } from '@/domain/chores';
+import { groszeFromZloty } from '@/lib/money';
 import { dateOrNull, dayKeyOrNull, numberOr, stringOr } from './fields';
 
 export function choreDefFromData(id: string, data: DocumentData): ChoreDef {
@@ -56,5 +57,17 @@ export function choreEntryData(entry: ChoreEntry): DocumentData {
     dateISO: entry.dateISO,
     monthKey: entry.monthKey,
     createdAt: entry.createdAt ?? new Date(),
+  };
+}
+
+/** chorePayouts (INVENTORY.md: 6, amountPln int or float złoty). */
+export function chorePayoutFromData(id: string, data: DocumentData): ChorePayout {
+  return {
+    id,
+    points: numberOr(data.points),
+    grosze: groszeFromZloty(numberOr(data.amountPln)),
+    fromISO: dayKeyOrNull(data.fromISO),
+    toISO: dayKeyOrNull(data.toISO),
+    createdAt: dateOrNull(data.createdAt),
   };
 }

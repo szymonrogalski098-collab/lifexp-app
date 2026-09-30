@@ -267,7 +267,16 @@
     "delete": "Usuń",
     "deleteNamed": "Usuń: {{name}}",
     "deleted": "Wpis usunięty.",
-    "loadFailed": "Nie udało się wczytać obowiązków. Sprawdź połączenie."
+    "loadFailed": "Nie udało się wczytać obowiązków. Sprawdź połączenie.",
+    "settle": "Rozlicz wypłatę",
+    "settleTitle": "Rozliczyć {{amount}}?",
+    "settleBody": "{{points}} pkt. Wpisy trafią do historii wypłat i znikną z kalendarza, a kwota wpłynie na saldo w Pieniądzach.",
+    "settled": "Rozliczono {{amount}}",
+    "settleFailed": "Rozliczenie się nie udało i nic nie zostało zmienione. Sprawdź połączenie i spróbuj ponownie.",
+    "history": "Historia wypłat",
+    "noPayouts": "Brak wypłat.",
+    "payoutPeriod": "za {{from}}–{{to}}",
+    "incomeCategory": "Obowiązki domowe"
   },
   "add": {
     "title": "Dodaj",

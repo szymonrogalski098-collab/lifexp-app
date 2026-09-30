@@ -164,6 +164,13 @@ z „Cofnij” przywraca ten sam dokument.
 Rozliczenie obejmuje wszystkie nierozliczone wpisy ze wszystkich miesięcy. Kasowanie wpisów połyka błędy
 (`chores.js:150-152`) — przy awarii w połowie możliwa niespójność (B3).
 
+v2 (etap 3b-2, `tests/v2/chores.spec.js`): G8.5 e2e — v1 i v2 rozliczają to samo konto do identycznego stanu
+(payout, wpisy, saldo, transakcja, `moneyIncomeAllTime`; bez id i `createdAt`). Rozliczenie to jedna transakcja:
+czyta saldo i każdy wpis, więc wpis usunięty w innej karcie nie zostanie wypłacony, a przerwane (offline) nie
+zmienia niczego — test sprawdza, że stan po nieudanej próbie jest identyczny jak przed nią, a kolejna próba
+przechodzi. v2 nie sprawdza osiągnięć przy rozliczeniu; v1 robi to przy każdym wejściu na dashboard, więc
+nadrabia je przy najbliższym otwarciu v1.
+
 ## G9. Zadania i budowa PC
 
 `notes.js:33-137`, `561-683`. Kolejność: `case`, `motherboard`, potem `gpu/cpu/psu/ram` w losowej kolejności

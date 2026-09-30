@@ -187,3 +187,104 @@ test('"+" → Obowiązek opens the list of chores', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Który obowiązek?' })).toBeVisible();
   await expect(page).toHaveURL(/#\/chores$/);
 });
+
+// ── Payout (stage 3b-2; G8.5–G8.8) ──
+
+/** Two unpaid entries (10 + 30 pts on two days), a 50,00 zł balance, nothing earned yet. */
+async function payoutAccount(tag) {
+  const account = await choresAccount(tag);
+  const user = db.doc(`users/${account.uid}`);
+  await user.collection('money').doc('balance').set({ current: 50, currency: 'PLN', monthlyLimit: 0 });
+  await entriesOf(account.uid).add({
+    choreId: 'x10', choreName: 'Dziesięć', choreEmoji: '🧹', points: 10, dateISO: localDay(0), monthKey: localDay(0).slice(0, 7), createdAt: new Date(),
+  });
+  await entriesOf(account.uid).add({
+    choreId: 'x30', choreName: 'Trzydzieści', choreEmoji: '🧽', points: 30, dateISO: localDay(-2), monthKey: localDay(-2).slice(0, 7), createdAt: new Date(),
+  });
+  return account;
+}
+
+/** Everything a payout touches, ids and creation times aside. */
+async function payoutState(uid) {
+  const user = db.doc(`users/${uid}`);
+  const strip = (docs) => docs.map((d) => {
+    const { createdAt, ...rest } = d.data();
+    return rest;
+  });
+  return {
+    payouts: strip((await user.collection('chorePayouts').get()).docs),
+    entries: (await entriesOf(uid).get()).size,
+    balance: (await user.collection('money').doc('balance').get()).data(),
+    transactions: strip((await user.collection('moneyTransactions').get()).docs),
+    moneyIncomeAllTime: (await user.get()).data().moneyIncomeAllTime ?? null,
+  };
+}
+
+const utcToday = () => new Date().toISOString().slice(0, 10);
+const paidState = () => ({
+  payouts: [{ points: 40, amountPln: 18, fromISO: localDay(-2), toISO: localDay(0) }],
+  entries: 0,
+  balance: { current: 68, currency: 'PLN', monthlyLimit: 0 },
+  transactions: [{ type: 'income', amount: 18, category: 'Obowiązki domowe', note: '', date: utcToday(), source: 'chore_payout' }],
+  moneyIncomeAllTime: 18,
+});
+
+async function settleInV2(page) {
+  await page.getByRole('button', { name: 'Rozlicz wypłatę' }).click();
+  const dialog = page.getByRole('alertdialog', { name: 'Rozliczyć 18,00 zł?' });
+  await expect(dialog).toContainText('40 pkt');
+  await dialog.getByRole('button', { name: 'Rozlicz wypłatę' }).click();
+}
+
+test('G8.5: paying out 10 + 30 pts moves 18,00 zł into Money in one go', async ({ page }) => {
+  const account = await payoutAccount('payout-v2');
+  await openSignedIn(page, account, '#/chores');
+  await expect(page.getByTestId('unpaid')).toHaveText('40 pkt · 18,00 zł');
+  await settleInV2(page);
+
+  await expect(page.getByText('Rozliczono 18,00 zł')).toBeVisible();
+  expect(await payoutState(account.uid)).toEqual(paidState());
+  await expect(page.getByTestId('unpaid')).toHaveText('0 pkt · 0,00 zł');
+  await expect(page.getByRole('button', { name: 'Rozlicz wypłatę' })).toBeDisabled();
+  const history = page.getByRole('list', { name: 'Historia wypłat' }).getByRole('listitem');
+  await expect(history).toHaveCount(1);
+  await expect(history.first()).toContainText('18,00 zł');
+  await expect(history.first()).toContainText('40 pkt');
+});
+
+test('a payout cut off by a lost connection changes nothing, and goes through afterwards', async ({ page, context }) => {
+  const account = await payoutAccount('payout-offline');
+  const before = await payoutState(account.uid);
+  await openSignedIn(page, account, '#/chores');
+  await expect(page.getByTestId('unpaid')).toHaveText('40 pkt · 18,00 zł');
+
+  await context.setOffline(true);
+  await settleInV2(page);
+  await expect(page.getByText('Rozliczenie się nie udało i nic nie zostało zmienione.', { exact: false })).toBeVisible({
+    timeout: 30000,
+  });
+  await context.setOffline(false);
+  // Nothing half-done: no record without deletions, no money without a record.
+  expect(await payoutState(account.uid)).toEqual(before);
+
+  await settleInV2(page);
+  await expect(page.getByText('Rozliczono 18,00 zł')).toBeVisible();
+  expect(await payoutState(account.uid)).toEqual(paidState());
+});
+
+test.describe('v1 on a desktop: payout', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('parity: v1 pays out the same account to the same state (achievements aside)', async ({ page, context }) => {
+    const account = await payoutAccount('payout-v1');
+    await serveCdnFromNpm(context);
+    await signInToApp(page, account);
+    await page.click('.sidebar .nav-item[data-page="chores"]');
+    await expect(page.locator('#chore-outstanding')).toHaveText('18,00 zł');
+    await page.click('#chore-settle-btn');
+    await page.click('#confirm-modal-ok');
+    await expect.poll(async () => (await payoutState(account.uid)).transactions.length).toBe(1);
+    await expect.poll(async () => (await payoutState(account.uid)).moneyIncomeAllTime).toBe(18);
+    expect(await payoutState(account.uid)).toEqual(paidState());
+  });
+});
