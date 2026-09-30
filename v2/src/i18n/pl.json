@@ -122,6 +122,22 @@
     "titleLabel": "Tytuł",
     "contentLabel": "Treść",
     "contentPh": "Napisz coś…",
+    "icon": "Ikona",
+    "defaultIcon": "domyślna",
+    "icons": {
+      "notebook": "Notatnik",
+      "bulb": "Żarówka",
+      "star": "Gwiazdka",
+      "flag": "Flaga",
+      "heart": "Serce",
+      "briefcase": "Teczka",
+      "school": "Szkoła",
+      "shopping-cart": "Koszyk",
+      "plane": "Samolot",
+      "home": "Dom",
+      "code": "Kod",
+      "music": "Muzyka"
+    },
     "color": "Kolor",
     "noColor": "Bez koloru",
     "colors": {

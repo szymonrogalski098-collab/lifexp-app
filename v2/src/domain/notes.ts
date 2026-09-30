@@ -8,6 +8,26 @@ export const NOTE_MAX_LINES = 1000;
 /** v1's title field (maxlength="80"). */
 export const NOTE_TITLE_MAX = 80;
 
+/** v1 NOTE_ICON_PRESETS (Tabler class names), in its order. "" = none chosen: v1 shows the notebook. */
+export const NOTE_ICONS = [
+  'ti-notebook',
+  'ti-bulb',
+  'ti-star',
+  'ti-flag',
+  'ti-heart',
+  'ti-briefcase',
+  'ti-school',
+  'ti-shopping-cart',
+  'ti-plane',
+  'ti-home',
+  'ti-code',
+  'ti-music',
+] as const;
+
+export type NoteIcon = (typeof NOTE_ICONS)[number];
+
+export const isNoteIcon = (icon: string): icon is NoteIcon => (NOTE_ICONS as readonly string[]).includes(icon);
+
 /** v1 NOTE_COLOR_PRESETS, in its order. "" = no colour. */
 export const NOTE_COLORS = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b', '#8a8fa8', '#ff9f43', '#00d2d3', '#feca57'] as const;
 
@@ -17,7 +37,7 @@ export interface Note {
   title: string;
   /** Markdown. */
   content: string;
-  /** v1 Tabler icon class, kept but not shown (PLAN.md 7.1); "" = none. */
+  /** v1 Tabler class name (NOTE_ICONS); "" = none chosen. v2 draws it with its lucide twin. */
   icon: string;
   /** Hex colour, "" = none. */
   color: string;
@@ -25,10 +45,11 @@ export interface Note {
   archived: boolean;
 }
 
-/** What the editor changes. The icon is not edited in v2 and stays as it was. */
+/** What the editor changes. */
 export interface NoteDraft {
   title: string;
   content: string;
+  icon: string;
   color: string;
 }
 
@@ -44,7 +65,7 @@ export function noteProblem(draft: NoteDraft): NoteProblem | null {
 
 /** The values v1 stores: the title trimmed, the content as typed. */
 export function normalizedDraft(draft: NoteDraft): NoteDraft {
-  return { title: draft.title.trim(), content: draft.content, color: draft.color };
+  return { title: draft.title.trim(), content: draft.content, icon: draft.icon, color: draft.color };
 }
 
 export function activeNoteCount(notes: readonly Note[]): number {

@@ -15,13 +15,13 @@ const note = (patch: Partial<Note> = {}): Note => ({
 
 describe('G15 note rules (v1 saveNote, openNoteEditor)', () => {
   test('G15.1: a title of spaces is no title', () => {
-    expect(noteProblem({ title: '   ', content: 'x', color: '' })).toEqual({ kind: 'titleRequired' });
+    expect(noteProblem({ title: '   ', content: 'x', icon: '', color: '' })).toEqual({ kind: 'titleRequired' });
   });
 
   test('G15.2: 1000 lines pass, 1001 are too many and the message names the count', () => {
     const lines = (count: number) => Array.from({ length: count }, () => 'x').join('\n');
-    expect(noteProblem({ title: 'T', content: lines(NOTE_MAX_LINES), color: '' })).toBeNull();
-    expect(noteProblem({ title: 'T', content: lines(1001), color: '' })).toEqual({
+    expect(noteProblem({ title: 'T', content: lines(NOTE_MAX_LINES), icon: '', color: '' })).toBeNull();
+    expect(noteProblem({ title: 'T', content: lines(1001), icon: '', color: '' })).toEqual({
       kind: 'tooManyLines',
       lines: 1001,
       max: 1000,
