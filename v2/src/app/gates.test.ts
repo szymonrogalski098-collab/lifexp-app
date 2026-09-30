@@ -17,6 +17,7 @@ const ready: Profile = {
   rateGeneral: { zloty: null, points: null },
   rateChores: { zloty: null, points: null },
   streakFreezeLastUsed: null,
+  pcBuild: null,
 };
 
 const signedIn = (profile: ProfileState, u: SessionUser = user) => sessionGate({ status: 'signedIn', user: u, profile });

@@ -174,6 +174,16 @@ ustalonej raz na konto. Kawałki: S = 1, M = 2, L = 3. Max 3 na komponent.
 | G9.6 | zadanie z terminem dziś | zrobione dziś | w terminie (dzień terminu się liczy, data lokalna) |
 
 Kary naliczane przy wejściu w Notatnik, raz na zadanie. Odhaczenie jest nieodwracalne. Brak usuwania zadań.
+Limit 30 zadań liczy też zrobione. Treść max 500 znaków (Markdown), termin z kalendarza lokalnego (G13).
+
+v2 (etap 3a-2, `tests/v2/tasks.spec.js`, e2e na v1 i v2): ten sam dokument zadania i ten sam nowy `pcBuild`
+(obudowa i płyta pierwsze, reszta losowo, zera) przy pierwszym zadaniu; G9.2–G9.5 na prawdziwych dokumentach.
+Różnice, wszystkie bez zmiany kształtu danych:
+- kary naliczane przy wejściu w Zadania, w transakcji, która ponownie czyta zadania — dwie karty albo dwa
+  urządzenia nie ukarzą tego samego zadania dwa razy (v1 czyta i zapisuje osobno);
+- odhaczenie i kawałki w jednej transakcji (zadanie + `pcBuild`); offline się nie uda i zostanie ponowione;
+- usuwanie zadań (D8), z „Cofnij”; budowa zostaje bez zmian;
+- ostrzeżenie o karze przy dodawaniu jest tekstem przy przycisku, nie osobnym oknem.
 
 ## G10. Granie
 

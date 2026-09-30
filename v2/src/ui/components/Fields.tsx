@@ -80,6 +80,7 @@ interface TextAreaFieldProps {
   placeholder?: string;
   /** Visible lines before it scrolls; it grows with the text up to the screen (CSS). */
   rows?: number;
+  maxLength?: number;
   /** Between the label and the field, e.g. a formatting toolbar. */
   toolbar?: ComponentChildren;
   /** For callers that edit the selection (the Markdown toolbar). */
@@ -98,6 +99,7 @@ export function TextAreaField({ label, value, onInput, hint, error, toolbar, tex
         id={id}
         class="ui-field__input ui-field__textarea"
         rows={rows}
+        style={{ '--rows': String(rows) }}
         value={value}
         aria-invalid={error ? true : undefined}
         aria-describedby={described(id, hint, error)}

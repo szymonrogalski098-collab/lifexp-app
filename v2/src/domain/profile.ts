@@ -1,5 +1,6 @@
 // What v2 needs to know about the signed-in person. Grows module by module;
 // everything here is read from users/{uid} through data/converters/profile.ts.
+import type { PcBuild } from './tasks';
 
 export type Language = 'pl' | 'en';
 
@@ -33,6 +34,8 @@ export interface Profile {
   rateChores: { zloty: number | null; points: number | null };
   /** UTC day key of the last streak freeze, if any (G3). */
   streakFreezeLastUsed: string | null;
+  /** The PC built by doing tasks (G9); null until the first task, or when malformed. */
+  pcBuild: PcBuild | null;
 }
 
 /** users.points — v1 keeps all three in step. */
