@@ -1,7 +1,7 @@
 // v2 app shell (docs/v2/PLAN.md 7.3, 7.4, 7.7): drawer behaviour, sidebar,
 // themes and layout guarantees. Runs against the built app in v2/dist, signed in
 // on the Firebase emulators: `npm run test:v2` builds and starts them.
-const { test, expect, appUrl, openSignedIn } = require('../support/v2');
+const { test, expect, appUrl, openSignedIn, screenSettled } = require('../support/v2');
 const PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 800 };
 
@@ -212,6 +212,8 @@ test.describe('phone: tab bar', () => {
     expect(bar.y + bar.height).toBeCloseTo(PHONE.height, 0);
 
     await page.locator('.shell__content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    // Where the page's end rests, not a frame of the screen's entrance.
+    await screenSettled(page);
     const barAfterScroll = await tabBar(page).boundingBox();
     expect(barAfterScroll.y).toBeCloseTo(bar.y, 0);
     const lastBottom = await page

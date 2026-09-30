@@ -41,4 +41,13 @@ async function openSignedIn(page, account, hash = '#/today') {
   await expect(shell).toBeVisible({ timeout: 15000 });
 }
 
-module.exports = { test, expect, appUrl, signIn, openSignedIn };
+/**
+ * Waits until the current screen has finished rising into place (ui/motion.ts
+ * playEnter animates .shell__main on every navigation). Measure positions inside
+ * the screen only after this, or a frame of the animation gets measured.
+ */
+async function screenSettled(page) {
+  await page.locator('.shell__main').evaluate((main) => Promise.all(main.getAnimations().map((a) => a.finished)));
+}
+
+module.exports = { test, expect, appUrl, signIn, openSignedIn, screenSettled };

@@ -79,7 +79,8 @@ ui (design system) i i18n nie znają domeny ani danych
   Ruch (przesunięcie, pojawienie się, wzrost) tylko przez `transform` i `opacity`; kolor przy hover/press może
   przechodzić `transition`. Czasy i krzywe wyłącznie z tokenów (`--duration-enter/exit`, `--ease-out/in`);
   wejście zwalnia do miejsca, wyjście jest krótsze. `prefers-reduced-motion` = 0 ms (tokeny robią to same). Czego nie
-  zrobi CSS, to `ui/motion.ts` (`playEnter`, `cssDurationMs`). Test: `tests/v2/motion.spec.js`.
+  zrobi CSS, to `ui/motion.ts` (`playEnter`, `cssDurationMs`). Test: `tests/v2/motion.spec.js`. Testy mierzące
+  pozycję elementów ekranu czekają na `screenSettled(page)` (`tests/support/v2.js`), inaczej łapią klatkę wjazdu.
 - Wykresy: `ui/components/BarChart` (jedna seria, jedna oś od zera, każda wartość także w tekście). Dwie miary
   o różnych jednostkach = dwa wykresy, nigdy dwie osie.
 
