@@ -38,6 +38,11 @@ Konwencje: kwoty w zł, `r2(x) = Math.round(x * 100) / 100`, „dzień UTC” = 
 Offline: szkic z szacowaną liczbą punktów; cap liczony dopiero przy zatwierdzeniu, względem `dailyLog`
 dnia z chwili utworzenia szkicu (`offline.js:121-144`), a `timestamp` = czas utworzenia szkicu.
 
+v2 (etap 3e-1, `services/activity.ts`): te same reguły w jednej transakcji; zdobyte dziś i limit czytane
+z serwera w transakcji, więc dwie karty nie przekroczą limitu razem. e2e `tests/v2/activity.spec.js`:
+parytet G1.2 (v1 i v2 dają ten sam wpis, `dailyLog` i punkty), G1.7 i G1.8 w v2. Definicje aktywności v2
+seeduje (te same id i pola co v1) przy pierwszym otwarciu formularza, nie przy starcie.
+
 ## G2. Poziom
 
 `dashboard.js:253-266`. `poziom = floor(earnedAllTime / 500) + 1`, `w_poziomie = earnedAllTime mod 500`.
@@ -246,6 +251,8 @@ Różnice, wszystkie bez zmiany kształtu danych:
 `dashboard.js:476-516`. Dzień = dzień UTC z `timestamp` aktywności.
 `dailyLog.pointsEarned = max(0, obecne − pkt)`; `points.total = max(0, total − pkt)`;
 `points.earnedAllTime = max(0, … − pkt)`. `spentAllTime` bez zmian. Read-modify-write (B4).
+v2 (etap 3e-1): te same wartości, liczone w transakcji z danych serwera (koniec B4); usuwanie z Historii.
+e2e `tests/v2/activity.spec.js`: v1 i v2 usuwają do tego samego stanu.
 
 ## G12. Zgłoszenia błędów
 
@@ -278,7 +285,7 @@ poprzedni = dziś − 13 … dziś − 7 (to ostatnie 7 dni, nie tydzień kalend
 
 e2e = `tests/v2/stats.spec.js` sprawdza v1 i v2 na tym samym koncie w emulatorze.
 v2: historia czyta stronę kursorem (`limit(16)` + `startAfter`) zamiast całej kolekcji (B16), licznik z
-`count()` na serwerze; usuwanie wpisu z historii przychodzi z etapem 3e.
+`count()` na serwerze; usuwanie wpisu z historii od etapu 3e-1 (G11).
 
 ## G15. Notatki
 

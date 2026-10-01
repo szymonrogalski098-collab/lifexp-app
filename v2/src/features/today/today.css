@@ -365,3 +365,51 @@
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
 }
+
+/* ── Logging an activity ── */
+
+.today-card__actions {
+  display: flex;
+  margin-top: var(--space-4);
+}
+
+.activity-sheet__time {
+  gap: var(--space-2);
+}
+
+.activity-sheet__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.activity-sheet__preview {
+  min-height: 1lh;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.activity-sheet__preview:empty {
+  display: none;
+}
+
+.activity-sheet__preview--none {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-medium);
+}
+
+.activity-sheet__note {
+  color: var(--color-text-secondary);
+}
+
+.activity-sheet__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.activity-sheet__problem {
+  color: var(--color-negative);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}

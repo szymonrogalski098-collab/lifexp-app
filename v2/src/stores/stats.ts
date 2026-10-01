@@ -132,3 +132,14 @@ export function openHistory(uid: string): HistoryHandle {
     },
   };
 }
+
+/** After a delete (G11): the entry leaves the pages already shown and the count. */
+export function dropFromHistory(id: string): void {
+  const state = history.value;
+  if (!state.activities.some((a) => a.id === id)) return;
+  history.value = {
+    ...state,
+    activities: state.activities.filter((a) => a.id !== id),
+    total: state.total === null ? null : Math.max(0, state.total - 1),
+  };
+}

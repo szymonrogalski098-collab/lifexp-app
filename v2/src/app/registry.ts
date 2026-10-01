@@ -60,7 +60,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'today',
     labelKey: 'nav.today',
     icon: House,
-    paths: ['/today'],
+    paths: ['/today', '/today/activity'],
     nav: { group: 'main', order: 10 },
     tab: 1,
     stage: '2',

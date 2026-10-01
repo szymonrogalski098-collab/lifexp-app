@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 import { describe, expect, test } from 'vitest';
 import { activeDays, activityName } from '@/domain/activity';
-import { activityDefName, activityFromData, dayLogFromData } from './activity';
+import { activityDefFromData, activityDefName, activityFromData, dayLogFromData, newActivityData } from './activity';
 
 describe('activity converters', () => {
   test('an activity as v1 writes it (desc is usually an empty string)', () => {
@@ -43,5 +43,25 @@ describe('active days', () => {
       ['2026-09-28', { pointsEarned: 0, gamingMinutes: 90 }],
     ]);
     expect(activeDays(days)).toEqual(new Set(['2026-09-29']));
+  });
+});
+
+describe('logging (stage 3e)', () => {
+  test('a definition as v1 seeds it', () => {
+    expect(activityDefFromData('learning', { name: 'Nauka', points: 40, color: '#6c63ff', icon: 'ti-book', order: 0 })).toEqual({
+      id: 'learning',
+      name: 'Nauka',
+      points: 40,
+      order: 0,
+    });
+    expect(activityDefFromData('x', { name: '', points: 10 })).toBeNull();
+    expect(activityDefFromData('y', { name: 'Bez kolejności', points: 10 })?.order).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
+  test('a new entry has v1 fields only, the generated name only when given', () => {
+    const now = new Date('2026-10-01T10:00:00Z');
+    const base = { type: 'learning', typeName: null, minutes: 45, points: 26, desc: 'Rozdział 3', now };
+    expect(newActivityData(base)).toEqual({ type: 'learning', duration: 45, points: 26, desc: 'Rozdział 3', timestamp: now });
+    expect(newActivityData({ ...base, type: '__generated__', typeName: 'Spacer' }).typeName).toBe('Spacer');
   });
 });
