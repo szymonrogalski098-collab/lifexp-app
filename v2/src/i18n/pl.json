@@ -394,7 +394,16 @@
     "categoryAdded": "Kategoria dodana: {{name}}",
     "categoryDeleted": "Kategoria usunięta: {{name}}",
     "deleteCategoryNamed": "Usuń kategorię: {{name}}",
-    "settingsSaveFailed": "Nie udało się zapisać. Sprawdź połączenie i spróbuj ponownie."
+    "settingsSaveFailed": "Nie udało się zapisać. Sprawdź połączenie i spróbuj ponownie.",
+    "repeats_one": "{{count}} kategoria powtarza nazwę innej. Zostanie po jednej z każdej nazwy; transakcje się nie zmienią.",
+    "repeats_few": "{{count}} kategorie powtarzają nazwy innych. Zostanie po jednej z każdej nazwy; transakcje się nie zmienią.",
+    "repeats_many": "{{count}} kategorii powtarza nazwy innych. Zostanie po jednej z każdej nazwy; transakcje się nie zmienią.",
+    "repeats_other": "{{count}} kategorii powtarza nazwy innych. Zostanie po jednej z każdej nazwy; transakcje się nie zmienią.",
+    "removeRepeats": "Usuń powtórzone",
+    "repeatsRemoved_one": "Usunięto {{count}} powtórzoną kategorię.",
+    "repeatsRemoved_few": "Usunięto {{count}} powtórzone kategorie.",
+    "repeatsRemoved_many": "Usunięto {{count}} powtórzonych kategorii.",
+    "repeatsRemoved_other": "Usunięto {{count}} powtórzonych kategorii."
   },
   "add": {
     "title": "Dodaj",

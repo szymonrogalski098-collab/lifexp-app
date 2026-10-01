@@ -5,13 +5,15 @@
 import { useRef, useState } from 'preact/hooks';
 import {
   CATEGORY_NAME_MAX,
+  duplicateCategories,
   sortCategories,
   type CategoryProblem,
   type MoneyCategory,
+  type MoneyTx,
 } from '@/domain/money';
 import { locale, t } from '@/i18n';
 import { formatMoney } from '@/lib/money';
-import { createCategory, deleteCategory, saveMonthlyLimit } from '@/services/money';
+import { createCategory, deleteCategory, removeDuplicateCategories, saveMonthlyLimit } from '@/services/money';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
 import { Button } from '@/ui/components/Button';
 import { EmptyState } from '@/ui/components/Display';
@@ -26,11 +28,13 @@ const CATEGORY_PROBLEM = {
 interface SettingsViewProps {
   uid: string;
   categories: readonly MoneyCategory[];
+  /** To keep the category most of them use when removing repeats. */
+  txs: readonly MoneyTx[];
   /** Grosze; 0 = no limit. */
   limit: number;
 }
 
-export function SettingsView({ uid, categories, limit }: SettingsViewProps) {
+export function SettingsView({ uid, categories, txs, limit }: SettingsViewProps) {
   const [limitDraft, setLimitDraft] = useState<number | null>(limit);
   const [limitProblem, setLimitProblem] = useState(false);
   const [name, setName] = useState('');
@@ -78,7 +82,18 @@ export function SettingsView({ uid, categories, limit }: SettingsViewProps) {
     });
   };
 
+  const removeRepeats = () => {
+    const result = removeDuplicateCategories(uid, categories, txs);
+    if (!result) return;
+    result.saved.catch(saveFailed);
+    notify({
+      message: t('money.repeatsRemoved', { count: result.count }),
+      action: { label: t('ui.undo'), onAction: () => void result.undo().catch(saveFailed) },
+    });
+  };
+
   const sorted = sortCategories(categories);
+  const repeats = duplicateCategories(categories, txs).length;
 
   return (
     <>
@@ -138,6 +153,16 @@ export function SettingsView({ uid, categories, limit }: SettingsViewProps) {
             </div>
           </form>
         </Card>
+        {repeats > 0 && (
+          <Card>
+            <div class="money-repeats" data-testid="category-repeats">
+              <p>{t('money.repeats', { count: repeats })}</p>
+              <Button variant="secondary" onClick={removeRepeats}>
+                {t('money.removeRepeats')}
+              </Button>
+            </div>
+          </Card>
+        )}
         <Card padding={sorted.length === 0 ? 'md' : 'none'}>
           {sorted.length === 0 ? (
             <EmptyState title={t('money.noCategories')} />

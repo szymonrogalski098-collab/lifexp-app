@@ -37,7 +37,7 @@ export default function MoneyModule({ path, navigate }: RouteProps) {
     view === 'loans'
       ? loans !== undefined && balance !== undefined
       : view === 'settings'
-        ? categories !== undefined && limit !== undefined
+        ? categories !== undefined && txs !== undefined && limit !== undefined
         : txs !== undefined && categories !== undefined && limit !== undefined && balance !== undefined;
 
   return (
@@ -64,7 +64,7 @@ export default function MoneyModule({ path, navigate }: RouteProps) {
           ) : view === 'loans' ? (
             <LoansView uid={uid} loans={loans ?? []} balance={balance ?? 0} />
           ) : view === 'settings' ? (
-            <SettingsView uid={uid} categories={categories ?? []} limit={limit ?? 0} />
+            <SettingsView uid={uid} categories={categories ?? []} txs={txs ?? []} limit={limit ?? 0} />
           ) : (
             <OverviewView
               uid={uid}

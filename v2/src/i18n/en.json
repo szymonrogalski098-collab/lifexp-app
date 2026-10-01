@@ -394,7 +394,16 @@
     "categoryAdded": "Category added: {{name}}",
     "categoryDeleted": "Category deleted: {{name}}",
     "deleteCategoryNamed": "Delete category: {{name}}",
-    "settingsSaveFailed": "Could not save. Check your connection and try again."
+    "settingsSaveFailed": "Could not save. Check your connection and try again.",
+    "repeats_one": "{{count}} category repeats another one's name. One of each name stays; transactions do not change.",
+    "repeats_few": "{{count}} categories repeat other names. One of each name stays; transactions do not change.",
+    "repeats_many": "{{count}} categories repeat other names. One of each name stays; transactions do not change.",
+    "repeats_other": "{{count}} categories repeat other names. One of each name stays; transactions do not change.",
+    "removeRepeats": "Remove repeats",
+    "repeatsRemoved_one": "Removed {{count}} repeated category.",
+    "repeatsRemoved_few": "Removed {{count}} repeated categories.",
+    "repeatsRemoved_many": "Removed {{count}} repeated categories.",
+    "repeatsRemoved_other": "Removed {{count}} repeated categories."
   },
   "add": {
     "title": "Add",

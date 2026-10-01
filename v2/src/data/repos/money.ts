@@ -78,13 +78,18 @@ export function ensureMoneyDocs(uid: string): Promise<void> {
 /**
  * v1 loadMoneyCategories(): an account without categories gets v1's five. Asked of
  * the server only (offline an empty cache says nothing). Resolves to whether it seeded.
+ * The seed has fixed ids (v1 uses generated ones), so two tabs seeding at the same
+ * moment write the same five documents instead of ten.
  */
 export async function seedMoneyCategoriesIfEmpty(uid: string): Promise<boolean> {
   const snap = await getDocsFromServer(query(categoriesOf(uid), limit(1)));
   if (!snap.empty) return false;
   const batch = writeBatch(db);
   CATEGORY_SEEDS.forEach((name, i) =>
-    batch.set(doc(categoriesOf(uid)), moneyCategoryData({ name, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] as string })),
+    batch.set(
+      doc(categoriesOf(uid), `seed-${i}`),
+      moneyCategoryData({ name, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] as string }),
+    ),
   );
   await batch.commit();
   return true;
@@ -208,4 +213,18 @@ export function removeMoneyCategory(uid: string, id: string): Promise<void> {
 
 export function restoreMoneyCategory(uid: string, category: MoneyCategory): Promise<void> {
   return setDoc(doc(categoriesOf(uid), category.id), moneyCategoryData(category));
+}
+
+/** Several categories at once (removing repeats), in one batch. */
+export function removeMoneyCategories(uid: string, ids: readonly string[]): Promise<void> {
+  const batch = writeBatch(db);
+  for (const id of ids) batch.delete(doc(categoriesOf(uid), id));
+  return batch.commit();
+}
+
+/** Undo of removeMoneyCategories(): the same documents back, in one batch. */
+export function restoreMoneyCategories(uid: string, categories: readonly MoneyCategory[]): Promise<void> {
+  const batch = writeBatch(db);
+  for (const category of categories) batch.set(doc(categoriesOf(uid), category.id), moneyCategoryData(category));
+  return batch.commit();
 }

@@ -131,6 +131,35 @@ export function categoryProblem(name: string, categories: readonly MoneyCategory
   return null;
 }
 
+/** Names that v1's duplicate check treats as the same (addMoneyCategory: any case). */
+function categoryKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/**
+ * Categories that repeat another one's name (any case, spaces around ignored): all
+ * but one of each name. The one kept is the one whose exact name most transactions
+ * use, so the fewest lose their colour; on a tie, the first by id.
+ */
+export function duplicateCategories(categories: readonly MoneyCategory[], txs: readonly MoneyTx[]): MoneyCategory[] {
+  const uses = new Map<string, number>();
+  for (const tx of txs) uses.set(tx.category, (uses.get(tx.category) ?? 0) + 1);
+  const groups = new Map<string, MoneyCategory[]>();
+  for (const category of categories) {
+    const key = categoryKey(category.name);
+    groups.set(key, [...(groups.get(key) ?? []), category]);
+  }
+  const repeats: MoneyCategory[] = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const ranked = [...group].sort(
+      (a, b) => (uses.get(b.name) ?? 0) - (uses.get(a.name) ?? 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    );
+    repeats.push(...ranked.slice(1));
+  }
+  return repeats;
+}
+
 /** v1 saveMoneyLimit(): an empty or unreadable limit falls back to 200 zł; 0 means no limit. */
 export function limitFromInput(grosze: number | null): number {
   return grosze ?? MONEY_LIMIT_DEFAULT;

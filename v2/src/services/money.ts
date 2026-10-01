@@ -7,7 +7,9 @@ import {
   backfillMoneyIncome,
   deleteMoneyTx,
   ensureMoneyDocs,
+  removeMoneyCategories,
   removeMoneyCategory,
+  restoreMoneyCategories,
   restoreMoneyCategory,
   seedMoneyCategoriesIfEmpty,
   setMonthlyLimit,
@@ -16,6 +18,7 @@ import {
 import {
   TX_AMOUNT_MAX,
   categoryProblem,
+  duplicateCategories,
   limitFromInput,
   nextCategoryColor,
   resolveCategory,
@@ -105,4 +108,23 @@ export function createCategory(uid: string, name: string, categories: readonly M
 /** v1 deleteMoneyCategory() (there behind a confirmation; here with undo, D8). */
 export function deleteCategory(uid: string, category: MoneyCategory): { saved: Promise<void>; undo: () => Promise<void> } {
   return { saved: removeMoneyCategory(uid, category.id), undo: () => restoreMoneyCategory(uid, category) };
+}
+
+/**
+ * Removes categories that repeat another one's name (see domain duplicateCategories),
+ * in one batch, with undo. Transactions keep their category names. Null when there
+ * is nothing to remove.
+ */
+export function removeDuplicateCategories(
+  uid: string,
+  categories: readonly MoneyCategory[],
+  txs: readonly MoneyTx[],
+): { count: number; saved: Promise<void>; undo: () => Promise<void> } | null {
+  const repeats = duplicateCategories(categories, txs);
+  if (repeats.length === 0) return null;
+  return {
+    count: repeats.length,
+    saved: removeMoneyCategories(uid, repeats.map((c) => c.id)),
+    undo: () => restoreMoneyCategories(uid, repeats),
+  };
 }
