@@ -18,6 +18,12 @@ describe('profile converter', () => {
         pointsRateChoresZl: 0.5,
         pointsRateChoresPts: 1,
         streakFreezeLastUsed: '2026-09-20',
+        goals: [
+          { id: 'g1', type: 'money', saved: 12.5 },
+          { id: 'g2', type: 'points', saved: 99 },
+          { id: 'g3', type: 'money', saved: 0.1 },
+        ],
+        moneyIncomeAllTime: 18.45,
       }),
     ).toEqual({
       name: 'Ala',
@@ -33,6 +39,8 @@ describe('profile converter', () => {
       rateChores: { zloty: 0.5, points: 1 },
       streakFreezeLastUsed: '2026-09-20',
       pcBuild: null,
+      savedInGoals: 1260,
+      moneyIncomeAllTime: 1845,
     });
   });
 
@@ -82,6 +90,8 @@ describe('profile converter', () => {
       rateChores: { zloty: null, points: null },
       streakFreezeLastUsed: null,
       pcBuild: null,
+      savedInGoals: 0,
+      moneyIncomeAllTime: null,
     });
   });
 });

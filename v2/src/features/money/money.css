@@ -1,0 +1,149 @@
+/* Money (stage 3c). */
+
+.money-error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-negative) 12%, transparent);
+  color: var(--color-negative);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── Balance ── */
+
+.money-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.money-hero .ui-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.money-hero__label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.money-hero__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.15;
+}
+
+.money-hero__goals {
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Limit ── */
+
+.money-alert {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-negative) 12%, transparent);
+  color: var(--color-negative);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── This month against the last ── */
+
+.money-flow {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.money-flow__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: var(--space-3);
+}
+
+.money-flow__label {
+  font-weight: var(--font-weight-semibold);
+}
+
+.money-flow__value {
+  font-weight: var(--font-weight-bold);
+  text-align: right;
+}
+
+.money-flow__previous {
+  grid-column: 1 / -1;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+/* ── Transactions by day ── */
+
+.money-day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.money-day__title {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.money-day__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.money-tx {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+}
+
+.money-tx + .money-tx {
+  border-top: 1px solid var(--color-separator);
+}
+
+.money-tx__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--category-color, var(--color-negative));
+}
+
+.money-tx__dot--income {
+  background: var(--category-color, var(--color-positive));
+}
+
+.money-tx__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.money-tx__category {
+  overflow: hidden;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.money-tx__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.money-tx__amount {
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}

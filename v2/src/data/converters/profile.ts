@@ -5,6 +5,7 @@
 import type { DocumentData } from 'firebase/firestore';
 import type { Profile } from '@/domain/profile';
 import { pcBuildOrNull } from '@/domain/tasks';
+import { groszeFromZloty } from '@/lib/money';
 import { dayKeyOrNull, numberOr, numberOrNull } from './fields';
 
 /** v1's name for a profile without one (index.html, core.js). */
@@ -35,5 +36,16 @@ export function profileFromData(data: DocumentData): Profile {
     rateChores: { zloty: numberOrNull(data.pointsRateChoresZl), points: numberOrNull(data.pointsRateChoresPts) },
     streakFreezeLastUsed: dayKeyOrNull(data.streakFreezeLastUsed),
     pcBuild: pcBuildOrNull(data.pcBuild),
+    savedInGoals: savedInGoals(data.goals),
+    moneyIncomeAllTime: typeof data.moneyIncomeAllTime === 'number' ? groszeFromZloty(data.moneyIncomeAllTime) : null,
   };
+}
+
+/** v1 updateMoneyBalanceUI(): the `saved` of every money goal, in grosze. */
+function savedInGoals(goals: unknown): number {
+  if (!Array.isArray(goals)) return 0;
+  return goals.reduce<number>((sum, goal) => {
+    if (typeof goal !== 'object' || goal === null || goal.type !== 'money') return sum;
+    return sum + groszeFromZloty(numberOr(goal.saved));
+  }, 0);
 }

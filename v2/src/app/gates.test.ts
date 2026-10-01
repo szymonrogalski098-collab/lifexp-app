@@ -18,6 +18,8 @@ const ready: Profile = {
   rateChores: { zloty: null, points: null },
   streakFreezeLastUsed: null,
   pcBuild: null,
+  savedInGoals: 0,
+  moneyIncomeAllTime: null,
 };
 
 const signedIn = (profile: ProfileState, u: SessionUser = user) => sessionGate({ status: 'signedIn', user: u, profile });

@@ -245,18 +245,20 @@ interface SelectProps<T extends string> {
   options: readonly Choice<T>[];
   onChange: (value: T) => void;
   hint?: string;
+  error?: string | null;
 }
 
 /** Native select: the platform picker is the best one on phones. */
-export function Select<T extends string>({ label, value, options, onChange, hint }: SelectProps<T>) {
+export function Select<T extends string>({ label, value, options, onChange, hint, error }: SelectProps<T>) {
   const id = useId();
   return (
-    <FieldFrame id={id} label={label} hint={hint}>
+    <FieldFrame id={id} label={label} hint={hint} error={error}>
       <select
         id={id}
         class="ui-field__input ui-field__select"
         value={value}
-        aria-describedby={described(id, hint, null)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={described(id, hint, error)}
         onChange={(e) => onChange(e.currentTarget.value as T)}
       >
         {options.map((o) => (
