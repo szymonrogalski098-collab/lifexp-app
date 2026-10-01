@@ -4,7 +4,6 @@
 import { useState } from 'preact/hooks';
 import { GOAL_NAME_MAX, type Goal, type GoalDraft, type GoalProblem, type GoalType } from '@/domain/goals';
 import { locale, t } from '@/i18n';
-import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { Button } from '@/ui/components/Button';
 import { MoneyField, NumberField, SegmentedControl, TextField } from '@/ui/components/Fields';
@@ -34,11 +33,6 @@ function useSave(save: () => Promise<Problem | null>) {
     }
   };
   return { problem, setProblem, saving, submit };
-}
-
-/** A goal's amount as text: złoty for money, points for points. */
-export function goalAmount(type: GoalType, value: number, lang: string): string {
-  return type === 'money' ? formatMoney(value, lang) : t('units.points', { points: formatInteger(value, lang) });
 }
 
 interface GoalSheetProps {
