@@ -234,6 +234,9 @@ async function settleInV2(page) {
   const dialog = page.getByRole('alertdialog', { name: 'Rozliczyć 18,00 zł?' });
   await expect(dialog).toContainText('40 pkt');
   await dialog.getByRole('button', { name: 'Rozlicz wypłatę' }).click();
+  // Until its exit animation ends the dialog (by then titled with the new amount)
+  // still has a "Rozlicz wypłatę" button too.
+  await expect(page.getByRole('alertdialog')).toBeHidden();
 }
 
 test('G8.5: paying out 10 + 30 pts moves 18,00 zł into Money in one go', async ({ page }) => {
