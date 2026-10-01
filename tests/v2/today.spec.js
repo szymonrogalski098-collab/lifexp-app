@@ -182,7 +182,8 @@ test('chores today: v1 definitions marked when done today, and what is left to p
   // A one-time chore logged today stays on the list after its definition is gone.
   await expect(chores.nth(3)).toContainText('Mycie okien');
   await expect(chores.nth(3)).toContainText('Zrobione dziś');
-  expect(await text(page.getByTestId('chores-unpaid'))).toBe('45 pkt · 20,25 zł');
+  expect(await text(page.getByTestId('chores-unpaid-money'))).toBe('20,25 zł');
+  expect(await text(page.getByTestId('chores-unpaid-points'))).toBe('45 pkt');
 
   await page.waitForTimeout(500);
   expect(await snapshotAccount(account.uid)).toEqual(before);

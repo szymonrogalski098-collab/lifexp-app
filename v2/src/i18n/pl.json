@@ -66,7 +66,6 @@
     "choreDone": "Zrobione dziś",
     "choreDoneTimes": "Zrobione dziś ×{{count}}",
     "choresUnpaid": "Do wypłaty",
-    "choresUnpaidValue": "{{points}} pkt · {{amount}}",
     "noChores": "Brak obowiązków. Dodasz je w obecnej wersji LifeXP.",
     "loadFailed": "Nie udało się wczytać części danych. Sprawdź połączenie."
   },
