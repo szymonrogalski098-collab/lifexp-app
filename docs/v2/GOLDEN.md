@@ -162,6 +162,14 @@ ile wróci albo zejdzie z salda.
 | G7.6 | osiągnięcie | `celebrated = true` zapisane raz, **w trakcie renderu** (B15) |
 | G7.7 | legacy `goalName/goalType/goalAmount/goalCelebrated` bez `goals` | migracja do `goals[0]`, stare pola usuwane |
 
+v2 (etap 3d-1, `tests/v2/goals.spec.js`): G7.1, G7.2 i G7.3 e2e — v1 i v2 zapisują ten sam wpis w `goals`
+(bez id) i to samo saldo; v1 pokazuje cel z v2. Każda zmiana czyta i zapisuje tablicę `goals` w transakcji
+(z saldem przy wpłacie i usunięciu), zmieniając wpis w miejscu, więc pola dopisane przez v1 lub backend zostają.
+G7.4: w formularzu v1 typu celu nie da się zmienić (edycja przejmuje typ celu), więc ścieżka zwrotu przy zmianie
+typu jest w v1 nieosiągalna z UI; v2 też nie zmienia typu. Edycja, jak w v1, ustawia `celebrated: false`.
+G7.6: v2 oznacza osiągnięty cel w serwisie (transakcja sprawdza osiągnięcie na danych z serwera), nie w trakcie
+renderu, i ogłasza go raz. G7.7: bez migracji (M1 skreślona).
+
 ## G8. Obowiązki
 
 `chores.js`. Kurs `r = pointsRateChoresZl / pointsRateChoresPts` (domyślnie 0,45 zł / 1 pkt).

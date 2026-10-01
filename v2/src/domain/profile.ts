@@ -1,5 +1,6 @@
 // What v2 needs to know about the signed-in person. Grows module by module;
 // everything here is read from users/{uid} through data/converters/profile.ts.
+import type { Goal } from './goals';
 import type { PcBuild } from './tasks';
 
 export type Language = 'pl' | 'en';
@@ -36,8 +37,8 @@ export interface Profile {
   streakFreezeLastUsed: string | null;
   /** The PC built by doing tasks (G9); null until the first task, or when malformed. */
   pcBuild: PcBuild | null;
-  /** Grosze put aside in money goals (v1 "W celach"); the goals themselves come in stage 3d. */
-  savedInGoals: number;
+  /** users.goals (G7), at most three. */
+  goals: readonly Goal[];
   /** Grosze ever received in Money; null until v1 or v2 backfills it (M2). */
   moneyIncomeAllTime: number | null;
 }

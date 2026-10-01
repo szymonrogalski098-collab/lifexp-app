@@ -39,7 +39,11 @@ describe('profile converter', () => {
       rateChores: { zloty: 0.5, points: 1 },
       streakFreezeLastUsed: '2026-09-20',
       pcBuild: null,
-      savedInGoals: 1260,
+      goals: [
+        { id: 'g1', name: '', type: 'money', target: 0, saved: 1250, celebrated: false },
+        { id: 'g2', name: '', type: 'points', target: 0, saved: 9900, celebrated: false },
+        { id: 'g3', name: '', type: 'money', target: 0, saved: 10, celebrated: false },
+      ],
       moneyIncomeAllTime: 1845,
     });
   });
@@ -90,7 +94,7 @@ describe('profile converter', () => {
       rateChores: { zloty: null, points: null },
       streakFreezeLastUsed: null,
       pcBuild: null,
-      savedInGoals: 0,
+      goals: [],
       moneyIncomeAllTime: null,
     });
   });
