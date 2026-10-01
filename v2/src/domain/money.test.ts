@@ -2,11 +2,14 @@ import { describe, expect, test } from 'vitest';
 import {
   archiveMonths,
   balanceDelta,
+  categoryProblem,
   compareMonths,
   fitsBalance,
   groupByDay,
   incomeAllTime,
+  limitFromInput,
   limitStatus,
+  nextCategoryColor,
   pointsCost,
   recentTxs,
   resolveCategory,
@@ -147,5 +150,26 @@ describe('the month (limit, comparison)', () => {
     expect(incomeAllTime([tx('income', 1050, '2026-01-01'), tx('expense', 99, '2026-01-02'), tx('income', 1, '2026-02-01')])).toBe(
       1051,
     );
+  });
+});
+
+describe('categories and the limit (v1 Settings → Money)', () => {
+  const cats: MoneyCategory[] = [
+    { id: 'a', name: 'gry', color: '#6c63ff' },
+    { id: 'b', name: 'Jedzenie', color: '#4ecca3' },
+  ];
+
+  test('a new category needs a name no category has, in any case', () => {
+    expect(categoryProblem(' Prezenty ', cats)).toBeNull();
+    expect(categoryProblem('  ', cats)).toBe('nameRequired');
+    expect(categoryProblem('jedzenie', cats)).toBe('categoryExists');
+    expect(nextCategoryColor(cats)).toBe('#ffd700');
+    expect(nextCategoryColor([...cats, ...cats, ...cats, ...cats])).toBe('#6c63ff');
+  });
+
+  test('an empty limit is 200 zł, 0 is no limit', () => {
+    expect(limitFromInput(null)).toBe(20000);
+    expect(limitFromInput(0)).toBe(0);
+    expect(limitFromInput(15050)).toBe(15050);
   });
 });

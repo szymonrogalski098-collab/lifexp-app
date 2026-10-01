@@ -475,3 +475,104 @@ test.describe('v1 on a desktop: loans', () => {
     await expect(page.locator('#loans-list')).toContainText('12,50 zł');
   });
 });
+
+// ── Categories and the limit (stage 3c-3; v1 Settings → Pieniądze) ──
+
+async function settingsState(uid) {
+  const user = db.doc(`users/${uid}`);
+  return {
+    settings: (await user.collection('money').doc('settings').get()).data(),
+    categories: (await user.collection('moneyCategories').get()).docs
+      .map((d) => d.data())
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+const withPrezenty = () => ({
+  settings: { monthlyLimit: 150.5, currency: 'PLN' },
+  categories: [
+    { name: 'gry', color: '#6c63ff', icon: '' },
+    { name: 'jedzenie', color: '#4ecca3', icon: '' },
+    { name: 'Prezenty', color: '#ffd700', icon: '' },
+  ],
+});
+
+test('the limit and a new category are saved as v1 saves them', async ({ page }) => {
+  const account = await moneyAccount('money-settings-v2');
+  await openSignedIn(page, account, '#/money/settings');
+
+  const limit = page.getByLabel('Limit', { exact: true });
+  await expect(limit).toHaveValue('200,00');
+  await limit.fill('150,5');
+  await page.getByRole('button', { name: 'Zapisz limit' }).click();
+  await expect(page.getByText('Limit zapisany: 150,50 zł.')).toBeVisible();
+
+  const name = page.getByLabel('Nowa kategoria');
+  await name.fill('JEDZENIE');
+  await page.getByRole('button', { name: 'Dodaj kategorię' }).click();
+  await expect(page.getByText('Taka kategoria już istnieje.')).toBeVisible();
+  await name.fill('  Prezenty ');
+  await page.getByRole('button', { name: 'Dodaj kategorię' }).click();
+  await expect(page.getByText('Kategoria dodana: Prezenty')).toBeVisible();
+  await expect(name).toHaveValue('');
+
+  await expect.poll(() => settingsState(account.uid)).toEqual(withPrezenty());
+  await expect(page.getByRole('list', { name: 'Kategorie transakcji' }).getByRole('listitem')).toHaveCount(3);
+});
+
+test('an empty limit is 200 zł and 0 turns the alert off', async ({ page }) => {
+  const account = await moneyAccount('money-limit-off', { balance: 500 });
+  await db.collection(`users/${account.uid}/moneyTransactions`).add({
+    type: 'expense', amount: 250, category: 'gry', note: '', date: utcToday(), source: 'manual', pointsCost: 0, createdAt: new Date(),
+  });
+  await openSignedIn(page, account, '#/money/settings');
+  const limit = page.getByLabel('Limit', { exact: true });
+  await limit.fill('');
+  await page.getByRole('button', { name: 'Zapisz limit' }).click();
+  await expect.poll(async () => (await settingsState(account.uid)).settings).toEqual({ monthlyLimit: 200, currency: 'PLN' });
+
+  const views = page.getByRole('navigation', { name: 'Widoki Pieniędzy' });
+  await views.getByRole('link', { name: 'Przegląd' }).click();
+  await expect(page.getByTestId('money-limit')).toBeVisible();
+  await views.getByRole('link', { name: 'Ustawienia' }).click();
+  await page.getByLabel('Limit', { exact: true }).fill('0');
+  await page.getByRole('button', { name: 'Zapisz limit' }).click();
+  await expect(page.getByText('Limit wyłączony.')).toBeVisible();
+  await views.getByRole('link', { name: 'Przegląd' }).click();
+  await expect(page.getByTestId('money-balance')).toBeVisible();
+  await expect(page.getByTestId('money-limit')).toHaveCount(0);
+});
+
+test('deleting a category leaves its transactions, and undo brings the same one back', async ({ page }) => {
+  const account = await moneyAccount('money-cat-delete');
+  await db.collection(`users/${account.uid}/moneyTransactions`).add({
+    type: 'expense', amount: 3, category: 'gry', note: '', date: utcToday(), source: 'manual', pointsCost: 0, createdAt: new Date(),
+  });
+  const before = await db.doc(`users/${account.uid}/moneyCategories/cat-games`).get();
+  await openSignedIn(page, account, '#/money/settings');
+  await page.getByRole('button', { name: 'Usuń kategorię: gry' }).click();
+  await expect(page.getByText('Kategoria usunięta: gry')).toBeVisible();
+  await expect.poll(async () => (await db.doc(`users/${account.uid}/moneyCategories/cat-games`).get()).exists).toBe(false);
+  expect((await db.collection(`users/${account.uid}/moneyTransactions`).get()).docs[0].data().category).toBe('gry');
+
+  await page.getByRole('button', { name: 'Cofnij' }).click();
+  await expect.poll(async () => (await db.doc(`users/${account.uid}/moneyCategories/cat-games`).get()).data()).toEqual(before.data());
+});
+
+test.describe('v1 on a desktop: categories and the limit', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('parity: v1 settings save the same limit and category', async ({ page, context }) => {
+    const account = await moneyAccount('money-settings-v1');
+    await serveCdnFromNpm(context);
+    await signInToApp(page, account);
+    await page.click('.sidebar .nav-item[data-page="settings"]');
+    await page.click('#settings-cat-money .settings-cat-label');
+    await expect(page.locator('#set-money-limit')).toHaveValue('200');
+    await page.fill('#set-money-limit', '150.5');
+    await page.click('button[onclick="saveMoneyLimit()"]');
+    await page.fill('#new-money-cat', '  Prezenty ');
+    await page.click('button[onclick="addMoneyCategory()"]');
+    await expect.poll(() => settingsState(account.uid)).toEqual(withPrezenty());
+  });
+});

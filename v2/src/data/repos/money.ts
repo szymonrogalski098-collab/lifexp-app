@@ -12,6 +12,8 @@ import {
   onSnapshot,
   query,
   runTransaction,
+  setDoc,
+  deleteDoc,
   writeBatch,
   type DocumentData,
 } from 'firebase/firestore';
@@ -186,4 +188,24 @@ export function deleteMoneyTx(uid: string, id: string): Promise<TxOutcome> {
     if (Object.keys(profile).length) tx.update(userOf(uid), profile);
     return { ok: true, pointsCost: t.pointsCost };
   });
+}
+
+/** v1 saveMoneyLimit(): merged into money/settings with the currency. */
+export function setMonthlyLimit(uid: string, grosze: number): Promise<void> {
+  return setDoc(moneyDoc(uid, 'settings'), { monthlyLimit: zlotyFromGrosze(grosze), currency: 'PLN' }, { merge: true });
+}
+
+/** v1 addMoneyCategory(): a new document under a generated id. */
+export function addMoneyCategory(uid: string, category: { name: string; color: string }): { id: string; saved: Promise<void> } {
+  const ref = doc(categoriesOf(uid));
+  return { id: ref.id, saved: setDoc(ref, moneyCategoryData(category)) };
+}
+
+/** v1 deleteMoneyCategory(): transactions keep the name, so they are left alone. */
+export function removeMoneyCategory(uid: string, id: string): Promise<void> {
+  return deleteDoc(doc(categoriesOf(uid), id));
+}
+
+export function restoreMoneyCategory(uid: string, category: MoneyCategory): Promise<void> {
+  return setDoc(doc(categoriesOf(uid), category.id), moneyCategoryData(category));
 }
