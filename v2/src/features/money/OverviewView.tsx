@@ -18,6 +18,7 @@ import {
   type TxDraft,
   type TxProblem,
 } from '@/domain/money';
+import { savedInGoals } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
 import { generalRate } from '@/domain/points';
 import { locale, t } from '@/i18n';
@@ -165,9 +166,9 @@ export function OverviewView({ uid, profile, txs, categories, limit, balance, pa
             <p class="money-hero__value numeric" data-testid="money-balance">
               {formatMoney(balance, lang)}
             </p>
-            {profile.savedInGoals > 0 && (
+            {savedInGoals(profile.goals) > 0 && (
               <p class="money-hero__goals" data-testid="money-in-goals">
-                {t('money.inGoals', { amount: formatMoney(profile.savedInGoals, lang) })}
+                {t('money.inGoals', { amount: formatMoney(savedInGoals(profile.goals), lang) })}
               </p>
             )}
           </div>

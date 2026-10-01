@@ -75,7 +75,15 @@ export const FEATURES: readonly FeatureDef[] = [
     stage: '3a',
     view: () => import('@/features/tasks/TasksPage'),
   },
-  { id: 'goals', labelKey: 'nav.goals', icon: Target, paths: ['/goals'], nav: { group: 'main', order: 30 }, stage: '3d' },
+  {
+    id: 'goals',
+    labelKey: 'nav.goals',
+    icon: Target,
+    paths: ['/goals'],
+    nav: { group: 'main', order: 30 },
+    stage: '3d',
+    view: () => import('@/features/goals/GoalsPage'),
+  },
   {
     id: 'chores',
     labelKey: 'nav.chores',

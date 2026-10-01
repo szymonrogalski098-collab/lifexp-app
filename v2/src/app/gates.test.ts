@@ -18,7 +18,7 @@ const ready: Profile = {
   rateChores: { zloty: null, points: null },
   streakFreezeLastUsed: null,
   pcBuild: null,
-  savedInGoals: 0,
+  goals: [],
   moneyIncomeAllTime: null,
 };
 
