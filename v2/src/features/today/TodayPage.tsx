@@ -10,22 +10,26 @@ import {
   type LucideIcon,
   NotebookPen,
   Sparkles,
+  Target,
   Wallet,
   Zap,
 } from 'lucide-preact';
 import { useEffect } from 'preact/hooks';
 import { activeDays, type Activity, type DayLog } from '@/domain/activity';
 import { choresRate, todayChores, unpaidChores, type ChoreDef, type ChoreEntry } from '@/domain/chores';
+import { goalProgress } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
 import { dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
 import { calculateStreak, isFreezeAvailable } from '@/domain/streak';
 import { ActivityRow, formatDuration } from '@/features/shared/activity';
+import { goalAmount, useCelebration } from '@/features/shared/goals';
 import { locale, t } from '@/i18n';
 import { formatLongDate, formatWeekdayShort, localDayKey, utcDayKey, weekOf } from '@/lib/dates';
 import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
+import { ButtonLink } from '@/ui/components/ButtonLink';
 import { EmptyState, IconTile, List, ListRow, ProgressBar, Skeleton } from '@/ui/components/Display';
 import { Card, Page, Section, Stack } from '@/ui/components/Layout';
 import './today.css';
@@ -168,7 +172,14 @@ function ChoresCard({ profile, defs, entries }: ChoresCardProps) {
     >
       <Card padding="none">
         {rows.length === 0 ? (
-          <EmptyState title={t('today.noChores')} />
+          <EmptyState
+            title={t('today.noChores')}
+            action={
+              <ButtonLink variant="secondary" href="#/chores/defs">
+                {t('chores.defsView')}
+              </ButtonLink>
+            }
+          />
         ) : (
           <List label={t('today.chores')}>
             {rows.map((row) => (
@@ -206,6 +217,69 @@ function ChoresCard({ profile, defs, entries }: ChoresCardProps) {
             </span>
           </span>
         </div>
+      </Card>
+    </Section>
+  );
+}
+
+/** PLAN.md 7.6: the goals and what is still missing; each opens the Goals screen. */
+function GoalsCard({ uid, profile }: { uid: string; profile: Profile }) {
+  const lang = locale();
+  const pointsTotal = profile.points.total;
+  useCelebration(uid, profile.goals, pointsTotal);
+  return (
+    <Section
+      title={t('today.goals')}
+      action={
+        <a class="today-card__link" href="#/goals">
+          {t('today.goalsOpen')}
+        </a>
+      }
+    >
+      <Card padding="none">
+        {profile.goals.length === 0 ? (
+          <List label={t('today.goals')}>
+            <ListRow
+              leading={
+                <IconTile>
+                  <Target />
+                </IconTile>
+              }
+              title={t('today.goalsEmpty')}
+              meta={t('today.goalsEmptyMeta')}
+              href="#/goals"
+            />
+          </List>
+        ) : (
+          <ul class="today-goals" aria-label={t('today.goals')}>
+            {profile.goals.map((goal) => {
+              const progress = goalProgress(goal, pointsTotal);
+              return (
+                <li key={goal.id}>
+                  <a class="today-goal" href="#/goals">
+                    <span class="today-goal__top">
+                      <span class="today-goal__name user-text">{goal.name}</span>
+                      <span class={`today-goal__missing numeric tone-${progress.reached ? 'positive' : 'default'}`}>
+                        {progress.reached
+                          ? t('goals.reached')
+                          : t('goals.missing', { amount: goalAmount(goal.type, progress.missing, lang) })}
+                      </span>
+                    </span>
+                    <ProgressBar
+                      value={progress.share}
+                      label={t('goals.progress', {
+                        current: goalAmount(goal.type, progress.current, lang),
+                        target: goalAmount(goal.type, goal.target, lang),
+                        percent: Math.floor(progress.share * 100),
+                      })}
+                      tone={progress.reached ? 'positive' : 'default'}
+                    />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </Card>
     </Section>
   );
@@ -317,6 +391,8 @@ export default function TodayPage() {
             <Skeleton lines={4} />
           </Card>
         )}
+
+        {uid && <GoalsCard uid={uid} profile={profile} />}
 
         {moduleOn(profile, 'chores') &&
           (sources.choreDefs && sources.choreEntries ? (

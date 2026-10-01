@@ -172,3 +172,34 @@ test.describe('v1 on a desktop', () => {
     await expect(page.locator('#goal-card')).toContainText('150,50 zł');
   });
 });
+
+// ── Today (stage 3d-2; PLAN.md 7.6: goals and what is missing) ──
+
+test('Today lists the goals with what is missing and opens the Goals screen', async ({ page }) => {
+  const account = await goalsAccount('goals-today', [
+    { id: 'g1', ...rower, saved: 20.5 },
+    { id: 'g2', name: 'Sto punktów', type: 'points', amount: 100, celebrated: false, saved: 0 },
+  ]);
+  await openSignedIn(page, account, '#/today');
+  const goals = page.getByRole('list', { name: 'Cele' }).getByRole('listitem');
+  await expect(goals).toHaveCount(2);
+  await expect(goals.nth(0)).toContainText('Rower');
+  await expect(goals.nth(0)).toContainText('Brakuje 130,00 zł');
+  await expect(goals.nth(0).getByRole('progressbar')).toHaveAttribute('aria-label', /^20,50\szł z 150,50\szł · 13%$/);
+  await expect(goals.nth(1)).toContainText('Osiągnięty');
+  // Reached on Today too: marked once and announced.
+  await expect(page.getByText('Cel osiągnięty: Sto punktów')).toBeVisible();
+  await expect.poll(async () => (await goalsState(account.uid)).goals.map((g) => g.celebrated)).toEqual([false, true]);
+
+  await goals.nth(0).getByRole('link').click();
+  await expect(page).toHaveURL(/#\/goals$/);
+  await expect(page.getByRole('button', { name: 'Wpłać na: Rower' })).toBeVisible();
+});
+
+test('Today without goals invites to set one', async ({ page }) => {
+  const account = await goalsAccount('goals-today-empty');
+  await openSignedIn(page, account, '#/today');
+  await page.getByRole('link', { name: /Ustaw cel/ }).click();
+  await expect(page).toHaveURL(/#\/goals$/);
+  await expect(page.getByText('Nie masz jeszcze celów.')).toBeVisible();
+});

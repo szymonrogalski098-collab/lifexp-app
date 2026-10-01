@@ -68,8 +68,12 @@
     "choreDone": "Done today",
     "choreDoneTimes": "Done today ×{{count}}",
     "choresUnpaid": "To be paid out",
-    "noChores": "No chores yet. Add them in the current version of LifeXP.",
-    "loadFailed": "Some data could not be loaded. Check your connection."
+    "noChores": "No chores on the list yet.",
+    "loadFailed": "Some data could not be loaded. Check your connection.",
+    "goals": "Goals",
+    "goalsOpen": "All goals",
+    "goalsEmpty": "Set a goal",
+    "goalsEmptyMeta": "What are you saving points or money for?"
   },
   "stats": {
     "views": "Stats view",

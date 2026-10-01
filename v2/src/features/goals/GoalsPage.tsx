@@ -15,8 +15,8 @@ import { Button } from '@/ui/components/Button';
 import { ConfirmDialog } from '@/ui/components/ConfirmDialog';
 import { EmptyState, IconTile, ProgressBar } from '@/ui/components/Display';
 import { Card, Page, Stack } from '@/ui/components/Layout';
-import { DepositSheet, GoalSheet, goalAmount } from './GoalSheets';
-import { useCelebration } from './useCelebration';
+import { goalAmount, useCelebration } from '@/features/shared/goals';
+import { DepositSheet, GoalSheet } from './GoalSheets';
 import './goals.css';
 
 interface GoalCardProps {
