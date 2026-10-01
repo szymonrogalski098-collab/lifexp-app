@@ -576,3 +576,33 @@ test.describe('v1 on a desktop: categories and the limit', () => {
     await expect.poll(() => settingsState(account.uid)).toEqual(withPrezenty());
   });
 });
+
+test('repeated categories are removed in one go, keeping the one transactions use, with undo', async ({ page }) => {
+  const account = await moneyAccount('money-repeats');
+  const cats = db.collection(`users/${account.uid}/moneyCategories`);
+  // cat-games ("gry") is already there; three more spellings of it and one more "jedzenie".
+  await cats.doc('zz-1').set({ name: 'Gry', color: '#ffd700', icon: '' });
+  await cats.doc('zz-2').set({ name: ' gry ', color: '#ff6b6b', icon: '' });
+  await cats.doc('aa-3').set({ name: 'gry', color: '#00d2d3', icon: '' });
+  await cats.doc('zz-4').set({ name: 'jedzenie', color: '#ff9f43', icon: '' });
+  // Transactions name the category "Gry" most, so zz-1 is the one that stays.
+  const txs = db.collection(`users/${account.uid}/moneyTransactions`);
+  for (const category of ['Gry', 'Gry', 'gry']) {
+    await txs.add({ type: 'expense', amount: 1, category, note: '', date: utcToday(), source: 'manual', pointsCost: 0, createdAt: new Date() });
+  }
+  const before = (await cats.get()).docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.id.localeCompare(b.id));
+
+  await openSignedIn(page, account, '#/money/settings');
+  await expect(page.getByTestId('category-repeats')).toContainText('4 kategorie powtarzają nazwy innych.');
+  await page.getByRole('button', { name: 'Usuń powtórzone' }).click();
+  await expect(page.getByText('Usunięto 4 powtórzone kategorie.')).toBeVisible();
+  await expect.poll(async () => (await cats.get()).docs.map((d) => d.id).sort()).toEqual(['cat-food', 'zz-1']);
+  expect((await txs.get()).docs.map((d) => d.data().category).sort()).toEqual(['Gry', 'Gry', 'gry']);
+  await expect(page.getByTestId('category-repeats')).toHaveCount(0);
+  await expect(page.getByRole('list', { name: 'Kategorie transakcji' }).getByRole('listitem')).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Cofnij' }).click();
+  await expect
+    .poll(async () => (await cats.get()).docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.id.localeCompare(b.id)))
+    .toEqual(before);
+});

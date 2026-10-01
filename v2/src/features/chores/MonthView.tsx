@@ -193,12 +193,14 @@ export function MonthView({ uid, rate, defs, entries, payouts, path, navigate }:
             <p class="chores-summary__label">{t('chores.outstanding')}</p>
             <p class="chores-unpaid__note">{t('chores.outstandingNote')}</p>
           </div>
-          <p class="chores-unpaid__value numeric" data-testid="unpaid">
-            {t('today.choresUnpaidValue', {
-              points: formatInteger(unpaid.points, lang),
-              amount: formatMoney(unpaid.grosze, lang),
-            })}
-          </p>
+          <div class="chores-unpaid__value">
+            <p class="chores-unpaid__money numeric" data-testid="unpaid-money">
+              {formatMoney(unpaid.grosze, lang)}
+            </p>
+            <p class="chores-unpaid__points numeric" data-testid="unpaid-points">
+              {t('units.points', { points: formatInteger(unpaid.points, lang) })}
+            </p>
+          </div>
         </div>
         <div class="chores-unpaid__action">
           <Button

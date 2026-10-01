@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import pl from '@/i18n/pl.json';
-import { DEFAULT_PATH, FEATURES, navItems, resolveRoute, tabItems } from './registry';
+import { DEFAULT_PATH, FEATURES, isViewSwitch, navItems, resolveRoute, tabItems } from './registry';
 
 describe('module registry', () => {
   test('every route of PLAN.md 4.7 resolves to its module', () => {
@@ -46,5 +46,18 @@ describe('module registry', () => {
   test('ids and labels are unique and translated', () => {
     expect(new Set(FEATURES.map((f) => f.id)).size).toBe(FEATURES.length);
     for (const f of FEATURES) expect(pl.nav[f.id], f.id).toBeTruthy();
+  });
+});
+
+describe('views of one screen', () => {
+  test('moving between a module’s views is not a new screen; anything else is', () => {
+    expect(isViewSwitch('/stats', '/stats/history')).toBe(true);
+    expect(isViewSwitch('/money/settings', '/money')).toBe(true);
+    expect(isViewSwitch('/chores/defs', '/chores')).toBe(true);
+    expect(isViewSwitch('/stats', '/money')).toBe(false);
+    expect(isViewSwitch('/notes', '/notes/abc')).toBe(false);
+    expect(isViewSwitch('/chores/new', '/chores')).toBe(false);
+    expect(isViewSwitch(null, '/stats')).toBe(false);
+    expect(isViewSwitch('/stats', '/stats')).toBe(false);
   });
 });

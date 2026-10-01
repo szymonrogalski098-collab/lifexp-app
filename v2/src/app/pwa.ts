@@ -1,5 +1,7 @@
 // Installs v2's Service Worker (src/sw.ts) and recovers from a deploy that happened
 // while the page was open (docs/v2/PLAN.md 4.8, stage 1f).
+import { t } from '@/i18n';
+import { showToast } from '@/ui/toast';
 
 /** Production builds only: the dev server has no sw.js. Failure (private mode, blocked) is harmless. */
 export function registerServiceWorker(): void {
@@ -29,4 +31,43 @@ export function reloadOnStaleChunk(): void {
     event.preventDefault();
     location.reload();
   });
+}
+
+/** At most this often, a page that comes back into view asks whether a deploy happened. */
+const BUILD_CHECK_MS = 5 * 60_000;
+/** The entry script of a built index.html; its file name changes with every build. */
+const ENTRY_SCRIPT = /<script[^>]*type="module"[^>]*src="([^"]+)"/;
+
+/**
+ * A page keeps running the build it was opened with: moving between screens never
+ * reloads it. When it comes back into view (and while it stays open), it compares
+ * its own entry script with the deployed index.html and, if a newer build is out,
+ * offers to reload. The service worker cannot tell this reliably: right after a
+ * deploy it also updates under a page that already runs the new build.
+ */
+export function watchForNewBuild(): void {
+  if (!import.meta.env.PROD) return;
+  const own = document.querySelector('script[type="module"][src]')?.getAttribute('src');
+  if (!own) return;
+  let lastCheck = 0;
+  const check = () => {
+    if (document.visibilityState !== 'visible' || Date.now() - lastCheck < BUILD_CHECK_MS) return;
+    lastCheck = Date.now();
+    // A query the precache does not know, so the request reaches the server.
+    fetch(`./index.html?build-check=${lastCheck}`, { cache: 'no-store' })
+      .then((response) => (response.ok ? response.text() : ''))
+      .then((html) => {
+        const deployed = ENTRY_SCRIPT.exec(html)?.[1];
+        if (deployed && deployed !== own) {
+          showToast({
+            message: t('app.newVersion'),
+            action: { label: t('app.reload'), onAction: () => location.reload() },
+            durationMs: 12_000,
+          });
+        }
+      })
+      .catch(() => undefined);
+  };
+  document.addEventListener('visibilitychange', check);
+  setInterval(check, BUILD_CHECK_MS);
 }

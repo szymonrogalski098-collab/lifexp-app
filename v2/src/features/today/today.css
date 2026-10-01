@@ -297,3 +297,18 @@
   border-top: 1px solid var(--color-separator);
   font-weight: var(--font-weight-semibold);
 }
+
+/* The amount, the points under it; neither breaks inside. */
+.today-chores__unpaid-value {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: flex-end;
+  white-space: nowrap;
+}
+
+.today-chores__unpaid-points {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}

@@ -197,11 +197,13 @@ function ChoresCard({ profile, defs, entries }: ChoresCardProps) {
         )}
         <div class="today-chores__unpaid">
           <span>{t('today.choresUnpaid')}</span>
-          <span class="numeric" data-testid="chores-unpaid">
-            {t('today.choresUnpaidValue', {
-              points: formatInteger(unpaid.points, locale()),
-              amount: formatMoney(unpaid.grosze, locale()),
-            })}
+          <span class="today-chores__unpaid-value">
+            <span class="numeric" data-testid="chores-unpaid-money">
+              {formatMoney(unpaid.grosze, locale())}
+            </span>
+            <span class="today-chores__unpaid-points numeric" data-testid="chores-unpaid-points">
+              {t('units.points', { points: formatInteger(unpaid.points, locale()) })}
+            </span>
           </span>
         </div>
       </Card>

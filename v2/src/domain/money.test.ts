@@ -3,6 +3,7 @@ import {
   archiveMonths,
   balanceDelta,
   categoryProblem,
+  duplicateCategories,
   compareMonths,
   fitsBalance,
   groupByDay,
@@ -171,5 +172,22 @@ describe('categories and the limit (v1 Settings → Money)', () => {
     expect(limitFromInput(null)).toBe(20000);
     expect(limitFromInput(0)).toBe(0);
     expect(limitFromInput(15050)).toBe(15050);
+  });
+});
+
+describe('repeated categories', () => {
+  const cat = (id: string, name: string): MoneyCategory => ({ id, name, color: '#6c63ff' });
+  const used = (category: string, times: number) =>
+    Array.from({ length: times }, () => ({ ...tx('expense', 100, '2026-10-01'), category }));
+
+  test('one of each name stays, any case and spaces around', () => {
+    const cats = [cat('b', 'gry'), cat('a', 'gry'), cat('c', ' Gry '), cat('d', 'jedzenie'), cat('e', 'inne')];
+    expect(duplicateCategories(cats, []).map((c) => c.id).sort()).toEqual(['b', 'c']);
+    expect(duplicateCategories([cat('d', 'jedzenie'), cat('e', 'inne')], [])).toEqual([]);
+  });
+
+  test('the one most transactions use by its exact name stays', () => {
+    const cats = [cat('a', 'gry'), cat('b', 'Gry'), cat('c', 'gry')];
+    expect(duplicateCategories(cats, [...used('Gry', 3), ...used('gry', 1)]).map((c) => c.id).sort()).toEqual(['a', 'c']);
   });
 });

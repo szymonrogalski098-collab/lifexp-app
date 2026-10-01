@@ -79,7 +79,7 @@ test('logging a chore in v2 writes v1\'s entry and shows it in the calendar', as
   const day = page.getByRole('list', { name: /^Wpisy z dnia/ }).getByRole('listitem');
   await expect(day).toHaveCount(1);
   await expect(day.first()).toContainText('Opróżnienie zmywarki');
-  await expect(page.getByTestId('unpaid')).toContainText('15 pkt');
+  await expect(page.getByTestId('unpaid-points')).toHaveText('15 pkt');
 });
 
 test.describe('v1 on a desktop', () => {
@@ -158,7 +158,7 @@ test('the calendar, last month, and deleting an entry with undo', async ({ page 
   await openSignedIn(page, account, '#/chores');
   await expect(page.getByTestId('month-points')).toHaveText('20 pkt');
   await expect(page.getByTestId('month-money')).toHaveText('9,00 zł');
-  await expect(page.getByTestId('unpaid')).toContainText('25 pkt');
+  await expect(page.getByTestId('unpaid-points')).toHaveText('25 pkt');
 
   const dayNumber = String(Number(today.slice(8)));
   const cell = page.getByRole('button', { name: new RegExp(`^${dayNumber} .*: 20 pkt$`) });
@@ -242,12 +242,14 @@ async function settleInV2(page) {
 test('G8.5: paying out 10 + 30 pts moves 18,00 zł into Money in one go', async ({ page }) => {
   const account = await payoutAccount('payout-v2');
   await openSignedIn(page, account, '#/chores');
-  await expect(page.getByTestId('unpaid')).toHaveText('40 pkt · 18,00 zł');
+  await expect(page.getByTestId('unpaid-money')).toHaveText('18,00 zł');
+  await expect(page.getByTestId('unpaid-points')).toHaveText('40 pkt');
   await settleInV2(page);
 
   await expect(page.getByText('Rozliczono 18,00 zł')).toBeVisible();
   expect(await payoutState(account.uid)).toEqual(paidState());
-  await expect(page.getByTestId('unpaid')).toHaveText('0 pkt · 0,00 zł');
+  await expect(page.getByTestId('unpaid-money')).toHaveText('0,00 zł');
+  await expect(page.getByTestId('unpaid-points')).toHaveText('0 pkt');
   await expect(page.getByRole('button', { name: 'Rozlicz wypłatę' })).toBeDisabled();
   const history = page.getByRole('list', { name: 'Historia wypłat' }).getByRole('listitem');
   await expect(history).toHaveCount(1);
@@ -259,7 +261,8 @@ test('a payout cut off by a lost connection changes nothing, and goes through af
   const account = await payoutAccount('payout-offline');
   const before = await payoutState(account.uid);
   await openSignedIn(page, account, '#/chores');
-  await expect(page.getByTestId('unpaid')).toHaveText('40 pkt · 18,00 zł');
+  await expect(page.getByTestId('unpaid-money')).toHaveText('18,00 zł');
+  await expect(page.getByTestId('unpaid-points')).toHaveText('40 pkt');
 
   await context.setOffline(true);
   await settleInV2(page);

@@ -194,9 +194,10 @@
 
 /* ── To pay out ── */
 
+/* The amount leads, the points under it; neither breaks inside (long English amounts). */
 .chores-unpaid {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
 }
@@ -211,9 +212,20 @@
 }
 
 .chores-unpaid__value {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.chores-unpaid__money {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  text-align: right;
+  white-space: nowrap;
+}
+
+.chores-unpaid__points {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
 }
 
 /* ── Sheet ── */

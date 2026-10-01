@@ -4,7 +4,7 @@ import type { RouteProps } from '@/lib/route-match';
 import { t } from '@/i18n';
 import { account } from '@/stores/session';
 import { Page, Stack } from '@/ui/components/Layout';
-import { ViewSwitch } from '@/ui/components/ViewSwitch';
+import { ViewPanel, ViewSwitch } from '@/ui/components/ViewSwitch';
 import { HistoryView } from './HistoryView';
 import { OverviewView } from './OverviewView';
 import './stats.css';
@@ -24,11 +24,13 @@ export default function StatsModule({ path }: RouteProps) {
             { href: '#/stats/history', label: t('stats.history'), current: onHistory },
           ]}
         />
-        {onHistory ? (
-          <HistoryView uid={current.user.uid} />
-        ) : (
-          <OverviewView uid={current.user.uid} profile={current.profile} />
-        )}
+        <ViewPanel index={onHistory ? 1 : 0}>
+          {onHistory ? (
+            <HistoryView uid={current.user.uid} />
+          ) : (
+            <OverviewView uid={current.user.uid} profile={current.profile} />
+          )}
+        </ViewPanel>
       </Stack>
     </Page>
   );

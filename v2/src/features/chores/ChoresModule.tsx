@@ -10,7 +10,7 @@ import { chores as choresState, watchChores } from '@/stores/chores';
 import { account } from '@/stores/session';
 import { Skeleton } from '@/ui/components/Display';
 import { Card, Page, Stack } from '@/ui/components/Layout';
-import { ViewSwitch } from '@/ui/components/ViewSwitch';
+import { ViewPanel, ViewSwitch } from '@/ui/components/ViewSwitch';
 import { DefsView } from './DefsView';
 import { MonthView } from './MonthView';
 import './chores.css';
@@ -45,23 +45,25 @@ export default function ChoresModule({ path, navigate }: RouteProps) {
             {t('chores.loadFailed')}
           </p>
         )}
-        {!defs || !entries ? (
-          <Card>
-            <Skeleton lines={5} />
-          </Card>
-        ) : onDefs ? (
-          <DefsView uid={uid} defs={defs} />
-        ) : (
-          <MonthView
-            uid={uid}
-            rate={rate}
-            defs={defs}
-            entries={entries}
-            payouts={payouts}
-            path={path}
-            navigate={navigate}
-          />
-        )}
+        <ViewPanel index={onDefs ? 1 : 0}>
+          {!defs || !entries ? (
+            <Card>
+              <Skeleton lines={5} />
+            </Card>
+          ) : onDefs ? (
+            <DefsView uid={uid} defs={defs} />
+          ) : (
+            <MonthView
+              uid={uid}
+              rate={rate}
+              defs={defs}
+              entries={entries}
+              payouts={payouts}
+              path={path}
+              navigate={navigate}
+            />
+          )}
+        </ViewPanel>
       </Stack>
     </Page>
   );
