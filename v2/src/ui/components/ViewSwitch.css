@@ -55,3 +55,26 @@
   outline: 2px solid var(--color-focus);
   outline-offset: -2px;
 }
+
+/* ── ViewPanel: the content under the switch ── */
+
+.ui-view-panels,
+.ui-view-panel {
+  display: flex;
+  flex-direction: column;
+  /* The same gap as the Stack it sits in (Layout.css .ui-stack--md). */
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.ui-view-panel--enter {
+  animation: ui-view-in var(--duration-enter) var(--ease-out);
+}
+
+/* --from: 1 = comes from the right, -1 = from the left. */
+@keyframes ui-view-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--from) * 24px));
+  }
+}

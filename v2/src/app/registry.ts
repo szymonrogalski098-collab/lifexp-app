@@ -48,6 +48,11 @@ export interface FeatureDef {
   stage: string;
   /** The module's screen, loaded on first visit. Absent = "coming soon". */
   view?: () => Promise<{ default: ComponentType<RouteProps> }>;
+  /**
+   * Sibling views of one screen, switched by its ViewSwitch. Moving between them is
+   * not a new screen: the switch slides and only the content below changes.
+   */
+  views?: readonly string[];
 }
 
 export const FEATURES: readonly FeatureDef[] = [
@@ -80,6 +85,7 @@ export const FEATURES: readonly FeatureDef[] = [
     tab: 2,
     stage: '3b',
     view: () => import('@/features/chores/ChoresModule'),
+    views: ['/chores', '/chores/defs'],
   },
   {
     id: 'money',
@@ -90,6 +96,7 @@ export const FEATURES: readonly FeatureDef[] = [
     tab: 3,
     stage: '3c',
     view: () => import('@/features/money/MoneyModule'),
+    views: ['/money', '/money/loans', '/money/settings'],
   },
   {
     id: 'notes',
@@ -108,6 +115,7 @@ export const FEATURES: readonly FeatureDef[] = [
     nav: { group: 'main', order: 70 },
     stage: '2',
     view: () => import('@/features/stats/StatsModule'),
+    views: ['/stats', '/stats/history'],
   },
   { id: 'games', labelKey: 'nav.games', icon: Gamepad2, paths: ['/games'], nav: { group: 'main', order: 80 }, stage: '7' },
   { id: 'reports', labelKey: 'nav.reports', icon: Megaphone, paths: ['/reports'], nav: { group: 'secondary', order: 10 }, stage: '4' },
@@ -143,6 +151,12 @@ export function tabItems(): FeatureDef[] {
 export interface ResolvedRoute {
   feature: FeatureDef;
   params: RouteParams;
+}
+
+/** Two paths that are views of the same screen (FeatureDef.views), so not a new screen. */
+export function isViewSwitch(from: string | null, to: string): boolean {
+  if (from === null || from === to) return false;
+  return FEATURES.some((f) => f.views?.includes(from) && f.views.includes(to));
 }
 
 export function resolveRoute(path: string): ResolvedRoute | null {

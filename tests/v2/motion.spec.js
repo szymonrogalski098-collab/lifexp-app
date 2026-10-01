@@ -1,7 +1,7 @@
 // Motion (docs/v2/PLAN.md 7.1): state changes animate instead of jumping — screens
 // rise in, the segmented control's thumb slides, toasts fade out — using only
 // transform and opacity; with the system's "reduce motion" nothing animates.
-const { test, expect, openSignedIn } = require('../support/v2');
+const { test, expect, openSignedIn, screenSettled } = require('../support/v2');
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -56,4 +56,25 @@ test.describe('with reduced motion', () => {
     const enter = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--duration-enter'));
     expect(parseFloat(enter)).toBe(0);
   });
+});
+
+test('switching views of one module slides the switch and brings in only the content below', async ({ page, account }) => {
+  await openSignedIn(page, account, '#/stats');
+  const views = page.getByRole('navigation', { name: 'Widok statystyk' });
+  const thumb = views.locator('.ui-view-switch__thumb');
+  await screenSettled(page);
+  const before = await thumb.boundingBox();
+
+  await views.getByRole('link', { name: 'Historia' }).click();
+  // The screen stays put (no rise-in hiding the switch) ...
+  expect(await animatedProperties(page.locator('.shell__main'))).toEqual([]);
+  // ... the thumb slides to the new view ...
+  await expect.poll(async () => (await thumb.boundingBox()).x).toBeGreaterThan(before.x + 20);
+  // ... and the new view's content comes in on its own, with transform and opacity only.
+  const panel = page.locator('.ui-view-panel').first();
+  expect([...new Set(await animatedProperties(panel))].sort()).toEqual(['opacity', 'transform']);
+
+  // Another module is a new screen: that one still rises in.
+  await page.locator('.tabbar').getByRole('link', { name: 'Pieniądze' }).click();
+  expect((await animatedProperties(page.locator('.shell__main'))).length).toBeGreaterThan(0);
 });

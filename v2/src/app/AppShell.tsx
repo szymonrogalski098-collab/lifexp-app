@@ -12,7 +12,7 @@ import { dragProgress, releaseVelocity, settlesOpen, TAP_SLOP, type DragSample }
 import { AddSheet } from './AddSheet';
 import { NavMenu, type Account } from './NavMenu';
 import { TabBar } from './TabBar';
-import type { ModuleId } from './registry';
+import { isViewSwitch, type ModuleId } from './registry';
 import { navigate } from './router';
 import { isExpanded, isStandalone } from './viewport';
 
@@ -62,6 +62,7 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
   const navRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const lastPath = useRef<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // The drawer position lives in one CSS variable, written directly (not through
@@ -137,7 +138,10 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
     if (contentRef.current) contentRef.current.scrollTop = 0;
     scrollTo(0, 0);
     // Every screen change, including the first one after start, rises into place.
-    playEnter(mainRef.current);
+    // Switching views of one screen does not: its switch slides and the view's
+    // content comes in by itself (ui/ViewSwitch ViewPanel).
+    if (!isViewSwitch(lastPath.current, path)) playEnter(mainRef.current);
+    lastPath.current = path;
   }, [path]);
 
   const onPointerDown = (e: PointerEvent) => {

@@ -10,11 +10,14 @@ import { money as moneyState, watchMoney } from '@/stores/money';
 import { account } from '@/stores/session';
 import { Skeleton } from '@/ui/components/Display';
 import { Card, Page, Stack } from '@/ui/components/Layout';
-import { ViewSwitch } from '@/ui/components/ViewSwitch';
+import { ViewPanel, ViewSwitch } from '@/ui/components/ViewSwitch';
 import { LoansView } from './LoansView';
 import { OverviewView } from './OverviewView';
 import { SettingsView } from './SettingsView';
 import './money.css';
+
+/** In the order of the switch. */
+const VIEWS = ['overview', 'loans', 'settings'] as const;
 
 export default function MoneyModule({ path, navigate }: RouteProps) {
   const current = account.value;
@@ -53,26 +56,28 @@ export default function MoneyModule({ path, navigate }: RouteProps) {
             {t('money.loadFailed')}
           </p>
         )}
-        {!ready ? (
-          <Card>
-            <Skeleton lines={5} />
-          </Card>
-        ) : view === 'loans' ? (
-          <LoansView uid={uid} loans={loans ?? []} balance={balance ?? 0} />
-        ) : view === 'settings' ? (
-          <SettingsView uid={uid} categories={categories ?? []} limit={limit ?? 0} />
-        ) : (
-          <OverviewView
-            uid={uid}
-            profile={current.profile}
-            txs={txs ?? []}
-            categories={categories ?? []}
-            limit={limit ?? 0}
-            balance={balance ?? 0}
-            path={path}
-            navigate={navigate}
-          />
-        )}
+        <ViewPanel index={VIEWS.indexOf(view)}>
+          {!ready ? (
+            <Card>
+              <Skeleton lines={5} />
+            </Card>
+          ) : view === 'loans' ? (
+            <LoansView uid={uid} loans={loans ?? []} balance={balance ?? 0} />
+          ) : view === 'settings' ? (
+            <SettingsView uid={uid} categories={categories ?? []} limit={limit ?? 0} />
+          ) : (
+            <OverviewView
+              uid={uid}
+              profile={current.profile}
+              txs={txs ?? []}
+              categories={categories ?? []}
+              limit={limit ?? 0}
+              balance={balance ?? 0}
+              path={path}
+              navigate={navigate}
+            />
+          )}
+        </ViewPanel>
       </Stack>
     </Page>
   );
