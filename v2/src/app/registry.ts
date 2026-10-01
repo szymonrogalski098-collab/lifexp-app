@@ -85,7 +85,7 @@ export const FEATURES: readonly FeatureDef[] = [
     id: 'money',
     labelKey: 'nav.money',
     icon: Wallet,
-    paths: ['/money', '/money/new', '/money/loans'],
+    paths: ['/money', '/money/new', '/money/loans', '/money/settings'],
     nav: { group: 'main', order: 50 },
     tab: 3,
     stage: '3c',

@@ -121,6 +121,11 @@ Otwarcie Pieniędzy w v2 robi to co `loadMoney()` v1: dokumenty `money/settings`
 5 kategorii startowych (tylko po potwierdzeniu z serwera, że nie ma żadnej), M2 dla konta bez
 `moneyIncomeAllTime`.
 
+v2 (etap 3c-3): limit i kategorie jak w Ustawieniach v1 (`money.js:568-640`), e2e: ten sam dokument
+`money/settings` (`{monthlyLimit, currency: 'PLN'}`, puste pole = 200 zł, 0 = bez limitu) i ta sama nowa
+kategoria (nazwa po `trim`, kolor z kolejki, `icon: ''`); duplikat nazwy bez względu na wielkość liter odrzucony.
+Usunięcie kategorii z „Cofnij” (D8) zamiast potwierdzenia; transakcje zachowują nazwę.
+
 ## G6. Money: pożyczki
 
 `money.js:353-524`. Pożyczki ruszają saldo, ale **nie tworzą transakcji** i nie zmieniają punktów.

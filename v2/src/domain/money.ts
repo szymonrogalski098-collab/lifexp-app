@@ -111,7 +111,29 @@ export function resolveCategory(draft: TxDraft, categories: readonly MoneyCatego
   const name = draft.newCategory.trim();
   const existing = categories.find((c) => c.name.toLowerCase() === name.toLowerCase());
   if (existing) return { name: existing.name, create: null };
-  return { name, create: { name, color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length] as string } };
+  return { name, create: { name, color: nextCategoryColor(categories) } };
+}
+
+/** v1 addMoneyCategoryByName(): colours go round in the order categories were added. */
+export function nextCategoryColor(categories: readonly MoneyCategory[]): string {
+  return CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length] as string;
+}
+
+// ── Categories and the limit (v1 Settings → Money) ──
+
+export type CategoryProblem = 'nameRequired' | 'categoryExists';
+
+/** v1 addMoneyCategory(): a name (trimmed) that no category has yet, in any case. */
+export function categoryProblem(name: string, categories: readonly MoneyCategory[]): CategoryProblem | null {
+  const trimmed = name.trim();
+  if (!trimmed) return 'nameRequired';
+  if (categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) return 'categoryExists';
+  return null;
+}
+
+/** v1 saveMoneyLimit(): an empty or unreadable limit falls back to 200 zł; 0 means no limit. */
+export function limitFromInput(grosze: number | null): number {
+  return grosze ?? MONEY_LIMIT_DEFAULT;
 }
 
 // ── The list (v1 renderMoneyTxList, renderMoneyArchiveSelect) ──
