@@ -147,3 +147,75 @@
   font-weight: var(--font-weight-bold);
   white-space: nowrap;
 }
+
+/* ── Loans (#/money/loans) ── */
+
+.money-loans__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.money-loans__head .ui-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.money-loans__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.money-loans {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.money-loan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.money-loan + .money-loan {
+  border-top: 1px solid var(--color-separator);
+}
+
+.money-loan__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.money-loan__title {
+  min-width: 0;
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.money-loan__left {
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.money-loan__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.money-loan__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.money-sheet__lead {
+  color: var(--color-text-secondary);
+}

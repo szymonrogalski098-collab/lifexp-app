@@ -14,9 +14,6 @@ import {
   runTransaction,
   writeBatch,
   type DocumentData,
-  type DocumentReference,
-  type DocumentSnapshot,
-  type Transaction,
 } from 'firebase/firestore';
 import {
   CATEGORY_COLORS,
@@ -30,7 +27,7 @@ import {
   type ResolvedCategory,
   type TxType,
 } from '@/domain/money';
-import { groszeFromZloty, zlotyFromGrosze } from '@/lib/money';
+import { zlotyFromGrosze } from '@/lib/money';
 import {
   moneyCategoryData,
   moneyCategoryFromData,
@@ -40,12 +37,12 @@ import {
 } from '../converters/money';
 import { numberOr } from '../converters/fields';
 import { db } from '../firebase';
+import { balanceIn, moneyDoc, writeBalance } from './balance';
 
 type OnError = (error: unknown) => void;
 
 const txsOf = (uid: string) => collection(db, 'users', uid, 'moneyTransactions');
 const categoriesOf = (uid: string) => collection(db, 'users', uid, 'moneyCategories');
-const moneyDoc = (uid: string, name: 'settings' | 'balance') => doc(db, 'users', uid, 'money', name);
 const userOf = (uid: string) => doc(db, 'users', uid);
 
 /** Every transaction (v1 loads them all; the screen picks what to show). */
@@ -64,17 +61,6 @@ export function watchMoneyCategories(uid: string, onChange: (categories: MoneyCa
 /** money/settings.monthlyLimit in grosze. */
 export function watchMonthlyLimit(uid: string, onChange: (limit: number) => void, onError: OnError) {
   return onSnapshot(moneyDoc(uid, 'settings'), (snap) => onChange(monthlyLimitFromData(snap.data())), onError);
-}
-
-/** The balance in grosze as read inside a transaction (0 without a document). */
-function balanceIn(snap: DocumentSnapshot): number {
-  return snap.exists() ? groszeFromZloty(numberOr(snap.data().current)) : 0;
-}
-
-/** v1 updateMoneyCurrent(): `current` only, created if missing. */
-function writeBalance(tx: Transaction, ref: DocumentReference, snap: DocumentSnapshot, grosze: number) {
-  if (snap.exists()) tx.update(ref, { current: zlotyFromGrosze(grosze) });
-  else tx.set(ref, { current: zlotyFromGrosze(grosze) });
 }
 
 /** v1 loadMoneyDocs(): both documents exist once Money has been opened. */

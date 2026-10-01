@@ -297,3 +297,181 @@ test.describe('v1 on a desktop', () => {
     await expect(page.locator('#money-tx-list')).toContainText('jedzenie · obiad');
   });
 });
+
+// ── Loans (stage 3c-2; GOLDEN G6) ──
+
+const loansOf = (uid) => db.collection(`users/${uid}/moneyLoans`);
+
+/** The balance and every loan, ids and times aside (completedAt only as set or not). */
+async function loansState(uid) {
+  const balance = (await db.doc(`users/${uid}/money/balance`).get()).data();
+  const loans = (await loansOf(uid).get()).docs
+    .map((d) => {
+      const { createdAt, completedAt, ...rest } = d.data();
+      return { ...rest, completed: completedAt !== null && completedAt !== undefined };
+    })
+    .sort((a, b) => a.person.localeCompare(b.person));
+  return { balance, loans, transactions: await txCount(uid) };
+}
+
+function seedLoan(uid, { person, amount, repaidAmount = 0, direction }) {
+  return loansOf(uid).add({
+    person,
+    amount,
+    repaidAmount,
+    direction,
+    note: '',
+    date: utcToday(),
+    createdAt: new Date(),
+    completedAt: null,
+  });
+}
+
+const lentToOla = () => ({
+  balance: { current: 30 },
+  loans: [
+    { person: 'Ola', amount: 20, repaidAmount: 0, direction: 'lent', note: 'na kino', date: utcToday(), completed: false },
+  ],
+  transactions: 0,
+});
+
+test('G6.1: lending 20,00 zł takes it from the balance, as in v1', async ({ page }) => {
+  const account = await moneyAccount('loan-new-v2');
+  await openSignedIn(page, account, '#/money/loans');
+  await page.getByRole('button', { name: 'Nowa pożyczka' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Nowa pożyczka' });
+  await sheet.getByRole('button', { name: 'Dodaj pożyczkę' }).click();
+  await expect(sheet.getByText('Podaj osobę.')).toBeVisible();
+  await sheet.getByLabel('Osoba').fill(' Ola ');
+  await sheet.getByLabel('Kwota').fill('20');
+  await expect(sheet.getByText('Saldo po operacji: 30,00 zł')).toBeVisible();
+  await sheet.getByLabel('Notatka (opcjonalnie)').fill('na kino');
+  await sheet.getByRole('button', { name: 'Dodaj pożyczkę' }).click();
+
+  await expect(page.getByText('Pożyczka dodana.')).toBeVisible();
+  expect(await loansState(account.uid)).toEqual(lentToOla());
+  const row = page.getByRole('list', { name: 'Pożyczki' }).getByRole('listitem');
+  await expect(row).toHaveCount(1);
+  await expect(row.first()).toContainText('Pożyczka dla: Ola');
+  await expect(row.first()).toContainText('Spłacono 0,00 zł z 20,00 zł (0%) · na kino');
+  await expect(page.getByText('Do odzyskania')).toBeVisible();
+});
+
+test('G6.1 blocked, G6.4: lending or repaying more than the balance changes nothing', async ({ page }) => {
+  const account = await moneyAccount('loan-too-much', { balance: 10 });
+  await seedLoan(account.uid, { person: 'Tata', amount: 40, direction: 'borrowed' });
+  const before = await loansState(account.uid);
+  await openSignedIn(page, account, '#/money/loans');
+
+  await page.getByRole('button', { name: 'Nowa pożyczka' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Nowa pożyczka' });
+  await sheet.getByLabel('Osoba').fill('Ola');
+  await sheet.getByLabel('Kwota').fill('20');
+  await sheet.getByRole('button', { name: 'Dodaj pożyczkę' }).click();
+  await expect(sheet.getByText('Za mało środków na saldzie.')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Zamknij' }).click();
+
+  await page.getByRole('button', { name: 'Spłać: Pożyczka od: Tata' }).click();
+  const repaySheet = page.getByRole('dialog', { name: 'Spłata: Tata' });
+  await repaySheet.getByLabel('Kwota spłaty').fill('15');
+  await repaySheet.getByRole('button', { name: 'Spłać' }).click();
+  await expect(repaySheet.getByText('Za mało środków na saldzie.')).toBeVisible();
+  expect(await loansState(account.uid)).toEqual(before);
+});
+
+test('G6.3: a repayment above what is left is capped, settles the loan once', async ({ page }) => {
+  const account = await moneyAccount('loan-repay-v2');
+  await seedLoan(account.uid, { person: 'Ola', amount: 20, repaidAmount: 5, direction: 'lent' });
+  await openSignedIn(page, account, '#/money/loans');
+  await page.getByRole('button', { name: 'Spłać: Pożyczka dla: Ola' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Spłata: Ola' });
+  await expect(sheet.getByText('Zostało do spłaty: 15,00 zł.')).toBeVisible();
+  await sheet.getByLabel('Kwota spłaty').fill('25');
+  await expect(sheet.getByText('Spłata zostanie ograniczona do 15,00 zł. Saldo po operacji: 65,00 zł')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Spłać' }).click();
+
+  await expect(page.getByText('Pożyczka rozliczona: Ola.')).toBeVisible();
+  expect(await loansState(account.uid)).toEqual({
+    balance: { current: 65 },
+    loans: [{ person: 'Ola', amount: 20, repaidAmount: 20, direction: 'lent', note: '', date: utcToday(), completed: true }],
+    transactions: 0,
+  });
+  await expect(page.getByRole('list', { name: 'Pożyczki' })).toContainText('Rozliczona');
+  await expect(page.getByRole('button', { name: /^Spłać:/ })).toHaveCount(0);
+});
+
+test('G6.5/G6.6: deleting undoes what is outstanding, and is refused below zero', async ({ page }) => {
+  const account = await moneyAccount('loan-delete', { balance: 10 });
+  await seedLoan(account.uid, { person: 'Ola', amount: 20, repaidAmount: 5, direction: 'lent' });
+  await seedLoan(account.uid, { person: 'Tata', amount: 40, direction: 'borrowed' });
+  await openSignedIn(page, account, '#/money/loans');
+
+  await page.getByRole('button', { name: 'Usuń: Pożyczka od: Tata' }).click();
+  await page.getByRole('alertdialog', { name: 'Usunąć tę pożyczkę?' }).getByRole('button', { name: 'Usuń' }).click();
+  await expect(page.getByText('Nie można usunąć: saldo spadłoby poniżej zera. Najpierw spłać pożyczkę.')).toBeVisible();
+  expect((await loansState(account.uid)).loans).toHaveLength(2);
+
+  await page.getByRole('button', { name: 'Usuń: Pożyczka dla: Ola' }).click();
+  const dialog = page.getByRole('alertdialog', { name: 'Usunąć tę pożyczkę?' });
+  await expect(dialog).toContainText('Niespłacona część (15,00 zł) wróci na saldo.');
+  await dialog.getByRole('button', { name: 'Usuń' }).click();
+  await expect(page.getByText('Pożyczka usunięta.')).toBeVisible();
+  await expect.poll(async () => (await loansState(account.uid)).balance).toEqual({ current: 25 });
+  expect((await loansState(account.uid)).loans.map((l) => l.person)).toEqual(['Tata']);
+});
+
+test.describe('v1 on a desktop: loans', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  async function openV1Money(page, context, account) {
+    await serveCdnFromNpm(context);
+    await signInToApp(page, account);
+    await page.click('.sidebar .nav-item[data-page="money"]');
+    await expect(page.locator('#money-balance')).not.toHaveText('0,00 zł');
+  }
+
+  test('parity G6.1: v1 lends the same way', async ({ page, context }) => {
+    const account = await moneyAccount('loan-new-v1');
+    await openV1Money(page, context, account);
+    await page.click('button[onclick="toggleLoanForm()"]');
+    await page.fill('#loan-person', ' Ola ');
+    await page.fill('#loan-amount', '20');
+    await page.fill('#loan-note', 'na kino');
+    await page.click('button[onclick="saveLoan()"]');
+    await expect.poll(async () => (await loansState(account.uid)).loans.length).toBe(1);
+    await expect.poll(async () => (await loansState(account.uid)).balance).toEqual({ current: 30 });
+    expect(await loansState(account.uid)).toEqual(lentToOla());
+  });
+
+  test('parity G6.3: v1 caps and settles the same repayment', async ({ page, context }) => {
+    const account = await moneyAccount('loan-repay-v1');
+    const ref = await seedLoan(account.uid, { person: 'Ola', amount: 20, repaidAmount: 5, direction: 'lent' });
+    await openV1Money(page, context, account);
+    await page.click(`button[onclick="openLoanRepay('${ref.id}')"]`);
+    await page.fill('#loan-repay-amount', '25');
+    await page.click(`button[onclick="saveLoanRepay('${ref.id}')"]`);
+    await expect.poll(async () => (await loansState(account.uid)).balance).toEqual({ current: 65 });
+    expect((await loansState(account.uid)).loans).toEqual([
+      { person: 'Ola', amount: 20, repaidAmount: 20, direction: 'lent', note: '', date: utcToday(), completed: true },
+    ]);
+  });
+
+  test('v1 lists a loan that v2 added, with the balance it left', async ({ page, context }) => {
+    const account = await moneyAccount('loan-v2-to-v1');
+    await openSignedIn(page, account, '#/money/loans');
+    await page.getByRole('button', { name: 'Nowa pożyczka' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Nowa pożyczka' });
+    await sheet.getByRole('radio', { name: 'Pożyczam od kogoś' }).check();
+    await sheet.getByLabel('Osoba').fill('Tata');
+    await sheet.getByLabel('Kwota').fill('12,5');
+    await sheet.getByRole('button', { name: 'Dodaj pożyczkę' }).click();
+    await expect.poll(async () => (await loansState(account.uid)).balance).toEqual({ current: 62.5 });
+    await page.getByRole('button', { name: 'Wyloguj' }).click();
+    await expect(page.getByRole('heading', { name: 'Zaloguj się' })).toBeVisible();
+
+    await openV1Money(page, context, account);
+    await expect(page.locator('#money-balance')).toHaveText('62,50 zł');
+    await expect(page.locator('#loans-list')).toContainText('Tata');
+    await expect(page.locator('#loans-list')).toContainText('12,50 zł');
+  });
+});

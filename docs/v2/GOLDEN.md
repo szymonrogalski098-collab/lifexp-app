@@ -136,6 +136,13 @@ Otwarcie Pieniędzy w v2 robi to co `loadMoney()` v1: dokumenty `money/settings`
 
 Spłata do końca ustawia `completedAt` (raz).
 
+v2 (etap 3c-2, `tests/v2/money.spec.js`): G6.1 i G6.3 e2e — v1 i v2 zapisują ten sam dokument pożyczki i to samo
+saldo (bez id i czasów; `completedAt` tylko ustawione albo nie), v1 pokazuje pożyczkę z v2. G6.4 i G6.6
+blokują bez zapisu. Każda operacja to jedna transakcja Firestore: czyta pożyczkę i saldo, więc spłata liczona
+jest od tego, co faktycznie zostało na serwerze, i nie może się policzyć dwa razy (v1 liczy od stanu
+wczytanego wcześniej i zapisuje pożyczkę i saldo osobno, B3/B4). Usunięcie z potwierdzeniem, które mówi,
+ile wróci albo zejdzie z salda.
+
 ## G7. Cele
 
 `dashboard.js:49-250`. Tablica `users.goals` (max 3).
