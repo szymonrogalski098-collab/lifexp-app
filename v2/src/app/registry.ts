@@ -81,7 +81,16 @@ export const FEATURES: readonly FeatureDef[] = [
     stage: '3b',
     view: () => import('@/features/chores/ChoresModule'),
   },
-  { id: 'money', labelKey: 'nav.money', icon: Wallet, paths: ['/money', '/money/loans'], nav: { group: 'main', order: 50 }, tab: 3, stage: '3c' },
+  {
+    id: 'money',
+    labelKey: 'nav.money',
+    icon: Wallet,
+    paths: ['/money', '/money/new', '/money/loans'],
+    nav: { group: 'main', order: 50 },
+    tab: 3,
+    stage: '3c',
+    view: () => import('@/features/money/MoneyModule'),
+  },
   {
     id: 'notes',
     labelKey: 'nav.notes',

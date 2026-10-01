@@ -105,10 +105,21 @@ odbierane.
 | G5.3 | wydatek 0,01 | total 120 | koszt 1 | kod |
 | G5.4 | wydatek 20,00 | saldo 50, total 120 | koszt 120 (200 obcięte do total) | kod |
 | G5.5 | wydatek 60,00 | saldo 50 | błąd „za mało środków”, brak zapisu | kod |
-| G5.6 | wpływ 30,00 | saldo 50 | saldo 80; moneyIncomeAllTime +30; bez punktów | kod |
+| G5.6 | wpływ 30,00 | saldo 50 | saldo 80; moneyIncomeAllTime +30; bez punktów | e2e |
 
 Sprawdzone w Node: przy kursie domyślnym `ceil(kwota / r)` daje dokładny wynik dla wszystkich kwot
 0,01-1000,00 zł (brak błędów zmiennoprzecinkowych).
+
+v2 (etap 3c-1, `tests/v2/money.spec.js`): G5.1 i G5.6 e2e — v1 i v2 zapisują to samo konto do identycznego
+stanu (saldo, punkty, `moneyIncomeAllTime`, dokument transakcji, nowa kategoria z kolorem z kolejki; bez id
+i `createdAt`), G5.5 blokuje bez zapisu, usunięcie wydatku przywraca stan sprzed niego, v1 pokazuje transakcję
+z v2. Koszt w punktach liczony tym samym wyrażeniem co v1 (test jednostkowy dla każdej kwoty do 1000 zł).
+Każda zmiana salda to jedna transakcja Firestore, która czyta saldo i profil (koniec B4): dwie karty zapisujące
+w tej samej chwili dają poprawną sumę (test e2e). Różnica: v2 nie pozwala usunąć wpływu, jeśli saldo spadłoby
+poniżej zera (v1 pozwala i saldo robi się ujemne). Osiągnięcia po wpływie v1 nadrabia przy wejściu na dashboard.
+Otwarcie Pieniędzy w v2 robi to co `loadMoney()` v1: dokumenty `money/settings` (200 zł) i `money/balance` (0),
+5 kategorii startowych (tylko po potwierdzeniu z serwera, że nie ma żadnej), M2 dla konta bez
+`moneyIncomeAllTime`.
 
 ## G6. Money: pożyczki
 

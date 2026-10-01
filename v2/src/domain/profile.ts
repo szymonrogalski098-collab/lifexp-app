@@ -36,6 +36,10 @@ export interface Profile {
   streakFreezeLastUsed: string | null;
   /** The PC built by doing tasks (G9); null until the first task, or when malformed. */
   pcBuild: PcBuild | null;
+  /** Grosze put aside in money goals (v1 "W celach"); the goals themselves come in stage 3d. */
+  savedInGoals: number;
+  /** Grosze ever received in Money; null until v1 or v2 backfills it (M2). */
+  moneyIncomeAllTime: number | null;
 }
 
 /** users.points — v1 keeps all three in step. */
