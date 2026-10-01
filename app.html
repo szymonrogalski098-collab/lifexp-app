@@ -101,6 +101,9 @@
     .main {
       margin-left: 220px;
       flex: 1;
+      /* Bez tego flex-item ma min-width:auto i rośnie do najszerszego niełamliwego
+         tekstu (np. długa notatka transakcji), rozpychając całą stronę na telefonie. */
+      min-width: 0;
       padding: 28px;
     }
 

@@ -434,7 +434,7 @@ function renderLoansList() {
         <div class="progress-bar-wrap" style="margin-bottom:6px">
           <div class="progress-bar" style="width:${pct}%;${done ? 'background:var(--accent2)' : ''}"></div>
         </div>
-        <span class="text2">${fmtMoney(repaid)} / ${fmtMoney(total)} · <strong>${pct.toFixed(0)}%</strong>${note}</span>
+        <span class="text2" style="overflow-wrap:anywhere">${fmtMoney(repaid)} / ${fmtMoney(total)} · <strong>${pct.toFixed(0)}%</strong>${note}</span>
         ${repayForm}
       </div>`;
   }).join('');
