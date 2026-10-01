@@ -1,7 +1,8 @@
-// Money, live (stage 3c): transactions, categories, the monthly limit and the
-// balance. The Money screen starts the listeners when it mounts and stops them
+// Money, live (stage 3c): transactions, categories, the monthly limit, loans and
+// the balance. The Money screen starts the listeners when it mounts and stops them
 // when it leaves.
 import { signal } from '@preact/signals';
+import type { Loan } from '@/domain/loans';
 import type { MoneyCategory, MoneyTx } from '@/domain/money';
 
 /** undefined = still loading. */
@@ -10,12 +11,20 @@ export interface MoneyState {
   categories: readonly MoneyCategory[] | undefined;
   /** Grosze; 0 = no limit. */
   limit: number | undefined;
+  loans: readonly Loan[] | undefined;
   /** Grosze; null = no money/balance document yet. */
   balance: number | null | undefined;
   failed: boolean;
 }
 
-const EMPTY: MoneyState = { txs: undefined, categories: undefined, limit: undefined, balance: undefined, failed: false };
+const EMPTY: MoneyState = {
+  txs: undefined,
+  categories: undefined,
+  limit: undefined,
+  loans: undefined,
+  balance: undefined,
+  failed: false,
+};
 
 export const money = signal<MoneyState>(EMPTY);
 
@@ -26,13 +35,14 @@ export function watchMoney(uid: string): () => void {
     if (!stopped) money.value = { ...money.value, ...patch };
   };
   const fail = () => set({ failed: true });
-  void Promise.all([import('@/data/repos/money'), import('@/data/repos/today')])
-    .then(([moneyRepo, todayRepo]) => {
+  void Promise.all([import('@/data/repos/money'), import('@/data/repos/loans'), import('@/data/repos/today')])
+    .then(([moneyRepo, loansRepo, todayRepo]) => {
       if (stopped) return;
       stops.push(
         moneyRepo.watchMoneyTxs(uid, (txs) => set({ txs }), fail),
         moneyRepo.watchMoneyCategories(uid, (categories) => set({ categories }), fail),
         moneyRepo.watchMonthlyLimit(uid, (limit) => set({ limit }), fail),
+        loansRepo.watchLoans(uid, (loans) => set({ loans }), fail),
         todayRepo.watchMoneyBalance(uid, (balance) => set({ balance }), fail),
       );
     })
