@@ -73,6 +73,8 @@ ui (design system) i i18n nie znają domeny ani danych
 - Akcent jako tekst albo ikona na powierzchni: `--color-accent-text`, nie `--color-accent` (to wypełnienie).
 - Ekran modułu (`view` w `app/registry.ts`) dostaje z routera `RouteProps` (`path`, `params`, `navigate`). Kilka widoków
   jednego modułu przełącza `ViewSwitch` (linki: każdy widok ma własny adres).
+- Kilka widoków jednego ekranu (`ViewSwitch`) wpisz w `views` modułu w `app/registry.ts`, a treść pod przełącznikiem
+  owiń w `ViewPanel`: przejście między nimi nie odtwarza wjazdu ekranu, tylko przesuwa wskaźnik i treść.
 - Zapis nie czeka na serwer: serwis zwraca wynik od razu i `saved` (Promise); ekran idzie dalej, a odrzucone `saved`
   zgłasza toastem. Offline zapisy kolejkuje Firestore, a nasłuch pokazuje je od razu.
 - Ruch (decyzja właściciela: wszystkie animacje płynne): każda zmiana stanu przechodzi płynnie, nic nie przeskakuje.
@@ -86,6 +88,9 @@ ui (design system) i i18n nie znają domeny ani danych
 
 ## Praca
 
+- Przerwy na zgłoszenia (decyzja właściciela 2026-10-01): po zakończeniu etapu (ostatni PR scalony, deploy zielony)
+  i po poprawkach zgłoszonych przez właściciela zatrzymaj się. Podaj krótką listę, co sprawdzić na telefonie, i czekaj
+  na błędy albo „kontynuuj”. Kroki wewnątrz etapu (np. 3c-1 → 3c-2) idą bez przerwy.
 - Przed PR: `npm run check --prefix v2` (i `npm test`, gdy ruszasz v1).
 - Małe PR-y: jeden element etapu, moduł albo serwis na PR. Opis PR i komentarze w kodzie po polsku albo
   angielsku, tak jak w otaczającym kodzie.

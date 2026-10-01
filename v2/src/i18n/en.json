@@ -1,6 +1,8 @@
 {
   "app": {
-    "name": "LifeXP"
+    "name": "LifeXP",
+    "newVersion": "A new version of the app is out.",
+    "reload": "Reload"
   },
   "nav": {
     "label": "Navigation",
