@@ -413,3 +413,9 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
 }
+
+.today-chores__head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}

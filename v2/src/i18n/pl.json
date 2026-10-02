@@ -69,6 +69,7 @@
     "choreDone": "Zrobione dziś",
     "choreDoneTimes": "Zrobione dziś ×{{count}}",
     "choresUnpaid": "Do wypłaty",
+    "choresEdit": "Zmień listę",
     "noChores": "Brak obowiązków na liście.",
     "loadFailed": "Nie udało się wczytać części danych. Sprawdź połączenie.",
     "goals": "Cele",

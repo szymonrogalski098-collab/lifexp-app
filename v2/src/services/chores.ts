@@ -12,6 +12,7 @@ import {
   restoreChoreEntry,
   seedChoreDefsIfEmpty,
   settleChoreEntries,
+  undoChoreEntry,
 } from '@/data/repos/chores';
 import {
   choreDefProblem,
@@ -25,8 +26,14 @@ import {
 import { utcDayKey } from '@/lib/dates';
 
 /** v1 addChore() for the day already decided (today, or yesterday after asking). */
-export function logChore(uid: string, def: ChoreDef, dateISO: string, now = new Date()): { saved: Promise<void> } {
-  return { saved: addChoreEntry(uid, def, dateISO, now) };
+export function logChore(
+  uid: string,
+  def: ChoreDef,
+  dateISO: string,
+  now = new Date(),
+): { saved: Promise<void>; undo: () => Promise<void> } {
+  const { id, saved } = addChoreEntry(uid, def, dateISO, now);
+  return { saved, undo: () => undoChoreEntry(uid, id, def) };
 }
 
 /** v1 deleteChoreEntry(); `undo` puts the same entry back. */
