@@ -2,6 +2,7 @@
 // is one document update: the screen goes on at once and reports a failed `saved`,
 // and offline the write waits in Firestore's queue like any other.
 import { updateSettings } from '@/data/repos/profile';
+import { toggleModule, type ModuleChoice, type OptionalModule } from '@/domain/modules';
 import type { Language } from '@/domain/profile';
 import {
   dailyLimitProblem,
@@ -45,4 +46,9 @@ export function saveRate(uid: string, kind: 'general' | 'chores', draft: RateDra
 /** v1 saveLangToProfile(): the profile carries the choice to other devices. */
 export function saveLanguage(uid: string, lang: Language): Promise<void> {
   return updateSettings(uid, { lang });
+}
+
+/** v1 toggleModule(): at once, nothing asked, no data touched; v2 also writes disabledModules (M3). */
+export function saveModule(uid: string, choice: ModuleChoice, id: OptionalModule, on: boolean): Promise<void> {
+  return updateSettings(uid, toggleModule(choice, id, on));
 }

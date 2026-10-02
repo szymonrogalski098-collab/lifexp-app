@@ -23,9 +23,8 @@ export function profileFromData(data: DocumentData): Profile {
     // v1 gates on `=== undefined` (core.js), so any stored value counts as chosen.
     accountModeChosen: data.accountMode !== undefined,
     modulesChosen: data.enabledModules !== undefined,
-    enabledModules: Array.isArray(data.enabledModules)
-      ? data.enabledModules.filter((m: unknown): m is string => typeof m === 'string')
-      : null,
+    enabledModules: stringsOrNull(data.enabledModules),
+    disabledModules: stringsOrNull(data.disabledModules),
     lang: data.lang === 'pl' || data.lang === 'en' ? data.lang : null,
     points: {
       total: numberOr(points.total),
@@ -45,6 +44,10 @@ export function profileFromData(data: DocumentData): Profile {
       ? data.achievements.filter((id: unknown): id is string => typeof id === 'string')
       : [],
   };
+}
+
+function stringsOrNull(value: unknown): string[] | null {
+  return Array.isArray(value) ? value.filter((m: unknown): m is string => typeof m === 'string') : null;
 }
 
 /** users.choresCard (v2 only): random unless "chosen" was saved. */

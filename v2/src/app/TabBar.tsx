@@ -3,12 +3,15 @@
 // bare glyph, with an accessible name. The other modules live in the menu it opens.
 import { Menu, Plus } from 'lucide-preact';
 import type { Ref } from 'preact';
+import type { ModuleChoice } from '@/domain/modules';
 import { t } from '@/i18n';
 import { isPlainClick } from './links';
 import { featureHref, tabItems, type FeatureDef, type ModuleId } from './registry';
 
 interface TabBarProps {
   activeId: ModuleId;
+  /** A tab whose module is off gives its place to the next module on (registry tabItems). */
+  modules: ModuleChoice;
   onSelect: (path: string) => void;
   onAdd: () => void;
   onMenu: () => void;
@@ -17,8 +20,8 @@ interface TabBarProps {
   menuButtonRef: Ref<HTMLButtonElement>;
 }
 
-export function TabBar({ activeId, onSelect, onAdd, onMenu, menuOpen, menuButtonRef }: TabBarProps) {
-  const tabs = tabItems();
+export function TabBar({ activeId, modules, onSelect, onAdd, onMenu, menuOpen, menuButtonRef }: TabBarProps) {
+  const tabs = tabItems(modules);
   const tab = (feature: FeatureDef) => {
     const Icon = feature.icon;
     return (

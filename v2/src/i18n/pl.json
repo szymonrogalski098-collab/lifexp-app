@@ -891,6 +891,27 @@
     "choresMeta": "Lista obowiązków i ich punkty",
     "moneyMeta": "Miesięczny limit i kategorie",
     "notFound": "Nie ma takiej sekcji ustawień.",
+    "modules": "Moduły",
+    "modulesMeta": "Włączone: {{on}} z {{all}}",
+    "yourModules": "Twoje moduły",
+    "modulesHint": "Włącz albo wyłącz części LifeXP. Wyłączenie niczego nie kasuje: dane wracają po ponownym włączeniu. Zadania, cele i „Dziś” są zawsze.",
+    "moduleToggled": "Moduł zaktualizowany.",
+    "moduleNames": {
+      "chores": "Obowiązki",
+      "money": "Pieniądze",
+      "notes": "Notatki",
+      "stats": "Statystyki XP",
+      "games": "Gry",
+      "aichat": "Ex-us"
+    },
+    "moduleDescriptions": {
+      "chores": "Obowiązki domowe i jednorazowe za punkty, z wypłatą do Pieniędzy.",
+      "money": "Przychody, wydatki, kategorie i pożyczki.",
+      "notes": "Notatnik.",
+      "stats": "Historia, statystyki, odznaki i zapisywanie aktywności za punkty.",
+      "games": "Mini-gry offline, bez punktów.",
+      "aichat": "Asystent AI, który pomaga zapisywać i planować."
+    },
     "theme": "Motyw",
     "family": "Styl",
     "mode": "Tryb",

@@ -891,6 +891,27 @@
     "choresMeta": "Chore list and their points",
     "moneyMeta": "Monthly limit and categories",
     "notFound": "There is no such settings section.",
+    "modules": "Modules",
+    "modulesMeta": "On: {{on}} of {{all}}",
+    "yourModules": "Your modules",
+    "modulesHint": "Turn parts of LifeXP on or off. Turning one off deletes nothing: the data comes back when you turn it on. Tasks, goals and Today are always there.",
+    "moduleToggled": "Module updated.",
+    "moduleNames": {
+      "chores": "Chores",
+      "money": "Money",
+      "notes": "Notes",
+      "stats": "XP stats",
+      "games": "Games",
+      "aichat": "Ex-us"
+    },
+    "moduleDescriptions": {
+      "chores": "Household and one-time chores for points, paid out to Money.",
+      "money": "Income, expenses, categories and loans.",
+      "notes": "A notebook.",
+      "stats": "History, stats, badges and logging activities for points.",
+      "games": "Offline mini-games, no points.",
+      "aichat": "An AI assistant that helps you log and plan."
+    },
     "theme": "Theme",
     "family": "Style",
     "mode": "Mode",
