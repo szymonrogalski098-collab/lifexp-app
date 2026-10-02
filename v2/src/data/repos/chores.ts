@@ -87,6 +87,12 @@ export function removeChoreDef(uid: string, id: string): Promise<void> {
   return deleteDoc(doc(defsOf(uid), id));
 }
 
+/** Writes a definition's fields over the stored ones; fields v2 does not know stay. */
+export function updateChoreDef(uid: string, def: ChoreDef): Promise<void> {
+  const { id, ...data } = def;
+  return updateDoc(doc(defsOf(uid), id), choreDefData(data));
+}
+
 export function restoreChoreDef(uid: string, def: ChoreDef): Promise<void> {
   const { id, ...data } = def;
   return setDoc(doc(defsOf(uid), id), choreDefData(data));

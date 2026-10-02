@@ -1,12 +1,15 @@
-// A new chore in a sheet (PLAN.md 7.6; v1 Settings → "Zarządzaj obowiązkami"): name,
-// optional description, points, one of v1's emoji or none, and whether it disappears
-// after being logged once. Checked by domain/chores, as v1 checks it.
+// A new or changed chore in a sheet (PLAN.md 7.6; v1 Settings → "Zarządzaj
+// obowiązkami"): name, optional description, points, one of v1's emoji or none, and
+// whether it disappears after being logged once. Checked by domain/chores, as v1
+// checks it. Changing one is v2 only (v1 can add and delete).
 import { useState } from 'preact/hooks';
 import {
   CHORE_DESC_MAX,
   CHORE_EMOJIS,
   CHORE_NAME_MAX,
   CHORE_POINTS_MAX,
+  choreDefDraft,
+  type ChoreDef,
   type ChoreDefDraft,
   type ChoreDefProblem,
 } from '@/domain/chores';
@@ -27,14 +30,14 @@ const PROBLEM_KEY = {
 type Kind = 'repeat' | 'once';
 
 /** v1's emoji grid as radios, "none" first; the chosen one in the legend. */
-function EmojiPicker({ value, onChange }: { value: string; onChange: (emoji: string) => void }) {
+function EmojiPicker({ value, onChange, extra }: { value: string; onChange: (emoji: string) => void; extra?: string }) {
   return (
     <fieldset class="chores-emojis">
       <legend class="ui-field__label">
         {t('chores.emoji')}: <span class="chores-emojis__current">{value || t('chores.noEmoji')}</span>
       </legend>
       <div class="chores-emojis__options">
-        {['', ...CHORE_EMOJIS].map((emoji) => (
+        {['', ...(extra && !CHORE_EMOJIS.includes(extra) ? [extra] : []), ...CHORE_EMOJIS].map((emoji) => (
           <label key={emoji || 'none'} class="chores-emojis__option">
             <input
               class="chores-emojis__input"
@@ -57,13 +60,17 @@ function EmojiPicker({ value, onChange }: { value: string; onChange: (emoji: str
 
 interface ChoreDefSheetProps {
   open: boolean;
+  /** The chore being changed; absent for a new one. */
+  def?: ChoreDef;
   onClose: () => void;
   /** Returns a problem to show, or null when saved. */
   onSave: (draft: ChoreDefDraft) => ChoreDefProblem | null;
 }
 
-export function ChoreDefSheet({ open, onClose, onSave }: ChoreDefSheetProps) {
-  const [draft, setDraft] = useState<ChoreDefDraft>({ name: '', desc: '', emoji: '', points: null, oneTime: false });
+export function ChoreDefSheet({ open, def, onClose, onSave }: ChoreDefSheetProps) {
+  const [draft, setDraft] = useState<ChoreDefDraft>(
+    def ? choreDefDraft(def) : { name: '', desc: '', emoji: '', points: null, oneTime: false },
+  );
   const [problem, setProblem] = useState<ChoreDefProblem | null>(null);
   const set = (patch: Partial<ChoreDefDraft>) => {
     setDraft({ ...draft, ...patch });
@@ -76,13 +83,14 @@ export function ChoreDefSheet({ open, onClose, onSave }: ChoreDefSheetProps) {
     <Sheet
       open={open}
       onClose={onClose}
-      title={t('chores.newDef')}
+      title={t(def ? 'chores.editDef' : 'chores.newDef')}
       footer={
         <Button type="submit" form={FORM_ID} variant="primary" size="lg" block>
-          {t('chores.add')}
+          {t(def ? 'chores.saveDef' : 'chores.add')}
         </Button>
       }
     >
+      {def && <p class="chores-sheet__hint chores-sheet__lead">{t('chores.editHint')}</p>}
       <form
         id={FORM_ID}
         class="stack"
@@ -114,7 +122,7 @@ export function ChoreDefSheet({ open, onClose, onSave }: ChoreDefSheetProps) {
           suffix={t('chores.pointsUnit')}
           error={error('pointsRequired', 'pointsTooMany')}
         />
-        <EmojiPicker value={draft.emoji} onChange={(emoji) => set({ emoji })} />
+        <EmojiPicker value={draft.emoji} onChange={(emoji) => set({ emoji })} extra={def?.emoji} />
         <div class="stack chores-kind">
           <SegmentedControl<Kind>
             label={t('chores.kind')}

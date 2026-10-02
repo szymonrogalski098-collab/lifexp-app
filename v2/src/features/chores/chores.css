@@ -235,6 +235,10 @@
   font-size: var(--font-size-sm);
 }
 
+.chores-sheet__lead {
+  margin-bottom: var(--space-4);
+}
+
 .chores-when__actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -271,9 +275,36 @@
 .chores-defs__row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
   min-height: var(--touch-target);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+}
+
+/* Emoji, name and points: one button that opens the chore in the edit sheet. */
+.chores-defs__edit {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-enter) var(--ease-out);
+}
+
+.chores-defs__edit:hover {
+  background: var(--color-accent-soft);
+}
+
+.chores-defs__edit:active {
+  transform: scale(0.98);
 }
 
 .chores-defs__row + .chores-defs__row {
@@ -289,7 +320,7 @@
 
 .chores-defs__meta {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 
 .chores-defs__points {

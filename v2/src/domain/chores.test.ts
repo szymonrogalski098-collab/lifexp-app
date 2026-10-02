@@ -2,7 +2,9 @@ import { describe, expect, test } from 'vitest';
 import {
   CHORE_SEEDS,
   calendarMonth,
+  choreDefDraft,
   choreDefProblem,
+  editedChoreDef,
   choresRate,
   dayEntries,
   entryDay,
@@ -218,5 +220,27 @@ describe('definitions (v1 addChoreDef, ensureChoreDefsSeeded)', () => {
       ['trash_segregated', 40, 6],
       ['dishwasher', 15, 7],
     ]);
+  });
+});
+
+describe('editing a chore (v2 only)', () => {
+  const def = { id: 'd1', name: 'Zmywarka', desc: '', emoji: '🍽️', points: 15, oneTime: false, order: 3 };
+
+  test('id and place stay; text is trimmed', () => {
+    expect(editedChoreDef(def, { name: '  Opróżnienie zmywarki ', desc: ' górna ', emoji: '🧽', points: 20, oneTime: true })).toEqual({
+      id: 'd1',
+      name: 'Opróżnienie zmywarki',
+      desc: 'górna',
+      emoji: '🧽',
+      points: 20,
+      oneTime: true,
+      order: 3,
+    });
+  });
+
+  test("an emoji from outside v1's grid stays only while unchanged", () => {
+    const custom = { ...def, emoji: '🦄' };
+    expect(editedChoreDef(custom, choreDefDraft(custom)).emoji).toBe('🦄');
+    expect(editedChoreDef(def, { ...choreDefDraft(def), emoji: '🦄' }).emoji).toBe('');
   });
 });
