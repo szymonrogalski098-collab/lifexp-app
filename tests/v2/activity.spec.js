@@ -155,11 +155,18 @@ test.describe('v1 on a desktop', () => {
     await page.selectOption('#act-type', 'learning');
     await page.fill('#act-minutes', '60');
     await page.click('#page-log-activity button');
-    await expect.poll(async () => (await activityState(account.uid)).activities.length).toBe(1);
+    // v1 writes the entry, the day and the points one after another: wait for all three.
+    await expect
+      .poll(async () => {
+        const { defs, ...rest } = await activityState(account.uid);
+        return rest;
+      })
+      .toEqual({
+        points: { total: 140, earnedAllTime: 640, spentAllTime: 0 },
+        day: { pointsEarned: 150, gamingMinutes: 0 },
+        activities: [{ type: 'learning', duration: 60, points: 20, desc: '' }],
+      });
     const state = await activityState(account.uid);
-    expect(state.points).toEqual({ total: 140, earnedAllTime: 640, spentAllTime: 0 });
-    expect(state.day).toEqual({ pointsEarned: 150, gamingMinutes: 0 });
-    expect(state.activities).toEqual([{ type: 'learning', duration: 60, points: 20, desc: '' }]);
     // v2 seeds the same definitions.
     expect(Object.keys(state.defs).sort()).toEqual(['exercise', 'learning', 'project', 'reading', 'school']);
     expect(state.defs.learning).toEqual({ name: 'Nauka (JS, Unity, C#)', points: 40, color: '#6c63ff', icon: 'ti-book', order: 0 });
