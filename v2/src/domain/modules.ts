@@ -51,3 +51,11 @@ export function toggleModule(
     disabledModules: OPTIONAL_MODULES.filter((m) => !after(m)),
   };
 }
+
+/** v1 saveOnboarding(): the first-run survey, everything ticked unless the person unticked it. */
+export function surveyModules(on: readonly OptionalModule[]): { enabledModules: string[]; disabledModules: string[] } {
+  return {
+    enabledModules: V1_MODULES.filter((m) => on.includes(m)),
+    disabledModules: OPTIONAL_MODULES.filter((m) => !on.includes(m)),
+  };
+}

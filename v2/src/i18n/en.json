@@ -782,9 +782,9 @@
       "action": "Confirm email"
     },
     "finishSetup": {
-      "title": "Finish setting up your account",
-      "body": "Choose the account mode and modules in the current version of LifeXP. This version picks up those settings by itself.",
-      "action": "Finish setup"
+      "title": "Finish creating your account",
+      "body": "The account has no profile yet. The current version of LifeXP sets it up; then come back here.",
+      "action": "Finish in the current version"
     },
     "failed": {
       "title": "LifeXP could not start",
@@ -934,6 +934,12 @@
     },
     "languageEverywhere": "The language is saved to your account, so it also applies on other devices and in the current version.",
     "profile": "Profile",
+    "accountMode": "Account mode",
+    "accountModeHint": "Change it any time. Switching to solo unlinks your parent.",
+    "accountModeSaved": "Account mode updated.",
+    "goSoloTitle": "Switch to solo?",
+    "goSoloBody": "Your parent loses access to your data and the weekly report stops. Their address is removed from the account.",
+    "goSolo": "Switch to solo",
     "name": "Name",
     "nameHint": "What LifeXP calls you.",
     "nameTooLong": "The name can be at most {{max}} characters.",
@@ -957,5 +963,23 @@
     "rateNeedPoints": "Enter at least 1 point.",
     "rateTooLarge": "At most 100,000 zł and 100,000 points.",
     "saveRate": "Save rate"
+  },
+  "setup": {
+    "title": "Getting started",
+    "modeTitle": "How do you want to use LifeXP?",
+    "changeLater": "You can change this any time in Settings.",
+    "modes": {
+      "solo": "Solo",
+      "supervised": "Supervised"
+    },
+    "modeDescriptions": {
+      "solo": "You run the account yourself, unsupervised.",
+      "supervised": "A parent or guardian sees your progress and gets weekly reports."
+    },
+    "continue": "Continue",
+    "modulesTitle": "What do you want to use?",
+    "modulesIntro": "Turn off what you don't need. You can change this any time in Settings.",
+    "start": "Save and start",
+    "saveFailed": "Could not save. Check your connection and try again."
   }
 }

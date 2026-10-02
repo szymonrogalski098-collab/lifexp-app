@@ -9,6 +9,7 @@ describe('profile converter', () => {
         email: 'ala@example.com',
         emailVerified: true,
         accountMode: 'solo',
+        parentEmail: '',
         enabledModules: ['chores', 'money'],
         lang: 'en',
         points: { total: 1234, earnedAllTime: 620, spentAllTime: 50 },
@@ -31,6 +32,8 @@ describe('profile converter', () => {
       email: 'ala@example.com',
       emailVerified: true,
       accountModeChosen: true,
+      accountMode: 'solo',
+      parentEmail: '',
       modulesChosen: true,
       enabledModules: ['chores', 'money'],
       disabledModules: null,
@@ -58,6 +61,7 @@ describe('profile converter', () => {
     expect(p.accountModeChosen).toBe(false);
     expect(p.modulesChosen).toBe(false);
     expect(p.enabledModules).toBeNull();
+    expect(p.accountMode).toBeNull();
     expect(p.lang).toBeNull();
   });
 
@@ -85,12 +89,15 @@ describe('profile converter', () => {
         dailyLimit: 0,
         streakFreezeLastUsed: 'yesterday',
         enabledModules: ['chores', 7],
+        parentEmail: 7,
       }),
     ).toEqual({
       name: DEFAULT_NAME,
       email: '',
       emailVerified: false,
       accountModeChosen: false,
+      accountMode: null,
+      parentEmail: '',
       modulesChosen: true,
       enabledModules: ['chores'],
       disabledModules: null,

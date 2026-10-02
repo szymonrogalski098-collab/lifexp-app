@@ -6,6 +6,9 @@ import type { PcBuild } from './tasks';
 
 export type Language = 'pl' | 'en';
 
+/** v1 accountMode: alone, or with a parent who gets weekly reports. */
+export type AccountMode = 'solo' | 'supervised';
+
 /** The Firebase Auth side of the account. */
 export interface SessionUser {
   uid: string;
@@ -22,6 +25,10 @@ export interface Profile {
   emailVerified: boolean;
   /** v1 asks solo/supervised once (accountMode); until then the account is not set up. */
   accountModeChosen: boolean;
+  /** null = not chosen, or a value v1 never writes. */
+  accountMode: AccountMode | null;
+  /** The parent's verified or unverified e-mail (v1 parentEmail); '' = none. */
+  parentEmail: string;
   /** v1's first-run module survey (enabledModules) is done. */
   modulesChosen: boolean;
   /** v1 module ids the person turned on (chores, money, notes, games, stats, aichat, …); null = not chosen. */

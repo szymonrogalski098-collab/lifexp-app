@@ -1,9 +1,9 @@
 // Settings saved to the profile (v1 settings.js; docs/v2/PLAN.md 9, stage 4). Each
 // is one document update: the screen goes on at once and reports a failed `saved`,
 // and offline the write waits in Firestore's queue like any other.
-import { updateSettings } from '@/data/repos/profile';
-import { toggleModule, type ModuleChoice, type OptionalModule } from '@/domain/modules';
-import type { Language } from '@/domain/profile';
+import { goSoloUnlinkingParent, updateSettings } from '@/data/repos/profile';
+import { surveyModules, toggleModule, type ModuleChoice, type OptionalModule } from '@/domain/modules';
+import type { AccountMode, Language, Profile } from '@/domain/profile';
 import {
   dailyLimitProblem,
   nameProblem,
@@ -51,4 +51,24 @@ export function saveLanguage(uid: string, lang: Language): Promise<void> {
 /** v1 toggleModule(): at once, nothing asked, no data touched; v2 also writes disabledModules (M3). */
 export function saveModule(uid: string, choice: ModuleChoice, id: OptionalModule, on: boolean): Promise<void> {
   return updateSettings(uid, toggleModule(choice, id, on));
+}
+
+/** v1 saveAccountModeStep(): the first-run choice, written as it is. */
+export function chooseAccountMode(uid: string, mode: AccountMode): Promise<void> {
+  return updateSettings(uid, { accountMode: mode });
+}
+
+/** Going solo from Settings asks first when a parent is linked, because it unlinks them (v1 setAccountMode). */
+export function accountModeNeedsConfirm(profile: Profile, mode: AccountMode): boolean {
+  return mode === 'solo' && profile.parentEmail !== '';
+}
+
+/** v1 setAccountMode(): solo with a parent linked also unlinks the parent. */
+export function saveAccountMode(uid: string, profile: Profile, mode: AccountMode): Promise<void> {
+  return accountModeNeedsConfirm(profile, mode) ? goSoloUnlinkingParent(uid) : updateSettings(uid, { accountMode: mode });
+}
+
+/** v1 saveOnboarding(): the modules ticked in the first-run survey. */
+export function finishModuleSurvey(uid: string, on: readonly OptionalModule[]): Promise<void> {
+  return updateSettings(uid, { ...surveyModules(on), onboardingDone: true });
 }

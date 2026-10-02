@@ -1,7 +1,7 @@
-// What the app shows before any module screen: the boot gates of v1 (core.js),
-// read-only. Whatever v1 does by writing to the profile (creating it, marking the
-// e-mail verified, the account-mode step, the module survey) happens in v1, so
-// v2 hands those cases over to it (docs/v2/PLAN.md 9.1, stage 1e).
+// What the app shows before any module screen: the boot gates of v1 (core.js).
+// Creating the profile and verifying the e-mail still happen in v1, so v2 hands
+// those over to it (docs/v2/PLAN.md 9.1, stage 1e); the account-mode step and the
+// module survey v2 asks itself (stage 4b), in v1's order.
 import type { Profile, SessionUser } from '@/domain/profile';
 import type { Session } from '@/stores/session';
 
@@ -11,8 +11,10 @@ export type Gate =
   | { kind: 'login' }
   /** E-mail+password account without the code from v1's verify.html. */
   | { kind: 'verify'; email: string }
-  /** No profile yet, or v1's account-mode step or module survey not done. */
+  /** No profile yet: v1 creates it. */
   | { kind: 'finishSetup' }
+  /** v1's account-mode step, then its module survey, not done yet. */
+  | { kind: 'setup'; step: 'accountMode' | 'modules'; user: SessionUser; profile: Profile }
   | { kind: 'ready'; user: SessionUser; profile: Profile };
 
 export function sessionGate(session: Session): Gate {
@@ -30,7 +32,8 @@ export function sessionGate(session: Session): Gate {
       if (profile === null) return { kind: 'finishSetup' };
       // v1 trusts either flag; when only Auth has it, v1 copies it on its next start.
       if (!profile.emailVerified && !user.emailVerified) return { kind: 'verify', email: user.email };
-      if (!profile.accountModeChosen || !profile.modulesChosen) return { kind: 'finishSetup' };
+      if (!profile.accountModeChosen) return { kind: 'setup', step: 'accountMode', user, profile };
+      if (!profile.modulesChosen) return { kind: 'setup', step: 'modules', user, profile };
       return { kind: 'ready', user, profile };
     }
   }
