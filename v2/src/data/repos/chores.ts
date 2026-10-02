@@ -14,6 +14,7 @@ import {
   query,
   runTransaction,
   setDoc,
+  updateDoc,
   writeBatch,
 } from 'firebase/firestore';
 import {
@@ -22,6 +23,7 @@ import {
   type ChoreDef,
   type ChoreEntry,
   type ChorePayout,
+  type ChoresCardSettings,
   type PayoutPlan,
 } from '@/domain/chores';
 import { groszeFromZloty, zlotyFromGrosze } from '@/lib/money';
@@ -33,6 +35,7 @@ import {
   newChoreEntryData,
 } from '../converters/chores';
 import { numberOr } from '../converters/fields';
+import { choresCardData } from '../converters/profile';
 import { db } from '../firebase';
 
 type OnError = (error: unknown) => void;
@@ -172,4 +175,9 @@ export function settleChoreEntries(uid: string, input: SettleInput): Promise<Pay
     tx.update(doc(db, 'users', uid), { moneyIncomeAllTime: increment(amount) });
     return plan;
   });
+}
+
+/** users.choresCard (v2 only): what Today's chore card shows. Queued offline like any single write. */
+export function setChoresCard(uid: string, settings: ChoresCardSettings): Promise<void> {
+  return updateDoc(doc(db, 'users', uid), { choresCard: choresCardData(settings) });
 }

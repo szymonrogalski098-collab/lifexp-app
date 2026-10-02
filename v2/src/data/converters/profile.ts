@@ -3,6 +3,7 @@
 // or float, empty strings. Read-only: it never writes a "fixed" document back
 // (PLAN.md 5.1).
 import type { DocumentData } from 'firebase/firestore';
+import { CHORES_CARD_DEFAULT, type ChoresCardSettings } from '@/domain/chores';
 import type { Profile } from '@/domain/profile';
 import { pcBuildOrNull } from '@/domain/tasks';
 import { goalsFromData } from './goals';
@@ -39,5 +40,19 @@ export function profileFromData(data: DocumentData): Profile {
     pcBuild: pcBuildOrNull(data.pcBuild),
     goals: goalsFromData(data.goals),
     moneyIncomeAllTime: typeof data.moneyIncomeAllTime === 'number' ? groszeFromZloty(data.moneyIncomeAllTime) : null,
+    choresCard: choresCardFromData(data.choresCard),
   };
+}
+
+/** users.choresCard (v2 only): random unless "chosen" was saved. */
+export function choresCardFromData(value: unknown): ChoresCardSettings {
+  if (typeof value !== 'object' || value === null) return CHORES_CARD_DEFAULT;
+  const data = value as Record<string, unknown>;
+  if (data.mode !== 'chosen') return CHORES_CARD_DEFAULT;
+  const ids = Array.isArray(data.ids) ? data.ids.filter((id): id is string => typeof id === 'string') : [];
+  return { mode: 'chosen', ids };
+}
+
+export function choresCardData(settings: ChoresCardSettings): DocumentData {
+  return { mode: settings.mode, ids: [...settings.ids] };
 }

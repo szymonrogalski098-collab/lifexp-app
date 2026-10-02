@@ -1,5 +1,6 @@
 // What v2 needs to know about the signed-in person. Grows module by module;
 // everything here is read from users/{uid} through data/converters/profile.ts.
+import type { ChoresCardSettings } from './chores';
 import type { Goal } from './goals';
 import type { PcBuild } from './tasks';
 
@@ -41,6 +42,8 @@ export interface Profile {
   goals: readonly Goal[];
   /** Grosze ever received in Money; null until v1 or v2 backfills it (M2). */
   moneyIncomeAllTime: number | null;
+  /** What Today's chore card shows (v2 only; v1 ignores the field). */
+  choresCard: ChoresCardSettings;
 }
 
 /** users.points — v1 keeps all three in step. */

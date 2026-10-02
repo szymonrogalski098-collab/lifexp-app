@@ -429,23 +429,57 @@ test.describe('v1 on a desktop: the list of chores', () => {
   });
 });
 
-// ── Today (owner's request 2026-10-02): a tap logs the chore for today, with "Cofnij" ──
+// ── Today's card (owner's requests 2026-10-02): 3–4 drawn a day or a chosen list,
+// each done once a day there, with "Cofnij" ──
 
-test('a tap on Today logs the chore for today; "Cofnij" takes it back', async ({ page }) => {
+test('Today draws repeating chores; a tap logs one for today, once, and "Cofnij" takes it back', async ({ page }) => {
   const account = await choresAccount('chores-today-tap');
   await openSignedIn(page, account, '#/today');
+  await expect(page.getByText('Wylosowane na dziś')).toBeVisible();
   const chores = page.getByRole('list', { name: 'Obowiązki dziś' });
-  await chores.getByRole('button', { name: /Opróżnienie zmywarki/ }).click();
+  // Two repeating chores, fewer than a draw: both; the one-time chore is never drawn.
+  await expect(chores.getByRole('listitem')).toHaveCount(2);
+  await expect(chores).not.toContainText('Mycie okien');
+  await expect(page.getByTestId('chores-progress')).toHaveText('0 z 2 zrobione');
+
+  const dishes = chores.getByRole('button', { name: /Opróżnienie zmywarki/ });
+  await dishes.click();
   await expect(page.getByText('Dodano: Opróżnienie zmywarki (+15 pkt)')).toBeVisible();
-  await expect(page.getByTestId('chores-progress')).toHaveText('1 z 3 dziś');
+  await expect(dishes).toBeDisabled();
+  await expect(dishes).toContainText('Zrobione dziś');
+  await expect(page.getByTestId('chores-progress')).toHaveText('1 z 2 zrobione');
   await expect.poll(async () => (await entriesOf(account.uid).get()).docs.map((d) => d.data().dateISO)).toEqual([localDay()]);
+
   await page.getByRole('button', { name: 'Cofnij' }).click();
   await expect.poll(async () => (await entriesOf(account.uid).get()).size).toBe(0);
-  await expect(page.getByTestId('chores-progress')).toHaveText('0 z 3 dziś');
+  await expect(dishes).toBeEnabled();
+  await expect(page.getByTestId('chores-progress')).toHaveText('0 z 2 zrobione');
+});
 
-  // A one-time chore leaves the list when logged and comes back with "Cofnij".
+test("the card's editor: a chosen list with a one-time chore, kept on the account", async ({ page }) => {
+  const account = await choresAccount('chores-today-editor');
+  await openSignedIn(page, account, '#/today');
+  await page.getByRole('button', { name: 'Edytuj listę' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Lista na „Dziś”' });
+  await sheet.getByRole('radio', { name: 'Wybrane' }).check();
+  // It starts from what the card shows today.
+  await expect(sheet.getByRole('checkbox', { name: 'Opróżnienie zmywarki' })).toBeChecked();
+  await sheet.getByRole('checkbox', { name: 'Odkurzanie schodów' }).uncheck();
+  await sheet.getByRole('checkbox', { name: 'Mycie okien' }).check();
+  await sheet.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page.getByText('Zapisano listę na „Dziś”.')).toBeVisible();
+  await expect(sheet).toBeHidden();
+  await expect
+    .poll(async () => (await db.doc(`users/${account.uid}`).get()).data().choresCard)
+    .toEqual({ mode: 'chosen', ids: ['dishwasher', 'windows_once'] });
+
+  await expect(page.getByText('Twoja lista')).toBeVisible();
+  const chores = page.getByRole('list', { name: 'Obowiązki dziś' });
+  await expect(chores.getByRole('listitem')).toHaveCount(2);
+  // A one-time chore leaves the definitions when logged, stays done on the card, and comes back with "Cofnij".
   await chores.getByRole('button', { name: /Mycie okien/ }).click();
   await expect.poll(async () => (await defsOf(account.uid).doc('windows_once').get()).exists).toBe(false);
+  await expect(chores.getByRole('button', { name: /Mycie okien/ })).toBeDisabled();
   await page.getByRole('button', { name: 'Cofnij' }).click();
   await expect.poll(async () => (await defsOf(account.uid).doc('windows_once').get()).data()).toEqual({
     name: 'Mycie okien',
@@ -457,6 +491,13 @@ test('a tap on Today logs the chore for today; "Cofnij" takes it back', async ({
   });
   await expect.poll(async () => (await entriesOf(account.uid).get()).size).toBe(0);
 
-  await page.getByRole('link', { name: 'Zmień listę' }).click();
+  // An empty chosen list is not saved; the chore list itself is one tap away.
+  await page.getByRole('button', { name: 'Edytuj listę' }).click();
+  await sheet.getByRole('checkbox', { name: 'Opróżnienie zmywarki' }).uncheck();
+  await sheet.getByRole('checkbox', { name: 'Mycie okien' }).uncheck();
+  await sheet.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(sheet.getByRole('alert')).toHaveText('Zaznacz co najmniej jeden obowiązek.');
+  await sheet.getByRole('button', { name: 'Dodaj lub usuń obowiązki' }).click();
   await expect(page).toHaveURL(/#\/chores\/defs$/);
+  await expect(sheet).toBeHidden();
 });

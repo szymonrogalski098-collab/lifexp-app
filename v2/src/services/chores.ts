@@ -11,6 +11,7 @@ import {
   restoreChoreDef,
   restoreChoreEntry,
   seedChoreDefsIfEmpty,
+  setChoresCard,
   settleChoreEntries,
   undoChoreEntry,
 } from '@/data/repos/chores';
@@ -21,6 +22,7 @@ import {
   type ChoreDefDraft,
   type ChoreDefProblem,
   type ChoreEntry,
+  type ChoresCardSettings,
   type PayoutPlan,
 } from '@/domain/chores';
 import { utcDayKey } from '@/lib/dates';
@@ -88,4 +90,13 @@ export async function ensureChoreDefs(uid: string): Promise<void> {
     seedChecked.delete(uid);
     throw error;
   }
+}
+
+/** What Today's chore card shows (owner's request 2026-10-02); "chosen" needs at least one chore. */
+export function saveChoresCard(
+  uid: string,
+  settings: ChoresCardSettings,
+): { ok: true; saved: Promise<void> } | { ok: false; problem: 'noneChosen' } {
+  if (settings.mode === 'chosen' && settings.ids.length === 0) return { ok: false, problem: 'noneChosen' };
+  return { ok: true, saved: setChoresCard(uid, settings) };
 }

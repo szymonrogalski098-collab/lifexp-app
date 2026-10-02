@@ -319,3 +319,31 @@ export function FilterChip({ label, selected, onToggle }: FilterChipProps) {
     </button>
   );
 }
+
+interface CheckboxProps {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  /** Shown before the label, e.g. the person's emoji (content, not an icon). */
+  leading?: ComponentChildren;
+  /** Secondary text at the end of the row, e.g. points. */
+  meta?: string;
+}
+
+/** A native checkbox as a full-width row: the whole row is the target. */
+export function Checkbox({ label, checked, onChange, leading, meta }: CheckboxProps) {
+  return (
+    <label class="ui-check">
+      <input
+        type="checkbox"
+        class="ui-check__input"
+        checked={checked}
+        onChange={(e) => onChange(e.currentTarget.checked)}
+      />
+      <span class="ui-check__box" aria-hidden="true" />
+      {leading}
+      <span class="ui-check__label user-text">{label}</span>
+      {meta && <span class="ui-check__meta numeric">{meta}</span>}
+    </label>
+  );
+}

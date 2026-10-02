@@ -259,7 +259,94 @@
   white-space: nowrap;
 }
 
-/* ── Chores today: the reference's duty list ── */
+/* ── Chores today: the reference's duty list (owner's requests 2026-10-02) ── */
+
+.today-chores__status {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+}
+
+.today-chores__status-text {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.today-chores__source {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.today-chores__count {
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.today-chores {
+  margin: 0;
+  padding: 0 var(--space-2) var(--space-2);
+  list-style: none;
+}
+
+/* One chore: the whole row is the button; done = disabled, it stays in place. */
+.today-chore {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-enter) var(--ease-out);
+}
+
+.today-chore:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+.today-chore:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.today-chore:disabled {
+  cursor: default;
+}
+
+.today-chore__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.today-chore__name {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+  transition: color var(--duration-enter) var(--ease-out);
+}
+
+.today-chore__meta {
+  color: var(--color-positive);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.today-chore--done .today-chore__name {
+  color: var(--color-text-secondary);
+}
+
+.today-chore--done .today-chore__meta {
+  color: var(--color-text-secondary);
+}
 
 .today-chore__emoji {
   font-size: 20px;
@@ -270,22 +357,59 @@
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: 2px solid var(--color-border);
   border-radius: 50%;
   color: var(--color-on-accent);
+  transition:
+    background-color var(--duration-enter) var(--ease-out),
+    border-color var(--duration-enter) var(--ease-out);
 }
 
+/* The tick is always there and grows in when the chore is done. */
 .today-check svg {
   width: 16px;
   height: 16px;
   stroke-width: 3;
+  transform: scale(0);
+  transition: transform var(--duration-enter) var(--ease-out);
 }
 
-.today-check--done {
+.today-chore--done .today-check {
   border-color: transparent;
   background: var(--color-accent);
+}
+
+.today-chore--done .today-check svg {
+  transform: scale(1);
+}
+
+.today-card__link--button {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* ── The card's editor ── */
+
+.today-card-sheet__hint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.today-card-sheet__picks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.today-card-sheet__problem {
+  color: var(--color-negative);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .today-chores__unpaid {
@@ -412,10 +536,4 @@
   color: var(--color-negative);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-}
-
-.today-chores__head {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-3);
 }

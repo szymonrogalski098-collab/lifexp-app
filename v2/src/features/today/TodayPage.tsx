@@ -4,7 +4,6 @@
 // activity (stage 3e), goals, chores, shortcuts and the latest activities.
 import {
   Check,
-  ClipboardCheck,
   Flame,
   Gamepad2,
   type LucideIcon,
@@ -16,7 +15,7 @@ import {
 } from 'lucide-preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { activeDays, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
-import { choresRate, todayChores, unpaidChores, type ChoreDef, type ChoreEntry } from '@/domain/chores';
+import { choresOnCard, type ChoreDef, type ChoresCardSettings } from '@/domain/chores';
 import { goalProgress } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
 import { dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
@@ -29,15 +28,17 @@ import { formatLongDate, formatWeekdayShort, localDayKey, utcDayKey, weekOf } fr
 import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { ensureActivityDefs, saveActivity } from '@/services/activity';
-import { logChore } from '@/services/chores';
+import { logChore, saveChoresCard } from '@/services/chores';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
+import { afterModalHistory } from '@/ui/components/useModal';
 import { Button } from '@/ui/components/Button';
-import { ButtonLink } from '@/ui/components/ButtonLink';
 import { EmptyState, IconTile, List, ListRow, ProgressBar, Skeleton } from '@/ui/components/Display';
 import { Card, Page, Section, Stack } from '@/ui/components/Layout';
 import { ActivitySheet } from './ActivitySheet';
+import { ChoresCard } from './ChoresCard';
+import { ChoresCardSheet } from './ChoresCardSheet';
 import './today.css';
 
 function PointsHero({ profile }: { profile: Profile }) {
@@ -157,92 +158,6 @@ function TodayCard({ profile, day, onLog }: { profile: Profile; day: DayLog | un
         </Button>
       </div>
     </Card>
-  );
-}
-
-interface ChoresCardProps {
-  profile: Profile;
-  defs: readonly ChoreDef[];
-  entries: readonly ChoreEntry[];
-  /** A tap on a chore logs it for today (owner's request 2026-10-02). */
-  onLog: (def: ChoreDef) => void;
-}
-
-/** The reference's "Today's duties": v1's chore definitions, marked when logged today (local day, G8). */
-function ChoresCard({ profile, defs, entries, onLog }: ChoresCardProps) {
-  const rows = todayChores(defs, entries, localDayKey(new Date()));
-  const unpaid = unpaidChores(entries, choresRate(profile.rateChores.zloty, profile.rateChores.points));
-  const done = rows.filter((row) => row.doneToday > 0).length;
-  const defById = new Map(defs.map((def) => [def.id, def]));
-  return (
-    <Section
-      title={t('today.chores')}
-      action={
-        <span class="today-chores__head">
-          {rows.length > 0 && (
-            <span class="today-card__meta" data-testid="chores-progress">
-              {t('today.choresProgress', { done, total: rows.length })}
-            </span>
-          )}
-          <a class="today-card__link" href="#/chores/defs">
-            {t('today.choresEdit')}
-          </a>
-        </span>
-      }
-    >
-      <Card padding="none">
-        {rows.length === 0 ? (
-          <EmptyState
-            title={t('today.noChores')}
-            action={
-              <ButtonLink variant="secondary" href="#/chores/defs">
-                {t('chores.defsView')}
-              </ButtonLink>
-            }
-          />
-        ) : (
-          <List label={t('today.chores')}>
-            {rows.map((row) => {
-              const def = defById.get(row.choreId);
-              return (
-                <ListRow
-                  key={row.choreId}
-                  onClick={def ? () => onLog(def) : undefined}
-                  leading={
-                    <IconTile>{row.emoji ? <span class="today-chore__emoji">{row.emoji}</span> : <ClipboardCheck />}</IconTile>
-                  }
-                  title={row.name}
-                  meta={
-                    row.doneToday > 1
-                      ? t('today.choreDoneTimes', { count: row.doneToday })
-                      : row.doneToday === 1
-                        ? t('today.choreDone')
-                        : undefined
-                  }
-                  value={t('units.pointsGained', { points: row.points })}
-                  trailing={
-                    <span class={`today-check${row.doneToday > 0 ? ' today-check--done' : ''}`} aria-hidden="true">
-                      {row.doneToday > 0 && <Check />}
-                    </span>
-                  }
-                />
-              );
-            })}
-          </List>
-        )}
-        <div class="today-chores__unpaid">
-          <span>{t('today.choresUnpaid')}</span>
-          <span class="today-chores__unpaid-value">
-            <span class="numeric" data-testid="chores-unpaid-money">
-              {formatMoney(unpaid.grosze, locale())}
-            </span>
-            <span class="today-chores__unpaid-points numeric" data-testid="chores-unpaid-points">
-              {t('units.points', { points: formatInteger(unpaid.points, locale()) })}
-            </span>
-          </span>
-        </div>
-      </Card>
-    </Section>
   );
 }
 
@@ -400,6 +315,7 @@ export default function TodayPage({ path, navigate }: RouteProps) {
   useEffect(() => (uid ? watchToday(uid) : undefined), [uid]);
 
   const [sheet, setSheet] = useState<SheetState>({ open: false, key: 0 });
+  const [cardEditor, setCardEditor] = useState<SheetState>({ open: false, key: 0 });
   const lastToast = useRef<number | null>(null);
   const openSheet = () => {
     // v1 seeds the activity types on every start; v2 only when someone is about to
@@ -428,8 +344,19 @@ export default function TodayPage({ path, navigate }: RouteProps) {
     lastToast.current = showToast(input);
   };
 
+  const choresToday = localDayKey(new Date());
+  const closeCardEditor = () => setCardEditor((s) => ({ ...s, open: false }));
+  const saveCard = (settings: ChoresCardSettings) => {
+    const result = saveChoresCard(uid, settings);
+    if (!result.ok) return result.problem;
+    result.saved.catch(() => notify({ message: t('chores.saveFailed'), tone: 'negative' }));
+    closeCardEditor();
+    notify({ message: t('today.cardSaved'), tone: 'positive' });
+    return null;
+  };
+
   const logChoreToday = (def: ChoreDef) => {
-    const { saved, undo } = logChore(uid, def, localDayKey(new Date()));
+    const { saved, undo } = logChore(uid, def, choresToday);
     const failed = () => notify({ message: t('chores.saveFailed'), tone: 'negative' });
     saved.catch(failed);
     notify({
@@ -494,7 +421,15 @@ export default function TodayPage({ path, navigate }: RouteProps) {
 
         {moduleOn(profile, 'chores') &&
           (sources.choreDefs && sources.choreEntries ? (
-            <ChoresCard profile={profile} defs={sources.choreDefs} entries={sources.choreEntries} onLog={logChoreToday} />
+            <ChoresCard
+              uid={uid}
+              profile={profile}
+              defs={sources.choreDefs}
+              entries={sources.choreEntries}
+              today={choresToday}
+              onLog={logChoreToday}
+              onEdit={() => setCardEditor((s) => ({ open: true, key: s.key + 1 }))}
+            />
           ) : (
             <Card>
               <Skeleton />
@@ -514,6 +449,21 @@ export default function TodayPage({ path, navigate }: RouteProps) {
         )}
       </Stack>
 
+      {cardEditor.key > 0 && sources.choreDefs && (
+        <ChoresCardSheet
+          key={cardEditor.key}
+          open={cardEditor.open}
+          defs={sources.choreDefs}
+          settings={profile.choresCard}
+          shownIds={choresOnCard(sources.choreDefs, profile.choresCard, `${uid}:${choresToday}`).map((d) => d.id)}
+          onClose={closeCardEditor}
+          onSave={saveCard}
+          onManage={() => {
+            closeCardEditor();
+            afterModalHistory(() => navigate('/chores/defs'));
+          }}
+        />
+      )}
       {sheet.key > 0 && (
         <ActivitySheet
           key={sheet.key}
