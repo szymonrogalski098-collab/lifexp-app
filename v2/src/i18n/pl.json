@@ -575,6 +575,146 @@
     "deleted": "Usunięto aktywność. −{{points}} pkt",
     "deleteFailed": "Nie udało się usunąć. Sprawdź połączenie."
   },
+  "generator": {
+    "whatNow": "Co teraz?",
+    "roll": "Losuj",
+    "hint": "Nie wiesz, co robić? Wylosuj coś produktywnego.",
+    "picked": "Wylosowano: {{name}}",
+    "pool": [
+      {
+        "name": "Czytanie książki edukacyjnej",
+        "points": 35
+      },
+      {
+        "name": "Nauka języka obcego",
+        "points": 45
+      },
+      {
+        "name": "Rozwiązywanie zadań / matematyka",
+        "points": 50
+      },
+      {
+        "name": "Programowanie / nauka kodowania",
+        "points": 55
+      },
+      {
+        "name": "Praca (koncentracja, zadania wymagające skupienia)",
+        "points": 60
+      },
+      {
+        "name": "Pisanie (notatki, esej, projekt)",
+        "points": 50
+      },
+      {
+        "name": "Oglądanie kursu edukacyjnego",
+        "points": 40
+      },
+      {
+        "name": "Powtarzanie materiału (repetytorium)",
+        "points": 45
+      },
+      {
+        "name": "Planowanie dnia / tygodnia",
+        "points": 30
+      },
+      {
+        "name": "Spacer szybkim tempem",
+        "points": 20
+      },
+      {
+        "name": "Lekka nauka (fiszki, powtórki)",
+        "points": 25
+      },
+      {
+        "name": "Porządkowanie biurka",
+        "points": 20
+      },
+      {
+        "name": "Stretching / rozciąganie",
+        "points": 15
+      },
+      {
+        "name": "Słuchanie podcastu edukacyjnego",
+        "points": 15
+      },
+      {
+        "name": "Oglądanie materiału edukacyjnego „na pół uwagi\"",
+        "points": 10
+      },
+      {
+        "name": "Trening siłowy",
+        "points": 50
+      },
+      {
+        "name": "Cardio (bieganie, rower)",
+        "points": 45
+      },
+      {
+        "name": "Trening interwałowy HIIT",
+        "points": 55
+      },
+      {
+        "name": "Joga / pilates",
+        "points": 30
+      },
+      {
+        "name": "Trening techniczny (np. sztuki walki)",
+        "points": 55
+      },
+      {
+        "name": "Praca kreatywna (projekt, design)",
+        "points": 55
+      },
+      {
+        "name": "Nauka rysunku / grafiki",
+        "points": 45
+      },
+      {
+        "name": "Pisanie kodu do projektu",
+        "points": 60
+      },
+      {
+        "name": "Tworzenie prezentacji",
+        "points": 40
+      },
+      {
+        "name": "Analiza / research",
+        "points": 50
+      },
+      {
+        "name": "Organizacja plików / porządkowanie komputera",
+        "points": 25
+      },
+      {
+        "name": "Nauka z aplikacji (Duolingo itp.)",
+        "points": 20
+      },
+      {
+        "name": "Czytanie artykułów branżowych",
+        "points": 35
+      },
+      {
+        "name": "Notowanie i robienie map myśli",
+        "points": 40
+      },
+      {
+        "name": "Przegląd materiałów do nauki",
+        "points": 30
+      },
+      {
+        "name": "Sprzątanie mieszkania",
+        "points": 30
+      },
+      {
+        "name": "Gotowanie (zdrowy posiłek)",
+        "points": 25
+      },
+      {
+        "name": "Zakupy spożywcze",
+        "points": 20
+      }
+    ]
+  },
   "add": {
     "title": "Dodaj",
     "intro": "Dodawanie przechodzi do nowej wersji razem z modułami. Czego tu jeszcze nie ma, dodasz w obecnej wersji LifeXP.",

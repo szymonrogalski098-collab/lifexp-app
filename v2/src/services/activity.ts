@@ -3,7 +3,14 @@
 // points, so they are awaited and need the server; offline they fail and change
 // nothing (offline drafts come with stage 3f).
 import { deleteActivity, logActivity, seedActivityDefsIfEmpty } from '@/data/repos/activities';
-import { activityProblem, type Activity, type ActivityDef, type ActivityDraft, type ActivityProblem } from '@/domain/activity';
+import {
+  GENERATED_TYPE,
+  activityProblem,
+  type Activity,
+  type ActivityDef,
+  type ActivityDraft,
+  type ActivityProblem,
+} from '@/domain/activity';
 
 export type SaveActivityResult =
   | { ok: true; points: number; earned: number }
@@ -18,6 +25,17 @@ export async function saveActivity(
 ): Promise<SaveActivityResult> {
   const problem = activityProblem(draft);
   if (problem) return { ok: false, problem };
+  // v1 goLogGenerated(): an activity from the generator's own pool, saved under its name.
+  if (draft.type === GENERATED_TYPE && draft.generated) {
+    return logActivity(uid, {
+      type: GENERATED_TYPE,
+      typeName: draft.generated.name,
+      minutes: draft.minutes ?? 0,
+      desc: draft.desc.trim(),
+      pointsPerHour: draft.generated.points,
+      now,
+    });
+  }
   const def = defs.find((d) => d.id === draft.type);
   if (!def) return { ok: false, problem: 'typeRequired' };
   return logActivity(uid, {

@@ -4,6 +4,7 @@
 // activity (stage 3e), goals, chores, shortcuts and the latest activities.
 import {
   Check,
+  Dices,
   Flame,
   Gamepad2,
   type LucideIcon,
@@ -14,7 +15,7 @@ import {
   Zap,
 } from 'lucide-preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { activeDays, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
+import { activeDays, generatorPool, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
 import { choresOnCard, type ChoreDef, type ChoresCardSettings } from '@/domain/chores';
 import { newAchievements } from '@/domain/achievements';
 import { goalProgress } from '@/domain/goals';
@@ -183,7 +184,15 @@ function StreakCard({ profile, days, todayKey }: { profile: Profile; days: Reado
   );
 }
 
-function TodayCard({ profile, day, onLog }: { profile: Profile; day: DayLog | undefined; onLog: () => void }) {
+interface TodayCardProps {
+  profile: Profile;
+  day: DayLog | undefined;
+  onLog: () => void;
+  /** v1's "Co teraz?": the log sheet with a pick from the generator. */
+  onWhatNow: () => void;
+}
+
+function TodayCard({ profile, day, onLog, onWhatNow }: TodayCardProps) {
   const progress = dailyProgress(day?.pointsEarned ?? 0, profile.dailyLimit);
   return (
     <Card>
@@ -205,10 +214,14 @@ function TodayCard({ profile, day, onLog }: { profile: Profile; day: DayLog | un
       <div class="today-card__bar">
         <ProgressBar value={progress.ratio} label={t('today.limitProgress')} tone="positive" />
       </div>
-      <div class="today-card__actions">
+      <div class="today-card__actions today-card__actions--two">
         <Button variant="primary" block onClick={onLog}>
           <Zap aria-hidden="true" />
           {t('activity.log')}
+        </Button>
+        <Button variant="secondary" block onClick={onWhatNow}>
+          <Dices aria-hidden="true" />
+          {t('generator.whatNow')}
         </Button>
       </div>
     </Card>
@@ -361,6 +374,8 @@ function Balance({ grosze }: { grosze: number }) {
 interface SheetState {
   open: boolean;
   key: number;
+  /** The activity sheet starts with a pick from the generator ("Co teraz?"). */
+  roll?: boolean;
 }
 
 export default function TodayPage({ path, navigate }: RouteProps) {
@@ -371,11 +386,11 @@ export default function TodayPage({ path, navigate }: RouteProps) {
   const [sheet, setSheet] = useState<SheetState>({ open: false, key: 0 });
   const [cardEditor, setCardEditor] = useState<SheetState>({ open: false, key: 0 });
   const lastToast = useRef<number | null>(null);
-  const openSheet = () => {
+  const openSheet = (roll = false) => {
     // v1 seeds the activity types on every start; v2 only when someone is about to
     // log one, so opening Today still writes nothing.
     if (uid) ensureActivityDefs(uid).catch(() => {});
-    setSheet((s) => ({ open: true, key: s.key + 1 }));
+    setSheet((s) => ({ open: true, key: s.key + 1, roll }));
   };
   const closeSheet = () => setSheet((s) => ({ ...s, open: false }));
 
@@ -428,7 +443,7 @@ export default function TodayPage({ path, navigate }: RouteProps) {
       if (!result.ok) return result.problem;
       closeSheet();
       const level = levelOf(profile.points.earnedAllTime + result.points).level;
-      const name = defs.find((d) => d.id === draft.type)?.name ?? '';
+      const name = draft.generated?.name ?? defs.find((d) => d.id === draft.type)?.name ?? '';
       notify(
         level > before
           ? {
@@ -464,7 +479,12 @@ export default function TodayPage({ path, navigate }: RouteProps) {
           <>
             <RecordProgress uid={uid} profile={profile} days={sources.days} todayKey={todayKey} />
             <StreakCard profile={profile} days={sources.days} todayKey={todayKey} />
-            <TodayCard profile={profile} day={sources.days.get(todayKey)} onLog={openSheet} />
+            <TodayCard
+              profile={profile}
+              day={sources.days.get(todayKey)}
+              onLog={() => openSheet()}
+              onWhatNow={() => openSheet(true)}
+            />
           </>
         ) : (
           <Card>
@@ -526,6 +546,8 @@ export default function TodayPage({ path, navigate }: RouteProps) {
           defs={sources.activityDefs}
           earnedToday={sources.days?.get(todayKey)?.pointsEarned ?? 0}
           dailyLimit={profile.dailyLimit}
+          pool={generatorPool(t('generator.pool', { returnObjects: true }), sources.activityDefs ?? [])}
+          rollOnOpen={sheet.roll ?? false}
           onClose={closeSheet}
           onSave={save}
         />

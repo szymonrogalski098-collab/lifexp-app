@@ -205,3 +205,45 @@ test.describe('v1 on a desktop', () => {
     await expect(page.locator('#recent-list')).toContainText('+20 pkt');
   });
 });
+
+// ── "Co teraz?" (v1 generator, stage 3e-3) ──
+
+/** Every roll picks the first entry: v1's first pool activity (35 pkt/h). */
+const rollFirst = (page) => page.addInitScript(() => {
+  Math.random = () => 0;
+});
+const generated = { type: '__generated__', typeName: 'Czytanie książki edukacyjnej', duration: 30, points: 18, desc: '' };
+
+test('"Co teraz?" opens the log sheet with a pick from v1\'s pool, saved as v1 saves it', async ({ page }) => {
+  const account = await cappedAccount('generator-v2', { earnedToday: 0 });
+  await rollFirst(page);
+  await openSignedIn(page, account, '#/today');
+  await page.getByRole('button', { name: 'Co teraz?' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Nowa aktywność' });
+  await expect(sheet.getByText('Wylosowano: Czytanie książki edukacyjnej')).toBeVisible();
+  await expect(sheet.getByLabel('Aktywność', { exact: true })).toHaveValue('__generated__');
+  await sheet.getByRole('button', { name: '30 min' }).click();
+  await expect(sheet.getByText('Dostaniesz 18 pkt.')).toBeVisible();
+  await save(sheet);
+  await expect(page.getByText('+18 pkt za: Czytanie książki edukacyjnej')).toBeVisible();
+  await expect.poll(async () => (await activityState(account.uid)).activities).toEqual([generated]);
+  // The entry shows under its own name, as in v1.
+  await expect(page.getByRole('list', { name: 'Ostatnie aktywności' })).toContainText('Czytanie książki edukacyjnej');
+});
+
+test.describe('v1 on a desktop: generator', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('parity: v1\'s "Co teraz?" logs the same entry', async ({ page, context }) => {
+    const account = await cappedAccount('generator-v1', { earnedToday: 0 });
+    await serveCdnFromNpm(context);
+    await rollFirst(page);
+    await signInToApp(page, account);
+    await page.click('#page-dashboard .action-row [onclick="showPage(\'generator\')"]');
+    await page.click('#page-generator .time-btn:has-text("30 min")');
+    await page.click('#gen-btn');
+    await page.click('#gen-do-btn');
+    await page.click('#page-log-activity button');
+    await expect.poll(async () => (await activityState(account.uid)).activities).toEqual([generated]);
+  });
+});

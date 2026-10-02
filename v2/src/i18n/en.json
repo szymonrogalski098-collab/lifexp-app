@@ -575,6 +575,146 @@
     "deleted": "Activity deleted. −{{points}} pts",
     "deleteFailed": "Couldn't delete. Check your connection."
   },
+  "generator": {
+    "whatNow": "What now?",
+    "roll": "Roll",
+    "hint": "Not sure what to do? Roll something productive.",
+    "picked": "Rolled: {{name}}",
+    "pool": [
+      {
+        "name": "Reading an educational book",
+        "points": 35
+      },
+      {
+        "name": "Learning a foreign language",
+        "points": 45
+      },
+      {
+        "name": "Solving problems / math",
+        "points": 50
+      },
+      {
+        "name": "Programming / learning to code",
+        "points": 55
+      },
+      {
+        "name": "Focused work (deep concentration task)",
+        "points": 60
+      },
+      {
+        "name": "Writing (notes, essay, project)",
+        "points": 50
+      },
+      {
+        "name": "Watching an educational course",
+        "points": 40
+      },
+      {
+        "name": "Reviewing material (revision)",
+        "points": 45
+      },
+      {
+        "name": "Planning your day / week",
+        "points": 30
+      },
+      {
+        "name": "Brisk walk",
+        "points": 20
+      },
+      {
+        "name": "Light studying (flashcards, review)",
+        "points": 25
+      },
+      {
+        "name": "Tidying your desk",
+        "points": 20
+      },
+      {
+        "name": "Stretching",
+        "points": 15
+      },
+      {
+        "name": "Listening to an educational podcast",
+        "points": 15
+      },
+      {
+        "name": "Half-focused educational video",
+        "points": 10
+      },
+      {
+        "name": "Strength training",
+        "points": 50
+      },
+      {
+        "name": "Cardio (running, cycling)",
+        "points": 45
+      },
+      {
+        "name": "HIIT interval training",
+        "points": 55
+      },
+      {
+        "name": "Yoga / pilates",
+        "points": 30
+      },
+      {
+        "name": "Technical training (e.g. martial arts)",
+        "points": 55
+      },
+      {
+        "name": "Creative work (project, design)",
+        "points": 55
+      },
+      {
+        "name": "Learning to draw / design",
+        "points": 45
+      },
+      {
+        "name": "Writing code for a project",
+        "points": 60
+      },
+      {
+        "name": "Making a presentation",
+        "points": 40
+      },
+      {
+        "name": "Analysis / research",
+        "points": 50
+      },
+      {
+        "name": "Organizing files / cleaning up your computer",
+        "points": 25
+      },
+      {
+        "name": "Learning with an app (Duolingo etc.)",
+        "points": 20
+      },
+      {
+        "name": "Reading industry articles",
+        "points": 35
+      },
+      {
+        "name": "Note-taking and mind mapping",
+        "points": 40
+      },
+      {
+        "name": "Reviewing study materials",
+        "points": 30
+      },
+      {
+        "name": "Cleaning the apartment",
+        "points": 30
+      },
+      {
+        "name": "Cooking (a healthy meal)",
+        "points": 25
+      },
+      {
+        "name": "Grocery shopping",
+        "points": 20
+      }
+    ]
+  },
   "add": {
     "title": "Add",
     "intro": "Adding moves to the new version with each module. What is not here yet, you add in the current version of LifeXP.",
