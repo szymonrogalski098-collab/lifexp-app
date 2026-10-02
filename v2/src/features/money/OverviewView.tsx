@@ -12,12 +12,14 @@ import {
   recentTxs,
   sortCategories,
   sortTxs,
+  txProblem,
   txsInMonth,
   type MoneyCategory,
   type MoneyTx,
   type TxDraft,
   type TxProblem,
 } from '@/domain/money';
+import { moneyDraftPayload } from '@/domain/drafts';
 import { savedInGoals } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
 import { generalRate } from '@/domain/points';
@@ -26,6 +28,7 @@ import { addDays, formatDayKey, formatDayMonth, formatMonthKey, localDayKey, utc
 import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import type { Navigate } from '@/lib/route-match';
+import { addDraft } from '@/offline/queue';
 import { removeTransaction, saveTransaction } from '@/services/money';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
 import { Button } from '@/ui/components/Button';
@@ -125,6 +128,27 @@ export function OverviewView({ uid, profile, txs, categories, limit, balance, pa
   const overLimit = limitStatus(sorted, today.slice(0, 7), limit);
 
   const save = async (draft: TxDraft): Promise<TxProblem | null> => {
+    // Offline (v1 queueMoneyTxDraft): a draft, confirmed later against the balance as it is then.
+    if (!navigator.onLine) {
+      const problem = txProblem(draft);
+      if (problem) return problem;
+      const grosze = draft.grosze ?? 0;
+      const category = draft.newCategory?.trim() || draft.category;
+      addDraft(
+        'money_tx',
+        t(draft.type === 'income' ? 'offline.sumIncome' : 'offline.sumExpense', { amount: formatMoney(grosze, lang), cat: category }),
+        moneyDraftPayload({
+          txType: draft.type,
+          grosze,
+          category,
+          note: draft.note.trim(),
+          date: draft.date || utcDayKey(new Date()),
+        }),
+      );
+      setSheet((s) => ({ ...s, open: false }));
+      notify({ message: t('offline.draftSaved') });
+      return null;
+    }
     try {
       const result = await saveTransaction(uid, draft, categories, rate);
       if (!result.ok) return result.problem;

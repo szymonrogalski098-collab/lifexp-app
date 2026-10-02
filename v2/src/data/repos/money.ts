@@ -52,6 +52,12 @@ export function watchMoneyTxs(uid: string, onChange: (txs: MoneyTx[]) => void, o
   return onSnapshot(txsOf(uid), (snap) => onChange(snap.docs.map((d) => moneyTxFromData(d.id, d.data()))), onError);
 }
 
+/** The categories as the server has them now (an offline draft names its category). */
+export async function getMoneyCategories(uid: string): Promise<MoneyCategory[]> {
+  const snap = await getDocsFromServer(categoriesOf(uid));
+  return snap.docs.map((d) => moneyCategoryFromData(d.id, d.data()));
+}
+
 export function watchMoneyCategories(uid: string, onChange: (categories: MoneyCategory[]) => void, onError: OnError) {
   return onSnapshot(
     categoriesOf(uid),

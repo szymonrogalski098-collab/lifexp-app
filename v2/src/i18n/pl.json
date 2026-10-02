@@ -715,6 +715,32 @@
       }
     ]
   },
+  "offline": {
+    "reviewTitle": "Szkice zrobione offline",
+    "reviewLead": "Zatwierdź albo odrzuć każdy szkic. Zapis liczy się według aktualnego stanu konta: limitu dnia i salda.",
+    "add": "Dodaj",
+    "discard": "Odrzuć",
+    "addNamed": "Dodaj: {{summary}}",
+    "discardNamed": "Odrzuć: {{summary}}",
+    "added": "Szkic zapisany na koncie.",
+    "discarded": "Szkic odrzucony.",
+    "empty": "Wszystkie szkice przetworzone.",
+    "gamingNote": "Sesję grania dodasz w obecnej wersji LifeXP albo odrzucisz tutaj.",
+    "otherNote": "Ten szkic otworzysz w obecnej wersji LifeXP.",
+    "invalid": "Tego szkicu nie da się zapisać. Możesz go odrzucić.",
+    "failed": "Nie udało się zapisać. Sprawdź połączenie i spróbuj ponownie.",
+    "pending_one": "Masz {{count}} szkic do zatwierdzenia",
+    "pending_few": "Masz {{count}} szkice do zatwierdzenia",
+    "pending_many": "Masz {{count}} szkiców do zatwierdzenia",
+    "pending_other": "Masz {{count}} szkicu do zatwierdzenia",
+    "pendingNote": "Zrobione bez internetu. Zatwierdź je albo odrzuć.",
+    "review": "Przejrzyj",
+    "banner": "Jesteś offline: nowe wpisy zapiszą się jako szkice do zatwierdzenia.",
+    "draftSaved": "Brak internetu: zapisano jako szkic. Zatwierdzisz go po powrocie online.",
+    "sumActivity": "Aktywność: {{name}} — {{min}} min (~{{pts}} pkt)",
+    "sumExpense": "Wydatek: {{amount}} — {{cat}}",
+    "sumIncome": "Przychód: {{amount}} — {{cat}}"
+  },
   "add": {
     "title": "Dodaj",
     "intro": "Dodawanie przechodzi do nowej wersji razem z modułami. Czego tu jeszcze nie ma, dodasz w obecnej wersji LifeXP.",

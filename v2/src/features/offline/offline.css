@@ -1,0 +1,41 @@
+/* Offline drafts (stage 3f): each one with its summary, when it was made, and what to do with it. */
+
+.drafts__lead,
+.drafts__empty {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.drafts {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drafts__item {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+}
+
+.drafts__item + .drafts__item {
+  border-top: 1px solid var(--color-separator);
+}
+
+.drafts__summary {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.drafts__when,
+.drafts__note {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.drafts__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}

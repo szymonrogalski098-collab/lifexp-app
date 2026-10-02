@@ -1,7 +1,7 @@
 // Modal layers on a phone (ui/components/useModal.ts), after the owner's report that
 // buttons sometimes stopped working until a reload (2026-10-02).
 const { devices } = require('@playwright/test');
-const { test, expect, openSignedIn } = require('../support/v2');
+const { test, expect, openSignedIn, screenSettled } = require('../support/v2');
 
 const { defaultBrowserType, ...pixel } = devices['Pixel 7'];
 test.use({ ...pixel, serviceWorkers: 'block' });
@@ -37,4 +37,21 @@ test('a tap during the exit animation does not land on the sheet sliding away', 
   await expect(page).toHaveURL(/v2\/dist\/index\.html.*#\/today$/);
   await plus.tap();
   await expect(sheet).toBeVisible();
+});
+
+test('the next screen takes taps after a sheet opened and closed', async ({ page, account }) => {
+  await openSignedIn(page, account, '#/money');
+  await expect(page.getByRole('button', { name: 'Dodaj transakcję' })).toBeVisible();
+  await page.locator('.tabbar').getByRole('link', { name: 'Dziś' }).tap();
+  await expect(page.getByTestId('today-points')).toBeVisible();
+  await screenSettled(page);
+  const sheet = page.getByRole('dialog', { name: 'Nowa aktywność' });
+  await page.getByRole('button', { name: 'Zapisz aktywność' }).tap();
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole('button', { name: 'Zamknij' }).tap();
+  await expect(sheet).toBeHidden();
+  // Chrome brought Money in with the style kept from while the sheet was open: inert.
+  await page.locator('.tabbar').getByRole('link', { name: 'Pieniądze' }).tap();
+  await page.getByRole('button', { name: 'Dodaj transakcję' }).tap();
+  await expect(page.getByRole('dialog', { name: 'Nowa transakcja' })).toBeVisible();
 });

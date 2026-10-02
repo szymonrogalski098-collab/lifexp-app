@@ -55,6 +55,17 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [standalone] = useState(isStandalone);
+  // v1 offline banner: new entries become drafts while there is no connection.
+  const [offline, setOffline] = useState(() => !navigator.onLine);
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    addEventListener('online', update);
+    addEventListener('offline', update);
+    return () => {
+      removeEventListener('online', update);
+      removeEventListener('offline', update);
+    };
+  }, []);
   const openRef = useRef(false);
   const wasOpen = useRef(false);
   const drag = useRef<Drag | null>(null);
@@ -225,6 +236,11 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
         <header class="topbar">
           <h1 class="topbar__title">{title}</h1>
         </header>
+        {offline && (
+          <p class="shell__offline" role="status">
+            {t('offline.banner')}
+          </p>
+        )}
         <main ref={mainRef} class="shell__main">
           {children}
         </main>
