@@ -45,6 +45,7 @@ export function profileFromData(data: DocumentData): Profile {
     achievements: Array.isArray(data.achievements)
       ? data.achievements.filter((id: unknown): id is string => typeof id === 'string')
       : [],
+    lastBugReportAt: typeof data.lastBugReportAt === 'string' && data.lastBugReportAt !== '' ? data.lastBugReportAt : null,
   };
 }
 

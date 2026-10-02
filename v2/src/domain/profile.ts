@@ -55,6 +55,8 @@ export interface Profile {
   choresCard: ChoresCardSettings;
   /** Ids of the badges earned (G4), never taken away. */
   achievements: readonly string[];
+  /** ISO time of the day's bug report (v1 lastBugReportAt); null = never. */
+  lastBugReportAt: string | null;
 }
 
 /** users.points — v1 keeps all three in step. */

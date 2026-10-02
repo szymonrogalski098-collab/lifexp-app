@@ -25,6 +25,7 @@ const ready: Profile = {
   moneyIncomeAllTime: null,
   choresCard: { mode: 'random', ids: [] },
   achievements: [],
+  lastBugReportAt: null,
 };
 
 const signedIn = (profile: ProfileState, u: SessionUser = user) => sessionGate({ status: 'signedIn', user: u, profile });

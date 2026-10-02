@@ -1,0 +1,177 @@
+/* Zgłoszenia (stage 4): the new-report card, the list of reports, a report's thread. */
+
+.reports-new {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.reports-new__text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.reports-new__title {
+  font-weight: var(--font-weight-semibold);
+}
+
+.reports-new__action {
+  margin-top: var(--space-4);
+}
+
+.reports-note,
+.reports-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.reports-problem {
+  color: var(--color-negative);
+  font-weight: var(--font-weight-medium);
+}
+
+.reports-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reports-list__item + .reports-list__item {
+  border-top: 1px solid var(--color-separator);
+}
+
+.reports-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-enter) var(--ease-out);
+}
+
+.reports-list__row:hover {
+  background: var(--color-accent-soft);
+}
+
+.reports-list__text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reports-list__title {
+  font-weight: var(--font-weight-medium);
+}
+
+.reports-list__meta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* A new message from the other side: an icon next to the words, never alone (D9). */
+.reports-unread {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-accent-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.reports-unread svg {
+  width: 16px;
+  height: 16px;
+}
+
+.reports-status {
+  flex-shrink: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.reports-status--accent {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.reports-status--positive {
+  background: color-mix(in srgb, var(--color-positive) 16%, transparent);
+  color: var(--color-positive);
+}
+
+.reports-status--negative {
+  background: color-mix(in srgb, var(--color-negative) 14%, transparent);
+  color: var(--color-negative);
+}
+
+.reports-status--neutral {
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+}
+
+.reports-desc {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* The thread: the other side on the left, mine on the right. */
+.reports-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reports-message {
+  display: grid;
+  gap: 2px;
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.reports-message--mine {
+  align-self: flex-end;
+  text-align: end;
+}
+
+.reports-message__who {
+  padding: 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.reports-message__text {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.reports-message--mine .reports-message__text {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.reports-reply {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.reports-reply .ui-button {
+  justify-self: start;
+}
