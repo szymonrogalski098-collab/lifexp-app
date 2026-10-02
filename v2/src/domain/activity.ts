@@ -88,11 +88,43 @@ export function creditActivity(
 }
 
 export interface ActivityDraft {
-  /** activityDefs id; null = none chosen yet. */
+  /** activityDefs id, or GENERATED_TYPE for a pick from the generator's pool; null = none chosen yet. */
   type: string | null;
   /** null = the field is empty. */
   minutes: number | null;
   desc: string;
+  /** The generator's pick when `type` is GENERATED_TYPE. */
+  generated?: GeneratedActivity | null;
+}
+
+// ── "Co teraz?" (v1 generator) ──
+
+/** v1's type for an activity picked from the generator's own pool (saved with typeName). */
+export const GENERATED_TYPE = '__generated__';
+
+/** An activity from the generator's pool (v1 i18n genActivities): a name and points per hour. */
+export interface GeneratedActivity {
+  name: string;
+  points: number;
+}
+
+export interface GeneratorPick extends GeneratedActivity {
+  /** The definition it is, or null for one of the pool's own. */
+  defId: string | null;
+}
+
+/** v1 generate(): the pool of 33 in the app's language, then the person's own definitions. */
+export function generatorPool(pool: readonly GeneratedActivity[], defs: readonly ActivityDef[]): GeneratorPick[] {
+  return [
+    ...pool.map((item) => ({ name: item.name, points: item.points, defId: null })),
+    ...defs.map((def) => ({ name: def.name, points: def.points, defId: def.id })),
+  ];
+}
+
+/** One pick, every entry as likely as any other (v1: Math.random over the pool). */
+export function pickActivity(pool: readonly GeneratorPick[], random: () => number = Math.random): GeneratorPick | null {
+  if (pool.length === 0) return null;
+  return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))] ?? null;
 }
 
 export type ActivityProblem = 'typeRequired' | 'minMinutes';

@@ -91,7 +91,8 @@
     "cardNoneChosen": "Tick at least one chore.",
     "cardSave": "Save",
     "cardSaved": "Today's list saved.",
-    "cardManage": "Add or remove chores"
+    "cardManage": "Add or remove chores",
+    "newBadge": "New badge: {{list}}!"
   },
   "stats": {
     "views": "Stats view",
@@ -123,7 +124,69 @@
     "showMore": "Show more",
     "noHistory": "No activities yet. Start earning points!",
     "historyFailed": "Could not load the history. Check your connection.",
-    "loadFailed": "Could not load some of the data. Check your connection."
+    "loadFailed": "Could not load some of the data. Check your connection.",
+    "badges": "Achievements",
+    "badgesCount": "{{count}} of {{total}}",
+    "badgeEarned": "earned",
+    "badgeLocked": "not yet"
+  },
+  "achievements": {
+    "first_activity": {
+      "name": "First spark",
+      "desc": "Log your first activity"
+    },
+    "pts_1000": {
+      "name": "Thousand points",
+      "desc": "Earn 1,000 pts total"
+    },
+    "pts_5000": {
+      "name": "Five thousand",
+      "desc": "Earn 5,000 pts total"
+    },
+    "first_purchase": {
+      "name": "First purchase",
+      "desc": "Spend points for the first time"
+    },
+    "streak_7": {
+      "name": "Week warrior",
+      "desc": "7 day streak"
+    },
+    "streak_30": {
+      "name": "Month legend",
+      "desc": "30 day streak"
+    },
+    "gaming_hour": {
+      "name": "Gaming marathon",
+      "desc": "60 min of gaming in one day"
+    },
+    "daily_limit": {
+      "name": "Limit smashed!",
+      "desc": "Hit your daily point limit"
+    },
+    "money_100": {
+      "name": "First hundred",
+      "desc": "Earn 100 PLN total in Money"
+    },
+    "money_500": {
+      "name": "Five hundred",
+      "desc": "Earn 500 PLN total in Money"
+    },
+    "money_1000": {
+      "name": "Thousand in the bank",
+      "desc": "Earn 1,000 PLN total in Money"
+    },
+    "money_2500": {
+      "name": "Serious saver",
+      "desc": "Earn 2,500 PLN total in Money"
+    },
+    "money_5000": {
+      "name": "Five grand",
+      "desc": "Earn 5,000 PLN total in Money"
+    },
+    "money_10000": {
+      "name": "Money master",
+      "desc": "Earn 10,000 PLN total in Money"
+    }
   },
   "units": {
     "minutes": "{{m}} min",
@@ -511,6 +574,146 @@
     "deleteBody": "{{points}} pts will come off your points and off the day it was logged.",
     "deleted": "Activity deleted. −{{points}} pts",
     "deleteFailed": "Couldn't delete. Check your connection."
+  },
+  "generator": {
+    "whatNow": "What now?",
+    "roll": "Roll",
+    "hint": "Not sure what to do? Roll something productive.",
+    "picked": "Rolled: {{name}}",
+    "pool": [
+      {
+        "name": "Reading an educational book",
+        "points": 35
+      },
+      {
+        "name": "Learning a foreign language",
+        "points": 45
+      },
+      {
+        "name": "Solving problems / math",
+        "points": 50
+      },
+      {
+        "name": "Programming / learning to code",
+        "points": 55
+      },
+      {
+        "name": "Focused work (deep concentration task)",
+        "points": 60
+      },
+      {
+        "name": "Writing (notes, essay, project)",
+        "points": 50
+      },
+      {
+        "name": "Watching an educational course",
+        "points": 40
+      },
+      {
+        "name": "Reviewing material (revision)",
+        "points": 45
+      },
+      {
+        "name": "Planning your day / week",
+        "points": 30
+      },
+      {
+        "name": "Brisk walk",
+        "points": 20
+      },
+      {
+        "name": "Light studying (flashcards, review)",
+        "points": 25
+      },
+      {
+        "name": "Tidying your desk",
+        "points": 20
+      },
+      {
+        "name": "Stretching",
+        "points": 15
+      },
+      {
+        "name": "Listening to an educational podcast",
+        "points": 15
+      },
+      {
+        "name": "Half-focused educational video",
+        "points": 10
+      },
+      {
+        "name": "Strength training",
+        "points": 50
+      },
+      {
+        "name": "Cardio (running, cycling)",
+        "points": 45
+      },
+      {
+        "name": "HIIT interval training",
+        "points": 55
+      },
+      {
+        "name": "Yoga / pilates",
+        "points": 30
+      },
+      {
+        "name": "Technical training (e.g. martial arts)",
+        "points": 55
+      },
+      {
+        "name": "Creative work (project, design)",
+        "points": 55
+      },
+      {
+        "name": "Learning to draw / design",
+        "points": 45
+      },
+      {
+        "name": "Writing code for a project",
+        "points": 60
+      },
+      {
+        "name": "Making a presentation",
+        "points": 40
+      },
+      {
+        "name": "Analysis / research",
+        "points": 50
+      },
+      {
+        "name": "Organizing files / cleaning up your computer",
+        "points": 25
+      },
+      {
+        "name": "Learning with an app (Duolingo etc.)",
+        "points": 20
+      },
+      {
+        "name": "Reading industry articles",
+        "points": 35
+      },
+      {
+        "name": "Note-taking and mind mapping",
+        "points": 40
+      },
+      {
+        "name": "Reviewing study materials",
+        "points": 30
+      },
+      {
+        "name": "Cleaning the apartment",
+        "points": 30
+      },
+      {
+        "name": "Cooking (a healthy meal)",
+        "points": 25
+      },
+      {
+        "name": "Grocery shopping",
+        "points": 20
+      }
+    ]
   },
   "add": {
     "title": "Add",

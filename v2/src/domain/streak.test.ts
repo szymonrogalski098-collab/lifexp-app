@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { addDays } from '@/lib/dates';
-import { calculateStreak, isFreezeAvailable } from './streak';
+import { calculateStreak, frozenDay, isFreezeAvailable } from './streak';
 
 const TODAY = '2026-09-29';
 
@@ -18,11 +18,11 @@ describe('G3 streak', () => {
     ['G3.5', '··✓✓·', true, 0, false],
     ['G3.6', '✓·✓·✓', true, 2, true],
   ])('%s: %s, freeze available %s → %i days, freeze used %s', (_case, pattern, freeze, expected, used) => {
-    expect(calculateStreak(days(pattern), TODAY, freeze)).toEqual({ days: expected, freezeUsed: used });
+    expect(calculateStreak(days(pattern), TODAY, freeze)).toEqual({ days: expected, freezeUsed: used, newFreeze: used });
   });
 
   test('no activity at all', () => {
-    expect(calculateStreak(new Set(), TODAY, true)).toEqual({ days: 0, freezeUsed: false });
+    expect(calculateStreak(new Set(), TODAY, true)).toEqual({ days: 0, freezeUsed: false, newFreeze: false });
   });
 
   test('a long streak across a month boundary', () => {
@@ -41,5 +41,33 @@ describe('streak freeze availability', () => {
   test('used within the last 7 days: not available', () => {
     expect(isFreezeAvailable('2026-09-29', now)).toBe(false);
     expect(isFreezeAvailable('2026-09-23', now)).toBe(false);
+  });
+});
+
+describe('a used freeze keeps bridging its gap (v2; v1 loses it on the next render)', () => {
+  test('G3.3 after the freeze was recorded today: still 3 days, nothing new to record', () => {
+    const active = days('✓·✓✓·');
+    const frozen = frozenDay(active, TODAY);
+    expect(frozen).toBe(addDays(TODAY, -1));
+    expect(calculateStreak(active, TODAY, false, frozen)).toEqual({ days: 3, freezeUsed: true, newFreeze: false });
+    // What v1 shows on its next render: the gap is not bridged any more.
+    expect(calculateStreak(active, TODAY, false).days).toBe(1);
+  });
+
+  test('used yesterday before any points today: the same gap, found from the day before', () => {
+    const active = days('✓✓·✓✓');
+    expect(frozenDay(active, addDays(TODAY, -1))).toBe(addDays(TODAY, -2));
+    expect(calculateStreak(active, TODAY, false, addDays(TODAY, -2)).days).toBe(4);
+  });
+
+  test('a week later the freeze is back for a second gap; the first stays bridged', () => {
+    const active = days('✓·✓✓✓✓✓✓✓·✓');
+    const frozen = addDays(TODAY, -9);
+    expect(calculateStreak(active, TODAY, true, frozen)).toEqual({ days: 9, freezeUsed: true, newFreeze: true });
+  });
+
+  test('no streak on the day it was used: nothing was bridged', () => {
+    expect(frozenDay(days('···✓'), addDays(TODAY, -1))).toBeNull();
+    expect(frozenDay(days('✓✓'), null)).toBeNull();
   });
 });

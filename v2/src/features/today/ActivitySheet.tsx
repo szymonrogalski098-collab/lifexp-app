@@ -1,9 +1,21 @@
 // Logging an activity (v1 #page-log-activity, GOLDEN G1): what, how long, a note.
 // Below the time the sheet says what will be credited, already cut to what is left
 // of today's limit, as v1's preview does. Saving waits for the server, which checks
-// the limit again; the sheet stays open until it answers.
+// the limit again; the sheet stays open until it answers. "Losuj" is v1's "Co
+// teraz?" generator in the same sheet: it picks from v1's pool and the person's own
+// activities and fills in the type (never a sheet opened from a sheet, PLAN.md 7.5).
 import { useState } from 'preact/hooks';
-import { ACTIVITY_MIN_MINUTES, creditActivity, type ActivityDef, type ActivityDraft, type ActivityProblem } from '@/domain/activity';
+import { Dices } from 'lucide-preact';
+import {
+  ACTIVITY_MIN_MINUTES,
+  GENERATED_TYPE,
+  creditActivity,
+  pickActivity,
+  type ActivityDef,
+  type ActivityDraft,
+  type ActivityProblem,
+  type GeneratorPick,
+} from '@/domain/activity';
 import { locale, t } from '@/i18n';
 import { formatInteger } from '@/lib/format';
 import { Button } from '@/ui/components/Button';
@@ -23,12 +35,28 @@ interface ActivitySheetProps {
   /** Points of the UTC day so far. */
   earnedToday: number;
   dailyLimit: number | null;
+  /** The generator's pool (v1's activities, then the person's). */
+  pool: readonly GeneratorPick[];
+  /** Opened from "Co teraz?": the sheet starts with a pick. */
+  rollOnOpen: boolean;
   onClose: () => void;
   onSave: (draft: ActivityDraft) => Promise<Problem | null>;
 }
 
-export function ActivitySheet({ open, defs, earnedToday, dailyLimit, onClose, onSave }: ActivitySheetProps) {
-  const [draft, setDraft] = useState<ActivityDraft>({ type: null, minutes: null, desc: '' });
+/** The draft for a pick: its definition, or the pool's own activity under v1's generated type. */
+function draftFor(pick: GeneratorPick | null, draft: ActivityDraft): ActivityDraft {
+  if (!pick) return draft;
+  return pick.defId
+    ? { ...draft, type: pick.defId, generated: null }
+    : { ...draft, type: GENERATED_TYPE, generated: { name: pick.name, points: pick.points } };
+}
+
+export function ActivitySheet({ open, defs, earnedToday, dailyLimit, pool, rollOnOpen, onClose, onSave }: ActivitySheetProps) {
+  const empty: ActivityDraft = { type: null, minutes: null, desc: '', generated: null };
+  const [draft, setDraft] = useState<ActivityDraft>(() => (rollOnOpen ? draftFor(pickActivity(pool), empty) : empty));
+  const [picked, setPicked] = useState<string | null>(() =>
+    rollOnOpen && draft.type ? (draft.generated?.name ?? defs?.find((d) => d.id === draft.type)?.name ?? null) : null,
+  );
   const [problem, setProblem] = useState<Problem | null>(null);
   const [saving, setSaving] = useState(false);
   const lang = locale();
@@ -47,10 +75,19 @@ export function ActivitySheet({ open, defs, earnedToday, dailyLimit, onClose, on
     }
   };
 
-  const def = defs?.find((d) => d.id === draft.type);
+  const roll = () => {
+    const pick = pickActivity(pool);
+    if (!pick) return;
+    setDraft(draftFor(pick, draft));
+    setPicked(pick.name);
+    setProblem(null);
+  };
+
+  const rate =
+    draft.type === GENERATED_TYPE ? draft.generated?.points : defs?.find((d) => d.id === draft.type)?.points;
   const credit =
-    def && draft.minutes !== null && draft.minutes >= ACTIVITY_MIN_MINUTES
-      ? creditActivity(draft.minutes, def.points, earnedToday, dailyLimit)
+    rate !== undefined && draft.minutes !== null && draft.minutes >= ACTIVITY_MIN_MINUTES
+      ? creditActivity(draft.minutes, rate, earnedToday, dailyLimit)
       : null;
   const preview = !credit
     ? undefined
@@ -105,14 +142,34 @@ export function ActivitySheet({ open, defs, earnedToday, dailyLimit, onClose, on
             void submit();
           }}
         >
+          <div class="activity-sheet__roll">
+            <p class="activity-sheet__roll-text" aria-live="polite">
+              {picked ? t('generator.picked', { name: picked }) : t('generator.hint')}
+            </p>
+            <Button variant="secondary" onClick={roll}>
+              <Dices aria-hidden="true" />
+              {t('generator.roll')}
+            </Button>
+          </div>
           <Select<string>
             label={t('activity.type')}
             value={draft.type ?? ''}
             options={[
               { value: '', label: t('activity.choose') },
+              ...(draft.type === GENERATED_TYPE && draft.generated
+                ? [
+                    {
+                      value: GENERATED_TYPE,
+                      label: t('activity.option', { name: draft.generated.name, points: draft.generated.points }),
+                    },
+                  ]
+                : []),
               ...defs.map((d) => ({ value: d.id, label: t('activity.option', { name: d.name, points: d.points }) })),
             ]}
-            onChange={(type) => set({ type: type || null })}
+            onChange={(type) => {
+              set({ type: type || null, generated: type === GENERATED_TYPE ? draft.generated : null });
+              setPicked(null);
+            }}
             error={problem === 'typeRequired' ? t('activity.needType') : null}
           />
           <div class="stack activity-sheet__time">

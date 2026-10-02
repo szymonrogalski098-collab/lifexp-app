@@ -77,6 +77,19 @@ Oznaczenia: D0 = dziś, D1 = wczoraj, … ✓ aktywny, · brak.
 | G3.5 | · | · | ✓ | ✓ | · | dostępne | 0 | nie (seria = 0 w chwili luki) | kod |
 | G3.6 | ✓ | · | ✓ | · | ✓ | dostępne | 2 | tak (druga luka kończy) | kod |
 
+**Świadoma zmiana w v2 (etap 3e-2, 2026-10-02).** W v1 zamrożenie działa tylko przy renderze, który je
+zużył: zapisuje `streakFreezeLastUsed = dziś`, więc przy następnym renderze zamrożenie jest niedostępne
+i ta sama luka przerywa serię (G3.3: 3 dni przy pierwszym renderze, 1 przy każdym następnym). Zamrożenie
+ma chronić serię, więc v2 przykrywa tę lukę dalej. Lukę odtwarza z daty użycia: to pierwszy dzień bez
+punktów, idąc wstecz od dnia użycia (albo od dnia przed nim, jeśli dzień użycia był wtedy pusty). Nowe pole
+nie jest potrzebne, a zamrożenia zużyte jeszcze w v1 też są rozpoznane. Zapis daty robi serwis, raz,
+transakcją, i tylko gdy zamrożenie jest dostępne według serwera. Do cutover v1 pokazuje mniejszą serię
+niż v2 na tym samym koncie.
+
+| # | D0 | D1 | D2 | D3 | D4 | Zamrożenie | v2 | v1 | Status |
+|---|---|---|---|---|---|---|---:|---:|---|
+| G3.7 | ✓ | · | ✓ | ✓ | · | użyte dziś (na D1) | 3 | 1 | e2e (`tests/v2/progress.spec.js`) |
+
 ## G4. Osiągnięcia
 
 `dashboard.js:362-418`. Sprawdzane przy każdym ładowaniu dashboardu i po wpływie w Money; dopisywane, nigdy
@@ -91,6 +104,10 @@ odbierane.
 | `gaming_hour` | gamingMinutes dziś ≥ 60 |
 | `daily_limit` | pointsEarned dziś ≥ dailyLimit |
 | `money_100` … `money_10000` | moneyIncomeAllTime ≥ 100 / 500 / 1000 / 2500 / 5000 / 10000 |
+
+v2 (etap 3e-2): te same warunki (`domain/achievements.ts`), sprawdzane na „Dziś”; nowe odznaki zapisuje
+serwis transakcją na liście z serwera (dopisuje, nigdy nie odbiera, bez duplikatów z dwóch kart) i ogłasza
+toastem; siatka 14 odznak w Statystykach. e2e `tests/v2/progress.spec.js`: v1 i v2 dopisują te same id.
 
 ## G5. Money: transakcje
 

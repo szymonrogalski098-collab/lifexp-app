@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
   ACTIVITY_SEEDS,
+  generatorPool,
+  pickActivity,
   activityProblem,
   creditActivity,
   earnedPoints,
@@ -76,5 +78,30 @@ describe('activity definitions', () => {
       { id: 'a', name: 'A', points: 10, order: 1 },
     ];
     expect(sortActivityDefs(defs).map((d) => d.id)).toEqual(['z', 'a', 'b']);
+  });
+});
+
+describe('"Co teraz?" (v1 generator)', () => {
+  const pool = generatorPool(
+    [
+      { name: 'Czytanie', points: 35 },
+      { name: 'Spacer', points: 20 },
+    ],
+    [{ id: 'learning', name: 'Nauka', points: 40, order: 0 }],
+  );
+
+  test("the pool's own activities, then the person's definitions", () => {
+    expect(pool).toEqual([
+      { name: 'Czytanie', points: 35, defId: null },
+      { name: 'Spacer', points: 20, defId: null },
+      { name: 'Nauka', points: 40, defId: 'learning' },
+    ]);
+  });
+
+  test('each entry as likely as any other', () => {
+    expect(pickActivity(pool, () => 0)?.name).toBe('Czytanie');
+    expect(pickActivity(pool, () => 0.5)?.name).toBe('Spacer');
+    expect(pickActivity(pool, () => 0.9999)?.name).toBe('Nauka');
+    expect(pickActivity([], () => 0)).toBeNull();
   });
 });

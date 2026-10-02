@@ -4,6 +4,7 @@
 // activity (stage 3e), goals, chores, shortcuts and the latest activities.
 import {
   Check,
+  Dices,
   Flame,
   Gamepad2,
   type LucideIcon,
@@ -14,12 +15,13 @@ import {
   Zap,
 } from 'lucide-preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { activeDays, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
+import { activeDays, generatorPool, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
 import { choresOnCard, type ChoreDef, type ChoresCardSettings } from '@/domain/chores';
+import { newAchievements } from '@/domain/achievements';
 import { goalProgress } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
-import { dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
-import { calculateStreak, isFreezeAvailable } from '@/domain/streak';
+import { DAILY_LIMIT_DEFAULT, dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
+import { calculateStreak, frozenDay, isFreezeAvailable } from '@/domain/streak';
 import { ActivityRow, formatDuration } from '@/features/shared/activity';
 import { goalAmount, useCelebration } from '@/features/shared/goals';
 import { locale, t } from '@/i18n';
@@ -29,6 +31,7 @@ import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { ensureActivityDefs, saveActivity } from '@/services/activity';
 import { logChore, saveChoresCard } from '@/services/chores';
+import { awardAchievements, recordFreeze } from '@/services/progress';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
@@ -86,10 +89,62 @@ function LevelCard({ profile }: { profile: Profile }) {
   );
 }
 
-function StreakCard({ profile, days, todayKey }: { profile: Profile; days: ReadonlyMap<string, DayLog>; todayKey: string }) {
+/** G3 on Today's data: the streak, with a freeze used before still bridging its gap. */
+function streakOf(profile: Profile, days: ReadonlyMap<string, DayLog>, todayKey: string) {
   const active = activeDays(days);
   const freezeAvailable = isFreezeAvailable(profile.streakFreezeLastUsed, new Date());
-  const streak = calculateStreak(active, todayKey, freezeAvailable);
+  const streak = calculateStreak(active, todayKey, freezeAvailable, frozenDay(active, profile.streakFreezeLastUsed));
+  return { active, freezeAvailable, streak };
+}
+
+interface RecordProgressProps {
+  uid: string;
+  profile: Profile;
+  days: ReadonlyMap<string, DayLog>;
+  todayKey: string;
+}
+
+/**
+ * G3, G4: a freeze bridging a gap today and badges earned now are recorded once, by
+ * the services, after the screen showed them (v1 writes them while rendering).
+ * Renders nothing.
+ */
+function RecordProgress({ uid, profile, days, todayKey }: RecordProgressProps) {
+  const { streak } = streakOf(profile, days, todayKey);
+  useEffect(() => {
+    if (streak.newFreeze) recordFreeze(uid, todayKey).catch(() => {});
+  }, [uid, streak.newFreeze, todayKey]);
+
+  const todayLog = days.get(todayKey);
+  const input = {
+    earnedAllTime: profile.points.earnedAllTime,
+    spentAllTime: profile.points.spentAllTime,
+    streak: streak.days,
+    pointsToday: todayLog?.pointsEarned ?? 0,
+    gamingMinutesToday: todayLog?.gamingMinutes ?? 0,
+    dailyLimit: profile.dailyLimit || DAILY_LIMIT_DEFAULT,
+    moneyIncomeAllTime: profile.moneyIncomeAllTime,
+  };
+  const due = newAchievements(profile.achievements, input)
+    .map((a) => a.id)
+    .join(',');
+  useEffect(() => {
+    if (!due) return;
+    awardAchievements(uid, profile.achievements, input)
+      .then((added) => {
+        if (added.length === 0) return;
+        const list = added
+          .map((a) => `${a.emoji} ${t(`achievements.${a.id}.name` as 'achievements.first_activity.name')}`)
+          .join(', ');
+        showToast({ message: t('today.newBadge', { list }), tone: 'positive' });
+      })
+      .catch(() => {});
+  }, [uid, due]);
+  return null;
+}
+
+function StreakCard({ profile, days, todayKey }: { profile: Profile; days: ReadonlyMap<string, DayLog>; todayKey: string }) {
+  const { active, freezeAvailable, streak } = streakOf(profile, days, todayKey);
   const lang = locale();
   return (
     <Card>
@@ -129,7 +184,15 @@ function StreakCard({ profile, days, todayKey }: { profile: Profile; days: Reado
   );
 }
 
-function TodayCard({ profile, day, onLog }: { profile: Profile; day: DayLog | undefined; onLog: () => void }) {
+interface TodayCardProps {
+  profile: Profile;
+  day: DayLog | undefined;
+  onLog: () => void;
+  /** v1's "Co teraz?": the log sheet with a pick from the generator. */
+  onWhatNow: () => void;
+}
+
+function TodayCard({ profile, day, onLog, onWhatNow }: TodayCardProps) {
   const progress = dailyProgress(day?.pointsEarned ?? 0, profile.dailyLimit);
   return (
     <Card>
@@ -151,10 +214,14 @@ function TodayCard({ profile, day, onLog }: { profile: Profile; day: DayLog | un
       <div class="today-card__bar">
         <ProgressBar value={progress.ratio} label={t('today.limitProgress')} tone="positive" />
       </div>
-      <div class="today-card__actions">
+      <div class="today-card__actions today-card__actions--two">
         <Button variant="primary" block onClick={onLog}>
           <Zap aria-hidden="true" />
           {t('activity.log')}
+        </Button>
+        <Button variant="secondary" block onClick={onWhatNow}>
+          <Dices aria-hidden="true" />
+          {t('generator.whatNow')}
         </Button>
       </div>
     </Card>
@@ -307,6 +374,8 @@ function Balance({ grosze }: { grosze: number }) {
 interface SheetState {
   open: boolean;
   key: number;
+  /** The activity sheet starts with a pick from the generator ("Co teraz?"). */
+  roll?: boolean;
 }
 
 export default function TodayPage({ path, navigate }: RouteProps) {
@@ -317,11 +386,11 @@ export default function TodayPage({ path, navigate }: RouteProps) {
   const [sheet, setSheet] = useState<SheetState>({ open: false, key: 0 });
   const [cardEditor, setCardEditor] = useState<SheetState>({ open: false, key: 0 });
   const lastToast = useRef<number | null>(null);
-  const openSheet = () => {
+  const openSheet = (roll = false) => {
     // v1 seeds the activity types on every start; v2 only when someone is about to
     // log one, so opening Today still writes nothing.
     if (uid) ensureActivityDefs(uid).catch(() => {});
-    setSheet((s) => ({ open: true, key: s.key + 1 }));
+    setSheet((s) => ({ open: true, key: s.key + 1, roll }));
   };
   const closeSheet = () => setSheet((s) => ({ ...s, open: false }));
 
@@ -374,7 +443,7 @@ export default function TodayPage({ path, navigate }: RouteProps) {
       if (!result.ok) return result.problem;
       closeSheet();
       const level = levelOf(profile.points.earnedAllTime + result.points).level;
-      const name = defs.find((d) => d.id === draft.type)?.name ?? '';
+      const name = draft.generated?.name ?? defs.find((d) => d.id === draft.type)?.name ?? '';
       notify(
         level > before
           ? {
@@ -408,8 +477,14 @@ export default function TodayPage({ path, navigate }: RouteProps) {
 
         {sources.days ? (
           <>
+            <RecordProgress uid={uid} profile={profile} days={sources.days} todayKey={todayKey} />
             <StreakCard profile={profile} days={sources.days} todayKey={todayKey} />
-            <TodayCard profile={profile} day={sources.days.get(todayKey)} onLog={openSheet} />
+            <TodayCard
+              profile={profile}
+              day={sources.days.get(todayKey)}
+              onLog={() => openSheet()}
+              onWhatNow={() => openSheet(true)}
+            />
           </>
         ) : (
           <Card>
@@ -471,6 +546,8 @@ export default function TodayPage({ path, navigate }: RouteProps) {
           defs={sources.activityDefs}
           earnedToday={sources.days?.get(todayKey)?.pointsEarned ?? 0}
           dailyLimit={profile.dailyLimit}
+          pool={generatorPool(t('generator.pool', { returnObjects: true }), sources.activityDefs ?? [])}
+          rollOnOpen={sheet.roll ?? false}
           onClose={closeSheet}
           onSave={save}
         />

@@ -15,8 +15,10 @@ function utcDaysAgo(n) {
 
 /**
  * 1234 points (620 earned all time → level 2), 95 of 150 today, 45 min of gaming,
- * active today and the two days before, a gap, then one more day: a streak of 3.
- * The freeze was used today, so it is not available and v1 writes nothing for it.
+ * active today and the two days before, a gap, then one more day. The freeze was
+ * used today, on that gap: v2 keeps bridging it (4 days, GOLDEN G3), v1 shows 3 once
+ * the freeze is spent. The badges it qualifies for are already held, so neither app
+ * has anything to write.
  */
 async function seededAccount() {
   const account = await createUser({
@@ -26,6 +28,7 @@ async function seededAccount() {
       points: { total: 1234, earnedAllTime: 620, spentAllTime: 50 },
       dailyLimit: 150,
       streakFreezeLastUsed: todayUtcKey(),
+      achievements: ['first_activity', 'first_purchase'],
     },
   });
   const user = db.doc(`users/${account.uid}`);
@@ -79,7 +82,8 @@ test('Today shows v1 dashboard numbers from the account, and writes nothing', as
   await expect(page.getByText('≈ 123,40 zł')).toBeVisible();
   await expect(page.getByTestId('level')).toHaveText('Poziom 2');
   await expect(page.getByText('120 / 500 XP')).toBeVisible();
-  await expect(page.getByTestId('streak')).toHaveText('3 dni z rzędu');
+  await expect(page.getByTestId('streak')).toHaveText('4 dni z rzędu');
+  await expect(page.getByText('Zamrożenie serii przykryło jedną przerwę')).toBeVisible();
   await expect(page.getByTestId('today-points')).toHaveText('95');
   await expect(page.getByText('z 150 dziennego limitu')).toBeVisible();
   await expect(page.getByTestId('gaming')).toHaveText('45 min');
@@ -102,12 +106,13 @@ test('Today shows v1 dashboard numbers from the account, and writes nothing', as
   expect(await snapshotAccount(account.uid)).toEqual(before);
 });
 
-test('v1 dashboard shows the same numbers on the same account', async ({ page, context }) => {
+test('v1 dashboard shows the same numbers on the same account (the streak aside)', async ({ page, context }) => {
   const account = await seededAccount();
   await serveCdnFromNpm(context);
   await signInToApp(page, account);
   await expect(page.locator('#dash-pts-num')).toHaveText('1234');
   await expect(page.locator('#dash-level')).toHaveText('Poziom 2');
+  // Deliberately different (GOLDEN G3): v1's freeze is spent after the render that used it.
   await expect(page.locator('#dash-streak-num')).toHaveText('3');
   await expect(page.locator('#dash-today-pts')).toHaveText('95');
   await expect(page.locator('#dash-gaming-today')).toHaveText('45m');
