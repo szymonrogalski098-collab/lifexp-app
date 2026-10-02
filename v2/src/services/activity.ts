@@ -2,10 +2,23 @@
 // domain/activity, then the repository's transaction. Logging and deleting move
 // points, so they are awaited and need the server; offline they fail and change
 // nothing (offline drafts come with stage 3f).
-import { deleteActivity, logActivity, seedActivityDefsIfEmpty } from '@/data/repos/activities';
+import {
+  addActivityDef,
+  deleteActivity,
+  logActivity,
+  removeActivityDef,
+  restoreActivityDef,
+  seedActivityDefsIfEmpty,
+  updateActivityDef,
+} from '@/data/repos/activities';
 import {
   GENERATED_TYPE,
+  activityDefProblem,
   activityProblem,
+  editedActivityDef,
+  nextActivityOrder,
+  type ActivityDefDraft,
+  type ActivityDefProblem,
   type Activity,
   type ActivityDef,
   type ActivityDraft,
@@ -68,4 +81,38 @@ export async function ensureActivityDefs(uid: string): Promise<void> {
     seedChecked.delete(uid);
     throw error;
   }
+}
+
+// ── Activity types (v1 Settings → Aktywności; stage 4c). Single documents: queued offline like any write. ──
+
+export type ActivityDefSave = { ok: true; saved: Promise<void> } | { ok: false; problem: ActivityDefProblem };
+
+/** v1 addActivityDef(): checked, then written after the last one. */
+export function createActivityDef(uid: string, draft: ActivityDefDraft, defs: readonly ActivityDef[]): ActivityDefSave {
+  const problem = activityDefProblem(draft);
+  if (problem) return { ok: false, problem };
+  const { saved } = addActivityDef(uid, {
+    name: draft.name.trim(),
+    points: draft.points ?? 0,
+    order: nextActivityOrder(defs),
+    icon: draft.icon,
+    color: draft.color,
+  });
+  return { ok: true, saved };
+}
+
+/** A changed type (v2 only; v1 adds and deletes). Logged entries keep their points; `undo` writes the old fields back. */
+export function editActivityDef(
+  uid: string,
+  def: ActivityDef,
+  draft: ActivityDefDraft,
+): (ActivityDefSave & { ok: true; undo: () => Promise<void> }) | { ok: false; problem: ActivityDefProblem } {
+  const problem = activityDefProblem(draft);
+  if (problem) return { ok: false, problem };
+  return { ok: true, saved: updateActivityDef(uid, editedActivityDef(def, draft)), undo: () => updateActivityDef(uid, def) };
+}
+
+/** v1 deleteActivityDef() (there behind a confirmation; here with undo, D8). */
+export function deleteActivityDef(uid: string, def: ActivityDef): { saved: Promise<void>; undo: () => Promise<void> } {
+  return { saved: removeActivityDef(uid, def.id), undo: () => restoreActivityDef(uid, def) };
 }
