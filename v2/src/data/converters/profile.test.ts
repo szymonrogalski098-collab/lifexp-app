@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { DEFAULT_NAME, profileFromData } from './profile';
+import { DEFAULT_NAME, choresCardFromData, profileFromData } from './profile';
 
 describe('profile converter', () => {
   test('a fully set-up profile', () => {
@@ -45,6 +45,7 @@ describe('profile converter', () => {
         { id: 'g3', name: '', type: 'money', target: 0, saved: 10, celebrated: false },
       ],
       moneyIncomeAllTime: 1845,
+      choresCard: { mode: 'random', ids: [] },
     });
   });
 
@@ -96,6 +97,16 @@ describe('profile converter', () => {
       pcBuild: null,
       goals: [],
       moneyIncomeAllTime: null,
+      choresCard: { mode: 'random', ids: [] },
     });
+  });
+});
+
+describe('choresCard (v2 only)', () => {
+  test('random without the field or with anything odd; chosen keeps string ids', () => {
+    expect(choresCardFromData(undefined)).toEqual({ mode: 'random', ids: [] });
+    expect(choresCardFromData({ mode: 'lottery', ids: ['a'] })).toEqual({ mode: 'random', ids: [] });
+    expect(choresCardFromData({ mode: 'chosen', ids: ['a', 7, 'b'] })).toEqual({ mode: 'chosen', ids: ['a', 'b'] });
+    expect(choresCardFromData({ mode: 'chosen' })).toEqual({ mode: 'chosen', ids: [] });
   });
 });

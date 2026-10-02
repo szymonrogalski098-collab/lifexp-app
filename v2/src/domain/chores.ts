@@ -249,3 +249,71 @@ export function newChoreDef(draft: ChoreDefDraft, defs: readonly ChoreDef[]): Om
     order: nextChoreOrder(defs),
   };
 }
+
+// ── The chores card on Today (owner's request 2026-10-02) ──
+
+/**
+ * users.choresCard: what Today's chore card shows. "random" (the default, also
+ * without the field) draws 3–4 repeating chores a day; "chosen" shows the
+ * chores picked in the card's editor, every day.
+ */
+export interface ChoresCardSettings {
+  mode: 'random' | 'chosen';
+  /** Chore definition ids, for "chosen". */
+  ids: readonly string[];
+}
+
+export const CHORES_CARD_DEFAULT: ChoresCardSettings = { mode: 'random', ids: [] };
+
+/** A random day shows this many chores, or 1 more (also drawn). */
+export const CHORES_CARD_RANDOM_MIN = 3;
+
+/** FNV-1a: a stable 32-bit hash, so a draw is the same on every device and reload. */
+function hash(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/**
+ * The definitions on Today's card, in v1's order. A random day ranks every
+ * repeating chore by a hash of `seed` (account and local day) and its id, and
+ * takes the top 3 or 4: nothing is written, the draw is the same all day, and
+ * adding or removing one chore leaves the others' ranks as they were. One-time
+ * chores are left out of the draw (logging one deletes it).
+ */
+export function choresOnCard(defs: readonly ChoreDef[], settings: ChoresCardSettings, seed: string): ChoreDef[] {
+  const byOrder = (a: ChoreDef, b: ChoreDef) => a.order - b.order;
+  if (settings.mode === 'chosen') return defs.filter((d) => settings.ids.includes(d.id)).sort(byOrder);
+  const count = CHORES_CARD_RANDOM_MIN + (hash(seed) % 2);
+  return defs
+    .filter((d) => !d.oneTime)
+    .map((def) => ({ def, rank: hash(`${seed}:${def.id}`) }))
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, count)
+    .map(({ def }) => def)
+    .sort(byOrder);
+}
+
+/**
+ * The card's rows: its chores with how often each was done today, and, for
+ * "chosen", a picked one-time chore done today whose definition is already gone.
+ */
+export function choresCardRows(
+  defs: readonly ChoreDef[],
+  entries: readonly ChoreEntry[],
+  today: string,
+  settings: ChoresCardSettings,
+  seed: string,
+): ChoreRow[] {
+  const shown = choresOnCard(defs, settings, seed);
+  const keep = new Set([...shown.map((d) => d.id), ...(settings.mode === 'chosen' ? settings.ids : [])]);
+  return todayChores(
+    shown,
+    entries.filter((e) => keep.has(e.choreId)),
+    today,
+  );
+}

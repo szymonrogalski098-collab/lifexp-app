@@ -140,8 +140,8 @@ function localDaysAgo(n) {
  * one-time chore (definition already gone) today: 45 unpaid points = 20,25 zł at
  * v1's default chores rate.
  */
-async function choresAccount() {
-  const account = await createUser({ tag: 'chores' });
+async function choresAccount(profile = {}) {
+  const account = await createUser({ tag: 'chores', profile });
   const user = db.doc(`users/${account.uid}`);
   const defs = [
     ['vacuum', 'Odkurzanie', '🧹', 10],
@@ -164,22 +164,25 @@ async function choresAccount() {
   return account;
 }
 
-test('chores today: v1 definitions marked when done today, and what is left to pay out', async ({ page }) => {
-  const account = await choresAccount();
+test('chores today: the chosen list marked when done today, and what is left to pay out', async ({ page }) => {
+  const account = await choresAccount({ choresCard: { mode: 'chosen', ids: ['vacuum', 'dishes', 'trash', 'window_once'] } });
   const before = await snapshotAccount(account.uid);
 
   await openSignedIn(page, account, '#/today');
   const chores = page.getByRole('list', { name: 'Obowiązki dziś' }).getByRole('listitem');
   await expect(chores).toHaveCount(4);
-  await expect(page.getByTestId('chores-progress')).toHaveText('2 z 4 dziś');
+  await expect(page.getByText('Twoja lista')).toBeVisible();
+  await expect(page.getByTestId('chores-progress')).toHaveText('2 z 4 zrobione');
+  // Done today, twice in the Chores screen: done once here, and not again.
   await expect(chores.nth(0)).toContainText('Odkurzanie');
-  await expect(chores.nth(0)).toContainText('Zrobione dziś ×2');
-  await expect(chores.nth(0)).toContainText('+10 pkt');
+  await expect(chores.nth(0)).toContainText('Zrobione dziś');
+  await expect(chores.nth(0).getByRole('button')).toBeDisabled();
   await expect(chores.nth(1)).toContainText('Zmywarka');
-  await expect(chores.nth(1)).not.toContainText('Zrobione');
+  await expect(chores.nth(1)).toContainText('+15 pkt');
+  await expect(chores.nth(1).getByRole('button')).toBeEnabled();
   // Done yesterday is not done today.
   await expect(chores.nth(2)).not.toContainText('Zrobione');
-  // A one-time chore logged today stays on the list after its definition is gone.
+  // A chosen one-time chore logged today stays on the list after its definition is gone.
   await expect(chores.nth(3)).toContainText('Mycie okien');
   await expect(chores.nth(3)).toContainText('Zrobione dziś');
   expect(await text(page.getByTestId('chores-unpaid-money'))).toBe('20,25 zł');
