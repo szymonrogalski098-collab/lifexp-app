@@ -1,7 +1,7 @@
-// Today (docs/v2/PLAN.md 9, stage 2a): the first v2 screen with real data, read
-// only. Same numbers as v1's dashboard (docs/v2/GOLDEN.md G1-G3) in the owner's
-// reference layout: points hero, level, the week's streak, today's limit,
-// shortcuts and the latest activities. Nothing here writes.
+// Today (docs/v2/PLAN.md 9, stage 2a): the first v2 screen with real data. Same
+// numbers as v1's dashboard (docs/v2/GOLDEN.md G1-G3) in the owner's reference
+// layout: points hero, level, the week's streak, today's limit with logging an
+// activity (stage 3e), goals, chores, shortcuts and the latest activities.
 import {
   Check,
   ClipboardCheck,
@@ -14,8 +14,8 @@ import {
   Wallet,
   Zap,
 } from 'lucide-preact';
-import { useEffect } from 'preact/hooks';
-import { activeDays, type Activity, type DayLog } from '@/domain/activity';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { activeDays, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
 import { choresRate, todayChores, unpaidChores, type ChoreDef, type ChoreEntry } from '@/domain/chores';
 import { goalProgress } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
@@ -24,14 +24,19 @@ import { calculateStreak, isFreezeAvailable } from '@/domain/streak';
 import { ActivityRow, formatDuration } from '@/features/shared/activity';
 import { goalAmount, useCelebration } from '@/features/shared/goals';
 import { locale, t } from '@/i18n';
+import type { RouteProps } from '@/lib/route-match';
 import { formatLongDate, formatWeekdayShort, localDayKey, utcDayKey, weekOf } from '@/lib/dates';
 import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
+import { ensureActivityDefs, saveActivity } from '@/services/activity';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
+import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
+import { Button } from '@/ui/components/Button';
 import { ButtonLink } from '@/ui/components/ButtonLink';
 import { EmptyState, IconTile, List, ListRow, ProgressBar, Skeleton } from '@/ui/components/Display';
 import { Card, Page, Section, Stack } from '@/ui/components/Layout';
+import { ActivitySheet } from './ActivitySheet';
 import './today.css';
 
 function PointsHero({ profile }: { profile: Profile }) {
@@ -122,7 +127,7 @@ function StreakCard({ profile, days, todayKey }: { profile: Profile; days: Reado
   );
 }
 
-function TodayCard({ profile, day }: { profile: Profile; day: DayLog | undefined }) {
+function TodayCard({ profile, day, onLog }: { profile: Profile; day: DayLog | undefined; onLog: () => void }) {
   const progress = dailyProgress(day?.pointsEarned ?? 0, profile.dailyLimit);
   return (
     <Card>
@@ -143,6 +148,12 @@ function TodayCard({ profile, day }: { profile: Profile; day: DayLog | undefined
       </div>
       <div class="today-card__bar">
         <ProgressBar value={progress.ratio} label={t('today.limitProgress')} tone="positive" />
+      </div>
+      <div class="today-card__actions">
+        <Button variant="primary" block onClick={onLog}>
+          <Zap aria-hidden="true" />
+          {t('activity.log')}
+        </Button>
       </div>
     </Card>
   );
@@ -327,7 +338,14 @@ function Shortcuts({ profile }: { profile: Profile }) {
 
 function RecentActivities({ recent, names }: { recent: readonly Activity[]; names: ReadonlyMap<string, string> }) {
   return (
-    <Section title={t('today.recent')}>
+    <Section
+      title={t('today.recent')}
+      action={
+        <a class="today-card__link" href="#/stats/history">
+          {t('today.recentAll')}
+        </a>
+      }
+    >
       <Card padding="none">
         {recent.length === 0 ? (
           <EmptyState title={t('today.noRecent')} />
@@ -357,16 +375,72 @@ function Balance({ grosze }: { grosze: number }) {
   );
 }
 
-export default function TodayPage() {
+/** The sheet stays mounted while it closes (exit animation); `key` gives each opening a fresh form. */
+interface SheetState {
+  open: boolean;
+  key: number;
+}
+
+export default function TodayPage({ path, navigate }: RouteProps) {
   const current = account.value;
   const uid = current?.user.uid;
   useEffect(() => (uid ? watchToday(uid) : undefined), [uid]);
-  if (!current) return null;
+
+  const [sheet, setSheet] = useState<SheetState>({ open: false, key: 0 });
+  const lastToast = useRef<number | null>(null);
+  const openSheet = () => {
+    // v1 seeds the activity types on every start; v2 only when someone is about to
+    // log one, so opening Today still writes nothing.
+    if (uid) ensureActivityDefs(uid).catch(() => {});
+    setSheet((s) => ({ open: true, key: s.key + 1 }));
+  };
+  const closeSheet = () => setSheet((s) => ({ ...s, open: false }));
+
+  // #/today/activity (the "+" sheet): Today's address, with the form open on top.
+  useEffect(() => {
+    if (path !== '/today/activity' || !uid) return;
+    navigate('/today', { replace: true });
+    openSheet();
+  }, [path, uid]);
+
+  if (!current || !uid) return null;
 
   const { profile } = current;
   const sources = todaySources.value;
   const todayKey = utcDayKey(new Date());
   const firstName = profile.name.split(/\s+/)[0] ?? profile.name;
+
+  const notify = (input: ToastInput) => {
+    if (lastToast.current !== null) dismissToast(lastToast.current);
+    lastToast.current = showToast(input);
+  };
+
+  const save = async (draft: ActivityDraft) => {
+    const defs = sources.activityDefs ?? [];
+    const before = levelOf(profile.points.earnedAllTime).level;
+    try {
+      const result = await saveActivity(uid, draft, defs);
+      if (!result.ok) return result.problem;
+      closeSheet();
+      const level = levelOf(profile.points.earnedAllTime + result.points).level;
+      const name = defs.find((d) => d.id === draft.type)?.name ?? '';
+      notify(
+        level > before
+          ? {
+              message: t('activity.levelUp', {
+                points: result.points,
+                level,
+                title: t(`today.levelTitle.${levelTitleIndex(level)}` as 'today.levelTitle.1'),
+              }),
+              tone: 'positive',
+            }
+          : { message: t('activity.earned', { points: result.points, name }), tone: 'positive' },
+      );
+    } catch {
+      notify({ message: t('activity.saveFailed'), tone: 'negative' });
+    }
+    return null;
+  };
 
   return (
     <Page>
@@ -384,7 +458,7 @@ export default function TodayPage() {
         {sources.days ? (
           <>
             <StreakCard profile={profile} days={sources.days} todayKey={todayKey} />
-            <TodayCard profile={profile} day={sources.days.get(todayKey)} />
+            <TodayCard profile={profile} day={sources.days.get(todayKey)} onLog={openSheet} />
           </>
         ) : (
           <Card>
@@ -415,6 +489,18 @@ export default function TodayPage() {
           </Card>
         )}
       </Stack>
+
+      {sheet.key > 0 && (
+        <ActivitySheet
+          key={sheet.key}
+          open={sheet.open}
+          defs={sources.activityDefs}
+          earnedToday={sources.days?.get(todayKey)?.pointsEarned ?? 0}
+          dailyLimit={profile.dailyLimit}
+          onClose={closeSheet}
+          onSave={save}
+        />
+      )}
     </Page>
   );
 }
