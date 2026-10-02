@@ -29,3 +29,8 @@
   gap: var(--space-3);
   align-items: start;
 }
+
+/* Module switches: one per row, a hairline between them. */
+.settings-switches > * + * {
+  border-top: 1px solid var(--color-separator);
+}

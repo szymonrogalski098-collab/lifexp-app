@@ -56,6 +56,8 @@ export interface SettingsFields {
   pointsRateGeneralPts?: number;
   pointsRateChoresZl?: number;
   pointsRateChoresPts?: number;
+  enabledModules?: string[];
+  disabledModules?: string[];
 }
 
 /** One update of the given fields; others stay as they are. Queued offline like any write. */

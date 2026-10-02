@@ -9,7 +9,7 @@ import { BootScreen } from './BootScreen';
 import { ComingSoonPage } from './ComingSoonPage';
 import { sessionGate, type Gate } from './gates';
 import { LazyView } from './LazyView';
-import { DEFAULT_PATH, resolveRoute } from './registry';
+import { DEFAULT_PATH, featureOn, resolveRoute } from './registry';
 import { currentPath, navigate } from './router';
 import { signOut } from './sign-out';
 
@@ -51,10 +51,12 @@ export function App() {
   const route = resolveRoute(path);
 
   // Unknown or empty hash → Today, without leaving a history entry behind. The
-  // hash is kept while signed out, so login lands where the link pointed.
+  // hash is kept while signed out, so login lands where the link pointed. A module
+  // turned off in Settings is not opened either (v1 showPage), whatever the link.
+  const off = gate.kind === 'ready' && route !== null && !featureOn(route.feature, gate.profile);
   useEffect(() => {
-    if (!route) navigate(DEFAULT_PATH, { replace: true });
-  }, [route === null]);
+    if (!route || off) navigate(DEFAULT_PATH, { replace: true });
+  }, [route === null, off]);
 
   const title = gate.kind === 'ready' ? (route ? t(route.feature.labelKey) : '') : gateTitle(gate);
   useEffect(() => {
@@ -62,11 +64,18 @@ export function App() {
   }, [title]);
 
   if (gate.kind !== 'ready') return <GateScreen gate={gate} />;
-  if (!route) return null;
+  if (!route || off) return null;
 
   const account = { name: gate.profile.name, email: gate.user.email };
   return (
-    <AppShell title={title} activeId={route.feature.id} path={path} account={account} onSignOut={signOut}>
+    <AppShell
+      title={title}
+      activeId={route.feature.id}
+      path={path}
+      account={account}
+      modules={gate.profile}
+      onSignOut={signOut}
+    >
       {route.feature.view ? (
         <LazyView load={route.feature.view} props={{ path, params: route.params, navigate }} />
       ) : (

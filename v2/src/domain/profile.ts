@@ -26,6 +26,8 @@ export interface Profile {
   modulesChosen: boolean;
   /** v1 module ids the person turned on (chores, money, notes, games, stats, aichat, …); null = not chosen. */
   enabledModules: readonly string[] | null;
+  /** Modules turned off, written by v2 (M3, domain/modules); null = not written yet. */
+  disabledModules: readonly string[] | null;
   lang: Language | null;
   points: PointsTotals;
   /** Daily points cap; null = v1's default (domain/points DAILY_LIMIT_DEFAULT). */

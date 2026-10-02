@@ -349,3 +349,42 @@ export function Checkbox({ label, checked, onChange, leading, meta }: CheckboxPr
     </label>
   );
 }
+
+interface SwitchProps {
+  label: string;
+  /** What turning it on or off means, under the label. */
+  description?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  /** Before the text, e.g. an IconTile. */
+  leading?: ComponentChildren;
+}
+
+/** On/off for a setting that applies at once (no Save). A native checkbox with role="switch"; the whole row is the target. */
+export function Switch({ label, description, checked, onChange, leading }: SwitchProps) {
+  const id = useId();
+  return (
+    <label class="ui-switch">
+      <input
+        type="checkbox"
+        role="switch"
+        class="ui-switch__input"
+        checked={checked}
+        aria-describedby={description ? `${id}-desc` : undefined}
+        onChange={(e) => onChange(e.currentTarget.checked)}
+      />
+      {leading}
+      <span class="ui-switch__text">
+        <span class="ui-switch__label">{label}</span>
+        {description && (
+          <span id={`${id}-desc`} class="ui-switch__description">
+            {description}
+          </span>
+        )}
+      </span>
+      <span class="ui-switch__track" aria-hidden="true">
+        <span class="ui-switch__thumb" />
+      </span>
+    </label>
+  );
+}

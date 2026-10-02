@@ -27,6 +27,7 @@ import {
 } from '@/domain/activity';
 import { activityDraftPayload } from '@/domain/drafts';
 import { choresOnCard, type ChoreDef, type ChoresCardSettings } from '@/domain/chores';
+import { isModuleOn } from '@/domain/modules';
 import { newAchievements } from '@/domain/achievements';
 import { goalProgress } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
@@ -198,12 +199,14 @@ function StreakCard({ profile, days, todayKey }: { profile: Profile; days: Reado
 interface TodayCardProps {
   profile: Profile;
   day: DayLog | undefined;
+  /** v1 hides logging with the "Statystyki XP" module. */
+  canLog: boolean;
   onLog: () => void;
   /** v1's "Co teraz?": the log sheet with a pick from the generator. */
   onWhatNow: () => void;
 }
 
-function TodayCard({ profile, day, onLog, onWhatNow }: TodayCardProps) {
+function TodayCard({ profile, day, canLog, onLog, onWhatNow }: TodayCardProps) {
   const progress = dailyProgress(day?.pointsEarned ?? 0, profile.dailyLimit);
   return (
     <Card>
@@ -225,16 +228,18 @@ function TodayCard({ profile, day, onLog, onWhatNow }: TodayCardProps) {
       <div class="today-card__bar">
         <ProgressBar value={progress.ratio} label={t('today.limitProgress')} tone="positive" />
       </div>
-      <div class="today-card__actions today-card__actions--two">
-        <Button variant="primary" block onClick={onLog}>
-          <Zap aria-hidden="true" />
-          {t('activity.log')}
-        </Button>
-        <Button variant="secondary" block onClick={onWhatNow}>
-          <Dices aria-hidden="true" />
-          {t('generator.whatNow')}
-        </Button>
-      </div>
+      {canLog && (
+        <div class="today-card__actions today-card__actions--two">
+          <Button variant="primary" block onClick={onLog}>
+            <Zap aria-hidden="true" />
+            {t('activity.log')}
+          </Button>
+          <Button variant="secondary" block onClick={onWhatNow}>
+            <Dices aria-hidden="true" />
+            {t('generator.whatNow')}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
@@ -317,12 +322,8 @@ const SHORTCUTS: readonly Shortcut[] = [
   { module: 'aichat', href: '#/exus', icon: Sparkles, labelKey: 'nav.exus' },
 ];
 
-function moduleOn(profile: Profile, module: string): boolean {
-  return profile.enabledModules === null || profile.enabledModules.includes(module);
-}
-
 function Shortcuts({ profile }: { profile: Profile }) {
-  const shown = SHORTCUTS.filter((s) => moduleOn(profile, s.module));
+  const shown = SHORTCUTS.filter((s) => isModuleOn(s.module, profile));
   if (shown.length === 0) return null;
   return (
     <Section title={t('today.quick')}>
@@ -406,10 +407,12 @@ export default function TodayPage({ path, navigate }: RouteProps) {
   const closeSheet = () => setSheet((s) => ({ ...s, open: false }));
 
   // #/today/activity (the "+" sheet): Today's address, with the form open on top.
+  // Activities belong to "Statystyki XP" (v1 MODULE_REGISTRY): not while it is off.
+  const statsOn = current ? isModuleOn('stats', current.profile) : false;
   useEffect(() => {
     if (path !== '/today/activity' || !uid) return;
     navigate('/today', { replace: true });
-    openSheet();
+    if (statsOn) openSheet();
   }, [path, uid]);
 
   if (!current || !uid) return null;
@@ -534,6 +537,7 @@ export default function TodayPage({ path, navigate }: RouteProps) {
             <TodayCard
               profile={profile}
               day={sources.days.get(todayKey)}
+              canLog={statsOn}
               onLog={() => openSheet()}
               onWhatNow={() => openSheet(true)}
             />
@@ -546,7 +550,7 @@ export default function TodayPage({ path, navigate }: RouteProps) {
 
         {uid && <GoalsCard uid={uid} profile={profile} />}
 
-        {moduleOn(profile, 'chores') &&
+        {isModuleOn('chores', profile) &&
           (sources.choreDefs && sources.choreEntries ? (
             <ChoresCard
               uid={uid}
@@ -563,17 +567,18 @@ export default function TodayPage({ path, navigate }: RouteProps) {
             </Card>
           ))}
 
-        {moduleOn(profile, 'money') && typeof sources.balance === 'number' && <Balance grosze={sources.balance} />}
+        {isModuleOn('money', profile) && typeof sources.balance === 'number' && <Balance grosze={sources.balance} />}
 
         <Shortcuts profile={profile} />
 
-        {sources.recent && sources.activityNames ? (
-          <RecentActivities recent={sources.recent} names={sources.activityNames} />
-        ) : (
-          <Card>
-            <Skeleton />
-          </Card>
-        )}
+        {statsOn &&
+          (sources.recent && sources.activityNames ? (
+            <RecentActivities recent={sources.recent} names={sources.activityNames} />
+          ) : (
+            <Card>
+              <Skeleton />
+            </Card>
+          ))}
       </Stack>
 
       {cardEditor.key > 0 && sources.choreDefs && (

@@ -2,7 +2,8 @@
 // own address (#/settings/<section>), so Back returns to the list. The list says
 // what each section is set to now. Settings that belong to one module stay there
 // (chores in Obowiązki, the limit and categories in Pieniądze); the list links to them.
-import { ClipboardCheck, Palette, Trophy, UserRound, Wallet } from 'lucide-preact';
+import { Blocks, ClipboardCheck, Palette, Trophy, UserRound, Wallet } from 'lucide-preact';
+import { OPTIONAL_MODULES, isModuleOn } from '@/domain/modules';
 import type { Profile } from '@/domain/profile';
 import { DAILY_LIMIT_DEFAULT } from '@/domain/points';
 import { language, locale, t } from '@/i18n';
@@ -15,10 +16,12 @@ import { EmptyState, IconTile, List, ListRow } from '@/ui/components/Display';
 import { Card, Page, Section } from '@/ui/components/Layout';
 import { AccountSection } from './AccountSection';
 import { AppearanceSection } from './AppearanceSection';
+import { ModulesSection } from './ModulesSection';
 import { PointsSection } from './PointsSection';
 import './settings.css';
 
 const SECTIONS = {
+  modules: ModulesSection,
   appearance: AppearanceSection,
   account: AccountSection,
   points: PointsSection,
@@ -42,6 +45,19 @@ function Home({ profile }: { profile: Profile }) {
       <Section title={t('settings.app')}>
         <Card padding="none">
           <List label={t('settings.app')}>
+            <ListRow
+              leading={
+                <IconTile>
+                  <Blocks />
+                </IconTile>
+              }
+              title={t('settings.modules')}
+              meta={t('settings.modulesMeta', {
+                on: OPTIONAL_MODULES.filter((id) => isModuleOn(id, profile)).length,
+                all: OPTIONAL_MODULES.length,
+              })}
+              href="#/settings/modules"
+            />
             <ListRow
               leading={
                 <IconTile>

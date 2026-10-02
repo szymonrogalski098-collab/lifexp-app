@@ -17,6 +17,7 @@ import {
   Wallet,
 } from 'lucide-preact';
 import type { ComponentType } from 'preact';
+import { isModuleOn, type ModuleChoice, type OptionalModule } from '@/domain/modules';
 import { matchPath, type RouteParams, type RouteProps } from '@/lib/route-match';
 
 export type ModuleId =
@@ -46,6 +47,8 @@ export interface FeatureDef {
   tab?: number;
   /** Stage of docs/v2/PLAN.md 9 that builds the module; shown until it exists. */
   stage: string;
+  /** The person can turn it off in Settings (domain/modules); absent = always there. */
+  optional?: OptionalModule;
   /** The module's screen, loaded on first visit. Absent = "coming soon". */
   view?: () => Promise<{ default: ComponentType<RouteProps> }>;
   /**
@@ -87,6 +90,7 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'chores',
     labelKey: 'nav.chores',
+    optional: 'chores',
     icon: ClipboardCheck,
     paths: ['/chores', '/chores/new', '/chores/defs'],
     nav: { group: 'main', order: 40 },
@@ -98,6 +102,7 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'money',
     labelKey: 'nav.money',
+    optional: 'money',
     icon: Wallet,
     paths: ['/money', '/money/new', '/money/loans', '/money/settings'],
     nav: { group: 'main', order: 50 },
@@ -109,6 +114,7 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'notes',
     labelKey: 'nav.notes',
+    optional: 'notes',
     icon: NotebookPen,
     paths: ['/notes', '/notes/:id'],
     nav: { group: 'main', order: 60 },
@@ -118,6 +124,7 @@ export const FEATURES: readonly FeatureDef[] = [
   {
     id: 'stats',
     labelKey: 'nav.stats',
+    optional: 'stats',
     icon: ChartLine,
     paths: ['/stats', '/stats/history'],
     nav: { group: 'main', order: 70 },
@@ -125,7 +132,15 @@ export const FEATURES: readonly FeatureDef[] = [
     view: () => import('@/features/stats/StatsModule'),
     views: ['/stats', '/stats/history'],
   },
-  { id: 'games', labelKey: 'nav.games', icon: Gamepad2, paths: ['/games'], nav: { group: 'main', order: 80 }, stage: '7' },
+  {
+    id: 'games',
+    labelKey: 'nav.games',
+    optional: 'games',
+    icon: Gamepad2,
+    paths: ['/games'],
+    nav: { group: 'main', order: 80 },
+    stage: '7',
+  },
   { id: 'reports', labelKey: 'nav.reports', icon: Megaphone, paths: ['/reports'], nav: { group: 'secondary', order: 10 }, stage: '4' },
   {
     id: 'settings',
@@ -136,7 +151,7 @@ export const FEATURES: readonly FeatureDef[] = [
     stage: '4',
     view: () => import('@/features/settings/SettingsModule'),
   },
-  { id: 'exus', labelKey: 'nav.exus', icon: Sparkles, paths: ['/exus'], nav: null, stage: '5' },
+  { id: 'exus', labelKey: 'nav.exus', optional: 'aichat', icon: Sparkles, paths: ['/exus'], nav: null, stage: '5' },
   // Not in the menu: a preview of the ui/ components in every theme.
   {
     id: 'gallery',
@@ -155,13 +170,36 @@ export function featureHref(feature: FeatureDef): string {
   return `#${feature.paths[0]}`;
 }
 
-export function navItems(group: 'main' | 'secondary'): FeatureDef[] {
-  return FEATURES.filter((f) => f.nav?.group === group).sort((a, b) => (a.nav?.order ?? 0) - (b.nav?.order ?? 0));
+/** Everything on: what a list shows before the profile says otherwise. */
+const ALL_ON: ModuleChoice = { enabledModules: null, disabledModules: null };
+
+/** The module is there for this person (not turned off in Settings). */
+export function featureOn(feature: FeatureDef, choice: ModuleChoice = ALL_ON): boolean {
+  return feature.optional === undefined || isModuleOn(feature.optional, choice);
 }
 
-/** Modules in the phone tab bar, in order (D10). */
-export function tabItems(): FeatureDef[] {
-  return FEATURES.filter((f) => f.tab !== undefined).sort((a, b) => (a.tab ?? 0) - (b.tab ?? 0));
+export function navItems(group: 'main' | 'secondary', choice: ModuleChoice = ALL_ON): FeatureDef[] {
+  return FEATURES.filter((f) => f.nav?.group === group && featureOn(f, choice)).sort(
+    (a, b) => (a.nav?.order ?? 0) - (b.nav?.order ?? 0),
+  );
+}
+
+/** How many modules the phone tab bar holds besides "+" and Menu (D10). */
+const TAB_COUNT = 3;
+
+/**
+ * Modules in the phone tab bar, in order (D10). A tab whose module is off gives its
+ * place to the next module of the menu that is on, so the bar stays full.
+ */
+export function tabItems(choice: ModuleChoice = ALL_ON): FeatureDef[] {
+  const tabs = FEATURES.filter((f) => f.tab !== undefined && featureOn(f, choice)).sort(
+    (a, b) => (a.tab ?? 0) - (b.tab ?? 0),
+  );
+  for (const f of navItems('main', choice)) {
+    if (tabs.length >= TAB_COUNT) break;
+    if (!tabs.includes(f)) tabs.push(f);
+  }
+  return tabs;
 }
 
 export interface ResolvedRoute {

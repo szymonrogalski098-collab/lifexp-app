@@ -5,6 +5,7 @@
 // persistent sidebar and there is no tab bar. Only the shell uses position: fixed.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import type { ModuleChoice } from '@/domain/modules';
 import { t } from '@/i18n';
 import { ToastHost } from '@/ui/components/ToastHost';
 import { playEnter } from '@/ui/motion';
@@ -46,11 +47,13 @@ interface AppShellProps {
   /** Current path; a change scrolls the new screen to the top. */
   path: string;
   account: Account;
+  /** The modules the person uses (domain/modules): the menu, tab bar and "+" show only these. */
+  modules: ModuleChoice;
   onSignOut: () => void;
   children: ComponentChildren;
 }
 
-export function AppShell({ title, activeId, path, account, onSignOut, children }: AppShellProps) {
+export function AppShell({ title, activeId, path, account, modules, onSignOut, children }: AppShellProps) {
   const drawerMode = !isExpanded.value;
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -224,6 +227,7 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
           activeId={activeId}
           onSelect={selectPath}
           account={account}
+          modules={modules}
           onSignOut={() => {
             // Take the drawer's history entry with it; the login screen replaces the shell.
             closeDrawer();
@@ -247,6 +251,7 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
         {drawerMode && (
           <TabBar
             activeId={activeId}
+            modules={modules}
             onSelect={selectPath}
             onAdd={() => setAddOpen(true)}
             onMenu={() => openDrawer()}
@@ -257,6 +262,7 @@ export function AppShell({ title, activeId, path, account, onSignOut, children }
       </div>
       <AddSheet
         open={addOpen}
+        modules={modules}
         onClose={() => setAddOpen(false)}
         onPick={(target) => {
           // Replace the sheet's history entry first, so closing it does not step Back.

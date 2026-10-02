@@ -33,6 +33,7 @@ describe('profile converter', () => {
       accountModeChosen: true,
       modulesChosen: true,
       enabledModules: ['chores', 'money'],
+      disabledModules: null,
       lang: 'en',
       points: { total: 1234, earnedAllTime: 620, spentAllTime: 50 },
       dailyLimit: 120,
@@ -62,6 +63,8 @@ describe('profile converter', () => {
 
   test('an empty module list still counts as chosen, as in v1', () => {
     expect(profileFromData({ enabledModules: [] }).modulesChosen).toBe(true);
+    // M3: written by v2; anything but strings is left out.
+    expect(profileFromData({ disabledModules: ['games', 3] }).disabledModules).toEqual(['games']);
   });
 
   // INVENTORY: pointsRateChoresZl is int or float; only 3 of 6 profiles set a limit or rate.
@@ -90,6 +93,7 @@ describe('profile converter', () => {
       accountModeChosen: false,
       modulesChosen: true,
       enabledModules: ['chores'],
+      disabledModules: null,
       lang: null,
       points: { total: 0, earnedAllTime: 0, spentAllTime: 0 },
       dailyLimit: null,
