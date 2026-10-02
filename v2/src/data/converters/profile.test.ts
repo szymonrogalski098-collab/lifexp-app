@@ -52,6 +52,7 @@ describe('profile converter', () => {
       moneyIncomeAllTime: 1845,
       choresCard: { mode: 'random', ids: [] },
       achievements: ['first_activity', 'streak_7'],
+      lastBugReportAt: null,
     });
   });
 
@@ -112,6 +113,7 @@ describe('profile converter', () => {
       moneyIncomeAllTime: null,
       choresCard: { mode: 'random', ids: [] },
       achievements: [],
+      lastBugReportAt: null,
     });
   });
 });

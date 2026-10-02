@@ -141,7 +141,15 @@ export const FEATURES: readonly FeatureDef[] = [
     nav: { group: 'main', order: 80 },
     stage: '7',
   },
-  { id: 'reports', labelKey: 'nav.reports', icon: Megaphone, paths: ['/reports'], nav: { group: 'secondary', order: 10 }, stage: '4' },
+  {
+    id: 'reports',
+    labelKey: 'nav.reports',
+    icon: Megaphone,
+    paths: ['/reports'],
+    nav: { group: 'secondary', order: 10 },
+    stage: '4',
+    view: () => import('@/features/reports/ReportsModule'),
+  },
   {
     id: 'settings',
     labelKey: 'nav.settings',
