@@ -14,9 +14,11 @@ import {
   setChoresCard,
   settleChoreEntries,
   undoChoreEntry,
+  updateChoreDef,
 } from '@/data/repos/chores';
 import {
   choreDefProblem,
+  editedChoreDef,
   newChoreDef,
   type ChoreDef,
   type ChoreDefDraft,
@@ -65,6 +67,20 @@ export function createChoreDef(uid: string, draft: ChoreDefDraft, defs: readonly
   const problem = choreDefProblem(draft);
   if (problem) return { ok: false, problem };
   return { ok: true, ...addChoreDef(uid, newChoreDef(draft, defs)) };
+}
+
+/**
+ * A changed definition (v2 only; v1 can only add and delete). Entries logged before
+ * keep their own name and points; `undo` writes the old fields back.
+ */
+export function editChoreDef(
+  uid: string,
+  def: ChoreDef,
+  draft: ChoreDefDraft,
+): { ok: true; saved: Promise<void>; undo: () => Promise<void> } | { ok: false; problem: ChoreDefProblem } {
+  const problem = choreDefProblem(draft);
+  if (problem) return { ok: false, problem };
+  return { ok: true, saved: updateChoreDef(uid, editedChoreDef(def, draft)), undo: () => updateChoreDef(uid, def) };
 }
 
 /** v1 deleteChoreDef() (there behind a confirmation; here with undo, D8). History stays. */

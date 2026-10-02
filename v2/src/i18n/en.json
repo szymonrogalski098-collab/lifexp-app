@@ -303,7 +303,7 @@
     "views": "Chore views",
     "overview": "Overview",
     "defsView": "Chore list",
-    "defsNote": "The chores you pick from when logging. Logged entries keep their own copy of the name and points, so changing the list leaves them as they are.",
+    "defsNote": "The chores you pick from when logging. Tap one to change it. Logged entries keep their own copy of the name and points, so changing the list leaves them as they are.",
     "newDef": "New chore",
     "noDefs": "The list is empty. Add your first chore.",
     "defAdded": "Added to the list: {{name}}",
@@ -322,7 +322,12 @@
     "onceHint": "Disappears from the list once it is logged.",
     "needName": "Enter a name.",
     "needPoints": "Enter a number of points above zero.",
-    "pointsTooMany": "At most {{max}} pts."
+    "pointsTooMany": "At most {{max}} pts.",
+    "editDef": "Edit chore",
+    "saveDef": "Save changes",
+    "editNamed": "Edit: {{name}}",
+    "defSaved": "Saved: {{name}}",
+    "editHint": "Entries already logged keep their old name and points."
   },
   "money": {
     "balance": "Balance",

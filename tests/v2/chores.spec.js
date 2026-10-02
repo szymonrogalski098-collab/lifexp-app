@@ -369,6 +369,37 @@ test('removing a chore from the list, and undo brings back the same definition',
   await expect.poll(() => defsState(account.uid)).toEqual(before);
 });
 
+test('a tap on a chore in the list changes it (v2 only); undo puts the old fields back', async ({ page }) => {
+  const account = await choresAccount('defs-edit');
+  await defsOf(account.uid).doc('dishwasher').update({ extra: 'kept' });
+  await openSignedIn(page, account, '#/chores/defs');
+
+  await page.getByRole('button', { name: 'Zmień: Opróżnienie zmywarki' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Edycja obowiązku' });
+  await expect(sheet.getByLabel('Nazwa')).toHaveValue('Opróżnienie zmywarki');
+  await expect(sheet.getByLabel('Punkty')).toHaveValue('15');
+  await expect(sheet.getByText('Emoji: 🍽️')).toBeVisible();
+  await sheet.getByLabel('Nazwa').fill('  Zmywarka (górna) ');
+  await sheet.getByLabel('Punkty').fill('20');
+  await sheet.getByRole('radio', { name: '🧽' }).check();
+  await sheet.getByRole('radio', { name: 'Jednorazowy' }).check();
+  await sheet.getByRole('button', { name: 'Zapisz zmiany' }).click();
+
+  await expect(page.getByText('Zapisano: Zmywarka (górna)')).toBeVisible();
+  await expect(sheet).toBeHidden();
+  await expect
+    .poll(async () => (await defsOf(account.uid).doc('dishwasher').get()).data())
+    .toEqual({ name: 'Zmywarka (górna)', desc: '', emoji: '🧽', points: 20, oneTime: true, order: 0, extra: 'kept' });
+  const list = page.getByRole('list', { name: 'Lista obowiązków' }).getByRole('listitem');
+  await expect(list.nth(0)).toContainText('Zmywarka (górna)');
+  await expect(list.nth(0)).toContainText('jednorazowy');
+
+  await page.getByRole('button', { name: 'Cofnij' }).click();
+  await expect
+    .poll(async () => (await defsOf(account.uid).doc('dishwasher').get()).data())
+    .toEqual({ name: 'Opróżnienie zmywarki', desc: '', emoji: '🍽️', points: 15, oneTime: false, order: 0, extra: 'kept' });
+});
+
 test('an account without a single chore gets v1\'s list when Chores opens', async ({ page }) => {
   const account = await createUser({ tag: 'defs-seed-v2' });
   await openSignedIn(page, account, '#/chores/defs');

@@ -250,6 +250,28 @@ export function newChoreDef(draft: ChoreDefDraft, defs: readonly ChoreDef[]): Om
   };
 }
 
+/** The draft a definition opens with in the edit sheet. */
+export function choreDefDraft(def: ChoreDef): ChoreDefDraft {
+  return { name: def.name, desc: def.desc, emoji: def.emoji, points: def.points, oneTime: def.oneTime };
+}
+
+/**
+ * The same definition with the sheet's changes (owner's request 2026-10-02; v1 has
+ * no editing): id and place in the list stay, and an emoji from outside v1's grid
+ * stays when it was not changed. Call choreDefProblem() first.
+ */
+export function editedChoreDef(def: ChoreDef, draft: ChoreDefDraft): ChoreDef {
+  const emojiKept = draft.emoji === def.emoji || CHORE_EMOJIS.includes(draft.emoji);
+  return {
+    ...def,
+    name: draft.name.trim(),
+    desc: draft.desc.trim(),
+    emoji: emojiKept ? draft.emoji : '',
+    points: draft.points ?? 0,
+    oneTime: draft.oneTime,
+  };
+}
+
 // ── The chores card on Today (owner's request 2026-10-02) ──
 
 /**

@@ -1,11 +1,12 @@
 // The list of chores (v1 Settings → "Zarządzaj obowiązkami", GOLDEN G8): what can be
-// logged, in v1's order; a new one from a sheet; removing one with undo (D8; v1 asks
-// first). Logged entries keep their own name and points, so they stay as they are.
+// logged, in v1's order; a new one from a sheet; a tap on one changes it in the same
+// sheet (v2 only); removing one with undo (D8; v1 asks first). Logged entries keep
+// their own name and points, so they stay as they are.
 import { Plus } from 'lucide-preact';
 import { useRef, useState } from 'preact/hooks';
 import type { ChoreDef, ChoreDefDraft } from '@/domain/chores';
 import { t } from '@/i18n';
-import { createChoreDef, deleteChoreDef } from '@/services/chores';
+import { createChoreDef, deleteChoreDef, editChoreDef } from '@/services/chores';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
 import { Button } from '@/ui/components/Button';
 import { EmptyState } from '@/ui/components/Display';
@@ -13,7 +14,7 @@ import { Card } from '@/ui/components/Layout';
 import { ChoreDefSheet } from './ChoreDefSheet';
 
 export function DefsView({ uid, defs }: { uid: string; defs: readonly ChoreDef[] }) {
-  const [sheet, setSheet] = useState({ open: false, key: 0 });
+  const [sheet, setSheet] = useState<{ open: boolean; key: number; def?: ChoreDef }>({ open: false, key: 0 });
   const lastToast = useRef<number | null>(null);
 
   const notify = (input: ToastInput) => {
@@ -24,6 +25,18 @@ export function DefsView({ uid, defs }: { uid: string; defs: readonly ChoreDef[]
   const close = () => setSheet((s) => ({ ...s, open: false }));
 
   const save = (draft: ChoreDefDraft) => {
+    if (sheet.def) {
+      const edited = editChoreDef(uid, sheet.def, draft);
+      if (!edited.ok) return edited.problem;
+      edited.saved.catch(saveFailed);
+      notify({
+        message: t('chores.defSaved', { name: draft.name.trim() }),
+        tone: 'positive',
+        action: { label: t('ui.undo'), onAction: () => void edited.undo().catch(saveFailed) },
+      });
+      close();
+      return null;
+    }
     const result = createChoreDef(uid, draft, defs);
     if (!result.ok) return result.problem;
     result.saved.catch(saveFailed);
@@ -58,18 +71,24 @@ export function DefsView({ uid, defs }: { uid: string; defs: readonly ChoreDef[]
           <ul class="chores-defs" aria-label={t('chores.defsView')}>
             {defs.map((def) => (
               <li key={def.id} class="chores-defs__row">
-                <span class="chores-emoji" aria-hidden="true">
-                  {def.emoji}
-                </span>
-                <span class="chores-defs__text">
-                  <span class="chores-defs__name user-text">{def.name}</span>
-                  {(def.desc || def.oneTime) && (
+                <button
+                  type="button"
+                  class="chores-defs__edit"
+                  aria-label={t('chores.editNamed', { name: def.name })}
+                  onClick={() => setSheet((s) => ({ open: true, key: s.key + 1, def }))}
+                >
+                  <span class="chores-emoji" aria-hidden="true">
+                    {def.emoji}
+                  </span>
+                  <span class="chores-defs__text">
+                    <span class="chores-defs__name user-text">{def.name}</span>
+                    {/* Points under the name, so a long name keeps the width. */}
                     <span class="chores-defs__meta user-text">
-                      {[def.desc, def.oneTime ? t('chores.oneTime') : ''].filter(Boolean).join(' · ')}
+                      <span class="chores-defs__points numeric">{t('units.pointsGained', { points: def.points })}</span>
+                      {[def.desc, def.oneTime ? t('chores.oneTime') : ''].filter(Boolean).map((part) => ` · ${part}`)}
                     </span>
-                  )}
-                </span>
-                <span class="chores-defs__points numeric">{t('units.pointsGained', { points: def.points })}</span>
+                  </span>
+                </button>
                 <Button variant="quiet" onClick={() => remove(def)} aria-label={t('chores.deleteNamed', { name: def.name })}>
                   {t('chores.delete')}
                 </Button>
@@ -79,7 +98,7 @@ export function DefsView({ uid, defs }: { uid: string; defs: readonly ChoreDef[]
         )}
       </Card>
 
-      {sheet.key > 0 && <ChoreDefSheet key={sheet.key} open={sheet.open} onClose={close} onSave={save} />}
+      {sheet.key > 0 && <ChoreDefSheet key={sheet.key} open={sheet.open} def={sheet.def} onClose={close} onSave={save} />}
     </>
   );
 }

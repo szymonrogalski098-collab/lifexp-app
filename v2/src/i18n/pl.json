@@ -303,7 +303,7 @@
     "views": "Widoki obowiązków",
     "overview": "Przegląd",
     "defsView": "Lista obowiązków",
-    "defsNote": "Obowiązki do wyboru przy dodawaniu wpisu. Zapisane wpisy mają własną kopię nazwy i punktów, więc zmiany listy ich nie ruszają.",
+    "defsNote": "Obowiązki do wyboru przy dodawaniu wpisu. Dotknij obowiązku, żeby go zmienić. Zapisane wpisy mają własną kopię nazwy i punktów, więc zmiany listy ich nie ruszają.",
     "newDef": "Nowy obowiązek",
     "noDefs": "Lista jest pusta. Dodaj pierwszy obowiązek.",
     "defAdded": "Dodano do listy: {{name}}",
@@ -322,7 +322,12 @@
     "onceHint": "Zniknie z listy po pierwszym zapisaniu.",
     "needName": "Podaj nazwę.",
     "needPoints": "Podaj liczbę punktów większą od zera.",
-    "pointsTooMany": "Najwięcej {{max}} pkt."
+    "pointsTooMany": "Najwięcej {{max}} pkt.",
+    "editDef": "Edycja obowiązku",
+    "saveDef": "Zapisz zmiany",
+    "editNamed": "Zmień: {{name}}",
+    "defSaved": "Zapisano: {{name}}",
+    "editHint": "Wpisy już zapisane zostają z dawną nazwą i punktami."
   },
   "money": {
     "balance": "Saldo",
