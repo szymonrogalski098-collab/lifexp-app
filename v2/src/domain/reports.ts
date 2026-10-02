@@ -113,3 +113,43 @@ export function isUnread(report: BugReport, seenAt: string | undefined, viewerIs
 export function sortReports(reports: readonly BugReport[]): BugReport[] {
   return [...reports].sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
 }
+
+// ── The admin's side (v1 bug-reports.js "Panel admina") ──
+
+/** v1's admin tabs; History holds accepted and rejected reports. */
+export const ADMIN_TABS = ['new', 'spam', 'postponed', 'history'] as const;
+export type AdminTab = (typeof ADMIN_TABS)[number];
+
+export function reportsInTab(reports: readonly BugReport[], tab: AdminTab): BugReport[] {
+  return reports.filter((r) => (tab === 'history' ? r.status === 'accepted' || r.status === 'rejected' : r.status === tab));
+}
+
+/** v1 bugTimeLeftLabel(): whole hours until spam nobody rescued goes (rounded up, never below 0). */
+export function spamHoursLeft(report: BugReport, now: Date): number {
+  const created = report.createdAt?.getTime() ?? now.getTime();
+  return Math.max(0, Math.ceil((BUG_SPAM_TTL_MS - (now.getTime() - created)) / 3_600_000));
+}
+
+/** v1 loadAdminBugReports(): spam older than 12 hours is deleted when the admin looks. */
+export function staleSpam(reports: readonly BugReport[], now: Date): BugReport[] {
+  return reports.filter((r) => r.status === 'spam' && r.createdAt !== null && now.getTime() - r.createdAt.getTime() > BUG_SPAM_TTL_MS);
+}
+
+/** What the admin can do with a report in each status (v1 bugAdminActionsHTML). */
+export type AdminAction = 'accept' | 'reject' | 'postpone' | 'rescue' | 'delete';
+
+export function adminActions(status: BugStatus): AdminAction[] {
+  if (status === 'spam') return ['rescue', 'delete'];
+  if (status === 'new') return ['accept', 'reject', 'postpone', 'delete'];
+  if (status === 'postponed') return ['accept', 'reject', 'delete'];
+  return ['delete'];
+}
+
+export type KeywordProblem = 'empty' | 'exists';
+
+/** v1 addBugKeyword(): a word not on the list yet, in any case. */
+export function keywordProblem(word: string, words: readonly string[]): KeywordProblem | null {
+  const w = word.trim().toLowerCase();
+  if (!w) return 'empty';
+  return words.some((k) => k.toLowerCase() === w) ? 'exists' : null;
+}

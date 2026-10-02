@@ -1,8 +1,20 @@
 // Top-level bugReports and bugReportsConfig/keywords (v1 bug-reports.js; stage 4).
 // The rules let the reporter read their own reports and add messages or use a bonus;
 // everything else is the admin's.
-import { arrayUnion, collection, doc, getDoc, onSnapshot, query, updateDoc, where, writeBatch } from 'firebase/firestore';
-import type { BugMessage, BugReport } from '@/domain/reports';
+import {
+  arrayUnion,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  onSnapshot,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
+import type { BugMessage, BugReport, BugStatus } from '@/domain/reports';
 import { bugReportFromData, newBugReportData } from '../converters/reports';
 import { db } from '../firebase';
 
@@ -55,4 +67,26 @@ export function submitReport(input: SubmitReportInput): Promise<void> {
 /** A message added to the thread with arrayUnion, so two replies at once both stay (B13; v1 rewrites the array). */
 export function addReportMessage(id: string, message: BugMessage): Promise<void> {
   return updateDoc(doc(reports(), id), { messages: arrayUnion({ ...message }) });
+}
+
+// ── The admin's side (the rules allow these to the admin only) ──
+
+/** Every report, live (v1 loadAdminBugReports, there read on each visit). */
+export function watchAllReports(onChange: (reports: BugReport[]) => void, onError: OnError): () => void {
+  return onSnapshot(reports(), (snap) => onChange(snap.docs.map((d) => bugReportFromData(d.id, d.data()))), onError);
+}
+
+/** v1 bugAdminAccept/Reject/Postpone/Rescue: the status, and the bonus with an acceptance. */
+export function setReportStatus(id: string, status: BugStatus): Promise<void> {
+  return updateDoc(doc(reports(), id), status === 'accepted' ? { status, bonusGranted: true } : { status });
+}
+
+/** v1 bugAdminDelete(). */
+export function deleteReport(id: string): Promise<void> {
+  return deleteDoc(doc(reports(), id));
+}
+
+/** v1 addBugKeyword/deleteBugKeyword: the whole list. */
+export function saveSpamKeywords(words: readonly string[]): Promise<void> {
+  return setDoc(doc(db, 'bugReportsConfig', 'keywords'), { words: [...words] });
 }

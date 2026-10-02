@@ -8,6 +8,7 @@ import { admin, checkAdmin } from '@/stores/admin';
 import { account } from '@/stores/session';
 import { Page, Stack } from '@/ui/components/Layout';
 import { ViewPanel, ViewSwitch } from '@/ui/components/ViewSwitch';
+import { AdminReportsView } from './AdminReportsView';
 import { BroadcastsView } from './BroadcastsView';
 import { ReportsView } from './ReportsView';
 import { UpdatesView } from './UpdatesView';
@@ -32,7 +33,15 @@ export default function ReportsModule({ path }: RouteProps) {
       <Stack>
         <ViewSwitch label={t('reports.views')} links={links} />
         <ViewPanel index={links.findIndex((l) => l.current)}>
-          {view === 'updates' ? <UpdatesView /> : view === 'broadcasts' ? <BroadcastsView /> : <ReportsView />}
+          {view === 'updates' ? (
+            <UpdatesView />
+          ) : view === 'broadcasts' ? (
+            <BroadcastsView />
+          ) : isAdmin ? (
+            <AdminReportsView />
+          ) : (
+            <ReportsView />
+          )}
         </ViewPanel>
       </Stack>
     </Page>

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  adminActions,
+  keywordProblem,
+  reportsInTab,
+  spamHoursLeft,
+  staleSpam,
   availableBonus,
   bugProblem,
   isUnread,
@@ -90,5 +95,48 @@ describe('sortReports', () => {
       report({ id: 'new', createdAt: new Date('2026-10-01') }),
     ]);
     expect(sorted.map((r) => r.id)).toEqual(['new', 'old', 'none']);
+  });
+});
+
+describe("the admin's side", () => {
+  const now = new Date('2026-10-02T12:00:00Z');
+  const at = (hoursAgo: number) => new Date(now.getTime() - hoursAgo * 3_600_000);
+
+  it('puts each status in its tab, accepted and rejected in History', () => {
+    const all = [
+      report({ id: 'n', status: 'new' }),
+      report({ id: 's', status: 'spam' }),
+      report({ id: 'p', status: 'postponed' }),
+      report({ id: 'a', status: 'accepted' }),
+      report({ id: 'r', status: 'rejected' }),
+    ];
+    expect(reportsInTab(all, 'new').map((r) => r.id)).toEqual(['n']);
+    expect(reportsInTab(all, 'spam').map((r) => r.id)).toEqual(['s']);
+    expect(reportsInTab(all, 'postponed').map((r) => r.id)).toEqual(['p']);
+    expect(reportsInTab(all, 'history').map((r) => r.id)).toEqual(['a', 'r']);
+  });
+
+  it('counts the hours spam has left and finds spam past 12 hours', () => {
+    expect(spamHoursLeft(report({ status: 'spam', createdAt: at(2.5) }), now)).toBe(10);
+    expect(spamHoursLeft(report({ status: 'spam', createdAt: at(13) }), now)).toBe(0);
+    const reports = [
+      report({ id: 'old', status: 'spam', createdAt: at(13) }),
+      report({ id: 'fresh', status: 'spam', createdAt: at(1) }),
+      report({ id: 'kept', status: 'new', createdAt: at(30) }),
+    ];
+    expect(staleSpam(reports, now).map((r) => r.id)).toEqual(['old']);
+  });
+
+  it("offers v1's actions for each status", () => {
+    expect(adminActions('spam')).toEqual(['rescue', 'delete']);
+    expect(adminActions('new')).toEqual(['accept', 'reject', 'postpone', 'delete']);
+    expect(adminActions('postponed')).toEqual(['accept', 'reject', 'delete']);
+    expect(adminActions('accepted')).toEqual(['delete']);
+  });
+
+  it('takes a new word only', () => {
+    expect(keywordProblem('  ', ['błąd'])).toBe('empty');
+    expect(keywordProblem('BŁĄD', ['błąd'])).toBe('exists');
+    expect(keywordProblem('saldo', ['błąd'])).toBeNull();
   });
 });

@@ -1091,7 +1091,38 @@
     "viewBroadcasts": "Messages",
     "viewUpdates": "Updates",
     "updatesIntro": "What we added and fixed in each version of LifeXP.",
-    "version": "Version {{v}}"
+    "version": "Version {{v}}",
+    "adminTabs": "Reports by state",
+    "tabs": {
+      "new": "New",
+      "spam": "Spam",
+      "postponed": "Postponed",
+      "history": "History"
+    },
+    "noneInTab": "Nothing here.",
+    "spamExpires": "Goes by itself in {{h}} h unless you act.",
+    "actions": {
+      "accept": "Accept",
+      "reject": "Reject",
+      "postpone": "Postpone",
+      "rescue": "Not spam",
+      "delete": "Delete"
+    },
+    "didAccept": "Accepted. The reporter got an extra report.",
+    "didReject": "Rejected.",
+    "didPostpone": "Postponed.",
+    "didRescue": "Not spam: moved to new.",
+    "didDelete": "Report deleted.",
+    "confirmDelete": "Delete this report for good?",
+    "keywordsTitle": "Spam filter",
+    "keywordsInfo": "A report goes to spam when its description has none of these words.",
+    "keywordNew": "New word",
+    "keywordAdd": "Add word",
+    "keywordAdded": "Word added.",
+    "keywordDeleted": "Word removed: {{word}}.",
+    "keywordRemoveNamed": "Remove word: {{word}}",
+    "keywordExists": "That word is already on the list.",
+    "keywordEmpty": "Enter a word."
   },
   "broadcasts": {
     "close": "Close",
