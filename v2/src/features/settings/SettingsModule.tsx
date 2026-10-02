@@ -2,7 +2,7 @@
 // own address (#/settings/<section>), so Back returns to the list. The list says
 // what each section is set to now. Settings that belong to one module stay there
 // (chores in Obowiązki, the limit and categories in Pieniądze); the list links to them.
-import { Blocks, ClipboardCheck, Palette, Trophy, UserRound, Wallet } from 'lucide-preact';
+import { Blocks, ClipboardCheck, Palette, Trophy, UserRound, Wallet, Zap } from 'lucide-preact';
 import { OPTIONAL_MODULES, isModuleOn } from '@/domain/modules';
 import type { Profile } from '@/domain/profile';
 import { DAILY_LIMIT_DEFAULT } from '@/domain/points';
@@ -15,6 +15,7 @@ import { ButtonLink } from '@/ui/components/ButtonLink';
 import { EmptyState, IconTile, List, ListRow } from '@/ui/components/Display';
 import { Card, Page, Section } from '@/ui/components/Layout';
 import { AccountSection } from './AccountSection';
+import { ActivitiesSection } from './ActivitiesSection';
 import { AppearanceSection } from './AppearanceSection';
 import { ModulesSection } from './ModulesSection';
 import { PointsSection } from './PointsSection';
@@ -25,6 +26,7 @@ const SECTIONS = {
   appearance: AppearanceSection,
   account: AccountSection,
   points: PointsSection,
+  activities: ActivitiesSection,
 } as const;
 
 type SectionId = keyof typeof SECTIONS;
@@ -87,6 +89,16 @@ function Home({ profile }: { profile: Profile }) {
               title={t('settings.points')}
               meta={t('settings.pointsMeta', { limit: formatInteger(profile.dailyLimit ?? DAILY_LIMIT_DEFAULT, locale()) })}
               href="#/settings/points"
+            />
+            <ListRow
+              leading={
+                <IconTile>
+                  <Zap />
+                </IconTile>
+              }
+              title={t('settings.activities')}
+              meta={t('settings.activitiesMeta')}
+              href="#/settings/activities"
             />
           </List>
         </Card>

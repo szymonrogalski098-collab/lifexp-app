@@ -53,9 +53,13 @@ describe('logging (stage 3e)', () => {
       name: 'Nauka',
       points: 40,
       order: 0,
+      icon: 'ti-book',
+      color: '#6c63ff',
     });
     expect(activityDefFromData('x', { name: '', points: 10 })).toBeNull();
-    expect(activityDefFromData('y', { name: 'Bez kolejności', points: 10 })?.order).toBe(Number.MAX_SAFE_INTEGER);
+    const bare = activityDefFromData('y', { name: 'Bez kolejności', points: 10 });
+    expect(bare?.order).toBe(Number.MAX_SAFE_INTEGER);
+    expect([bare?.icon, bare?.color]).toEqual([null, null]);
   });
 
   test('a new entry has v1 fields only, the generated name only when given', () => {

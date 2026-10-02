@@ -4,6 +4,7 @@
 // and the daily limit is checked against the server's numbers. Needs the server.
 import {
   collection,
+  deleteDoc,
   doc,
   getDocsFromServer,
   increment,
@@ -11,7 +12,10 @@ import {
   onSnapshot,
   query,
   runTransaction,
+  setDoc,
+  updateDoc,
   writeBatch,
+  type DocumentData,
 } from 'firebase/firestore';
 import {
   ACTIVITY_SEEDS,
@@ -60,6 +64,33 @@ export async function seedActivityDefsIfEmpty(uid: string): Promise<boolean> {
   for (const { id, ...data } of ACTIVITY_SEEDS) batch.set(doc(defsOf(uid), id), data);
   await batch.commit();
   return true;
+}
+
+/** A type's fields as v1 addActivityDef() writes them; a missing icon or colour stays missing. */
+function activityDefData({ name, points, order, icon, color }: Omit<ActivityDef, 'id'>): DocumentData {
+  return { name, points, order, ...(icon ? { icon } : {}), ...(color ? { color } : {}) };
+}
+
+/** v1 addActivityDef(): a new document under a generated id. */
+export function addActivityDef(uid: string, def: Omit<ActivityDef, 'id'>): { id: string; saved: Promise<void> } {
+  const ref = doc(defsOf(uid));
+  return { id: ref.id, saved: setDoc(ref, activityDefData(def)) };
+}
+
+/** Writes a type's fields over the stored ones; its place in the list and fields v2 does not know stay. */
+export function updateActivityDef(uid: string, def: ActivityDef): Promise<void> {
+  const { name, points, icon, color } = def;
+  return updateDoc(doc(defsOf(uid), def.id), { name, points, ...(icon ? { icon } : {}), ...(color ? { color } : {}) });
+}
+
+/** v1 deleteActivityDef(): entries keep the type's id; they just lose its name, as in v1. */
+export function removeActivityDef(uid: string, id: string): Promise<void> {
+  return deleteDoc(doc(defsOf(uid), id));
+}
+
+export function restoreActivityDef(uid: string, def: ActivityDef): Promise<void> {
+  const { id, ...data } = def;
+  return setDoc(doc(defsOf(uid), id), activityDefData(data));
 }
 
 export interface LogActivityInput {

@@ -32,7 +32,14 @@ export function activityDefName(data: DocumentData): string | null {
 export function activityDefFromData(id: string, data: DocumentData): ActivityDef | null {
   const name = activityDefName(data);
   if (!name) return null;
-  return { id, name, points: numberOr(data.points), order: numberOr(data.order, Number.MAX_SAFE_INTEGER) };
+  return {
+    id,
+    name,
+    points: numberOr(data.points),
+    order: numberOr(data.order, Number.MAX_SAFE_INTEGER),
+    icon: typeof data.icon === 'string' && data.icon !== '' ? data.icon : null,
+    color: typeof data.color === 'string' && data.color !== '' ? data.color : null,
+  };
 }
 
 export interface NewActivity {

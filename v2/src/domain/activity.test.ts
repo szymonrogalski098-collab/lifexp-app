@@ -8,6 +8,10 @@ import {
   earnedPoints,
   revertActivity,
   sortActivityDefs,
+  activityDefDraft,
+  activityDefProblem,
+  editedActivityDef,
+  nextActivityOrder,
 } from './activity';
 
 describe('G1 points for an activity and the daily limit', () => {
@@ -73,9 +77,9 @@ describe('activity definitions', () => {
 
   test('sorted by order, then by name', () => {
     const defs = [
-      { id: 'b', name: 'B', points: 10, order: 1 },
-      { id: 'z', name: 'Z', points: 10, order: 0 },
-      { id: 'a', name: 'A', points: 10, order: 1 },
+      { id: 'b', name: 'B', points: 10, order: 1, icon: null, color: null },
+      { id: 'z', name: 'Z', points: 10, order: 0, icon: null, color: null },
+      { id: 'a', name: 'A', points: 10, order: 1, icon: null, color: null },
     ];
     expect(sortActivityDefs(defs).map((d) => d.id)).toEqual(['z', 'a', 'b']);
   });
@@ -87,7 +91,7 @@ describe('"Co teraz?" (v1 generator)', () => {
       { name: 'Czytanie', points: 35 },
       { name: 'Spacer', points: 20 },
     ],
-    [{ id: 'learning', name: 'Nauka', points: 40, order: 0 }],
+    [{ id: 'learning', name: 'Nauka', points: 40, order: 0, icon: null, color: null }],
   );
 
   test("the pool's own activities, then the person's definitions", () => {
@@ -103,5 +107,36 @@ describe('"Co teraz?" (v1 generator)', () => {
     expect(pickActivity(pool, () => 0.5)?.name).toBe('Spacer');
     expect(pickActivity(pool, () => 0.9999)?.name).toBe('Nauka');
     expect(pickActivity([], () => 0)).toBeNull();
+  });
+});
+
+describe('activity types (v1 Settings → Aktywności)', () => {
+  const def = { id: 'gitara', name: 'Gitara', points: 30, order: 4, icon: null, color: null };
+
+  test('a name and whole points from 1 to 10 000', () => {
+    const ok = { name: ' Gitara ', points: 30, icon: 'ti-music', color: '#ff6b6b' };
+    expect(activityDefProblem(ok)).toBeNull();
+    expect(activityDefProblem({ ...ok, name: '  ' })).toBe('nameRequired');
+    expect(activityDefProblem({ ...ok, points: null })).toBe('pointsRequired');
+    expect(activityDefProblem({ ...ok, points: 0 })).toBe('pointsRequired');
+    expect(activityDefProblem({ ...ok, points: 10_001 })).toBe('pointsTooMany');
+  });
+
+  test("a new type goes after the last one (v1), a type without order counting as 0", () => {
+    expect(nextActivityOrder([])).toBe(0);
+    expect(nextActivityOrder([def, { ...def, order: 1 }])).toBe(5);
+    expect(nextActivityOrder([{ ...def, order: Number.MAX_SAFE_INTEGER }])).toBe(1);
+  });
+
+  test("a type without icon or colour starts from v1's defaults; editing keeps id and order", () => {
+    expect(activityDefDraft(def)).toEqual({ name: 'Gitara', points: 30, icon: 'ti-book', color: '#6c63ff' });
+    expect(editedActivityDef(def, { name: ' Gitara elektryczna ', points: 45, icon: 'ti-music', color: '#ff6b6b' })).toEqual({
+      id: 'gitara',
+      name: 'Gitara elektryczna',
+      points: 45,
+      order: 4,
+      icon: 'ti-music',
+      color: '#ff6b6b',
+    });
   });
 });

@@ -46,6 +46,10 @@ export interface ActivityDef {
   /** Points per hour. */
   points: number;
   order: number;
+  /** v1's Tabler icon id (v1 draws it; v2 names it, PLAN.md 7.1); null when missing. */
+  icon: string | null;
+  /** v1's colour for the type; null when missing. */
+  color: string | null;
 }
 
 /** v1 ensureActivityDefsSeeded(): the same ids, so history written before keeps its names. */
@@ -60,6 +64,68 @@ export const ACTIVITY_SEEDS: readonly (ActivityDef & { color: string; icon: stri
 /** v1's list order: by `order`; definitions without one (v1 never lists them) go last, by name. */
 export function sortActivityDefs(defs: readonly ActivityDef[]): ActivityDef[] {
   return [...defs].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+}
+
+// ── Activity types (v1 Settings → Aktywności; stage 4c) ──
+
+/** v1 input#ad-name maxlength. */
+export const ACTIVITY_NAME_MAX = 60;
+/** v1 input#ad-points max. */
+export const ACTIVITY_POINTS_MAX = 10_000;
+
+/** v1 ACTIVITY_ICON_PRESETS, in v1's order; the first is v1's default. */
+export const ACTIVITY_ICONS = [
+  'ti-book',
+  'ti-code',
+  'ti-run',
+  'ti-school',
+  'ti-book-2',
+  'ti-music',
+  'ti-palette',
+  'ti-language',
+  'ti-bike',
+  'ti-dumbbell',
+  'ti-pencil',
+  'ti-brain',
+] as const;
+
+/** v1 ACTIVITY_COLOR_PRESETS, in v1's order; the first is v1's default. */
+export const ACTIVITY_COLORS = ['#6c63ff', '#4ecca3', '#ffd700', '#ff6b6b', '#8a8fa8', '#ff9f43', '#00d2d3', '#feca57'] as const;
+
+export interface ActivityDefDraft {
+  name: string;
+  /** Points per hour; null = the field is empty. */
+  points: number | null;
+  icon: string;
+  color: string;
+}
+
+export type ActivityDefProblem = 'nameRequired' | 'pointsRequired' | 'pointsTooMany';
+
+export const NEW_ACTIVITY_DEF: ActivityDefDraft = { name: '', points: null, icon: ACTIVITY_ICONS[0], color: ACTIVITY_COLORS[0] };
+
+/** v1 addActivityDef(): a name and whole points above zero; v1's field stops at 10 000. */
+export function activityDefProblem(draft: ActivityDefDraft): ActivityDefProblem | null {
+  if (!draft.name.trim()) return 'nameRequired';
+  if (draft.points === null || !Number.isInteger(draft.points) || draft.points <= 0) return 'pointsRequired';
+  if (draft.points > ACTIVITY_POINTS_MAX) return 'pointsTooMany';
+  return null;
+}
+
+/** v1 addActivityDef(): after the last one (max order + 1), or 0 for the first. */
+export function nextActivityOrder(defs: readonly ActivityDef[]): number {
+  const orders = defs.map((d) => (d.order === Number.MAX_SAFE_INTEGER ? 0 : d.order));
+  return orders.length ? Math.max(...orders) + 1 : 0;
+}
+
+/** The sheet's starting point for an existing type; a missing icon or colour gets v1's default. */
+export function activityDefDraft(def: ActivityDef): ActivityDefDraft {
+  return { name: def.name, points: def.points, icon: def.icon ?? ACTIVITY_ICONS[0], color: def.color ?? ACTIVITY_COLORS[0] };
+}
+
+/** The same type with the sheet's changes (v2 only; v1 adds and deletes). Call activityDefProblem() first. */
+export function editedActivityDef(def: ActivityDef, draft: ActivityDefDraft): ActivityDef {
+  return { ...def, name: draft.name.trim(), points: draft.points ?? 0, icon: draft.icon, color: draft.color };
 }
 
 /** G1: an hour earns the definition's points; the result is rounded half up, as Math.round. */
