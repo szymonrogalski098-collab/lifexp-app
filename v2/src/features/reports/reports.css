@@ -175,3 +175,35 @@
 .reports-reply .ui-button {
   justify-self: start;
 }
+
+/* The admin's sent messages: text and when, with "Usuń" at the end. */
+.reports-broadcast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+}
+
+/* History of updates */
+.reports-version {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.reports-changes {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reports-change {
+  padding: var(--space-2) 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.reports-change + .reports-change {
+  border-top: 1px solid var(--color-separator);
+}

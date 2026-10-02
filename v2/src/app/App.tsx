@@ -1,5 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { GatePage } from '@/features/auth/GatePage';
+import { BroadcastBanner } from '@/features/broadcasts/BroadcastBanner';
 import { DraftsReview } from '@/features/offline/DraftsReview';
 import { generalRate } from '@/domain/points';
 import { language, t } from '@/i18n';
@@ -92,6 +93,7 @@ export function App() {
       ) : (
         <ComingSoonPage feature={route.feature} />
       )}
+      <BroadcastBanner />
       <DraftsReview
         uid={gate.user.uid}
         rate={generalRate(gate.profile.rateGeneral.zloty, gate.profile.rateGeneral.points)}

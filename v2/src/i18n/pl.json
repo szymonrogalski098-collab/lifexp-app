@@ -1085,6 +1085,30 @@
     "replyPh": "Napisz odpowiedź",
     "sendReply": "Wyślij",
     "unread": "Nowa wiadomość",
-    "you": "Ty"
+    "you": "Ty",
+    "views": "Zgłoszenia i aktualizacje",
+    "viewReports": "Zgłoszenia",
+    "viewBroadcasts": "Wiadomości",
+    "viewUpdates": "Aktualizacje",
+    "updatesIntro": "Co dodaliśmy i naprawiliśmy w kolejnych wersjach LifeXP.",
+    "version": "Wersja {{v}}"
+  },
+  "broadcasts": {
+    "close": "Zamknij",
+    "newTitle": "Wiadomość do wszystkich",
+    "hint": "Każdy zobaczy ją raz jako pasek u góry ekranu, przy najbliższym wejściu albo od razu, jeśli ma otwartą aplikację.",
+    "text": "Treść",
+    "seconds": "Czas na ekranie",
+    "secondsUnit": "s",
+    "secondsHint": "Od {{min}} do {{max}} sekund.",
+    "send": "Wyślij do wszystkich",
+    "needText": "Wpisz wiadomość.",
+    "sent": "Wiadomość wysłana.",
+    "sentList": "Wysłane",
+    "none": "Brak wysłanych wiadomości.",
+    "forSeconds": "{{s}} s",
+    "deleteNamed": "Usuń: {{text}}",
+    "confirmDelete": "Usunąć tę wiadomość?",
+    "deleted": "Wiadomość usunięta."
   }
 }
