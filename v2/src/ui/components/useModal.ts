@@ -2,7 +2,11 @@
 // <dialog>: showModal() gives the focus trap, inert background, Escape and the
 // top layer for free. On top of that:
 // - opening adds a history entry, so the system Back closes the layer (PLAN.md 4.7);
-// - closing plays the exit animation before the element really closes.
+// - closing plays the exit animation before the element really closes;
+// - a dialog the browser closes by itself (Chrome on Android closes the top dialog
+//   on Back through its close watcher, sometimes without a cancel event) reports
+//   it to the parent, which would otherwise keep `open` true: the button that
+//   opens it would then do nothing until the page was reloaded.
 import { useEffect, useRef } from 'preact/hooks';
 
 const HISTORY_KEY = 'lifexpModal';
@@ -30,25 +34,35 @@ function exitDuration(dialog: HTMLElement): number {
 export function useModal(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDialogElement>(null);
   const entryId = useRef<string | null>(null);
+  /** The next `close` event is ours (end of the exit animation), not the browser's. */
+  const closingOurselves = useRef(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+
+  /** Our history entry goes with the layer (Back already took it when Back closed it). */
+  const dropEntry = () => {
+    if (entryId.current && topEntryId() === entryId.current) history.back();
+    entryId.current = null;
+  };
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) {
+    if (open) {
+      if (dialog.open && dialog.dataset.state === 'open') return;
+      // Opening, or opened again while the exit animation still runs (the
+      // previous run's cleanup has stopped its close).
       dialog.dataset.state = 'open';
-      dialog.showModal();
+      if (!dialog.open) dialog.showModal();
       entryId.current = `m${++counter}`;
       history.pushState({ [HISTORY_KEY]: entryId.current }, '', location.href);
       return;
     }
-    if (!open && dialog.open) {
-      // Closed from the UI: drop our history entry too (Back already did it itself).
-      if (entryId.current && topEntryId() === entryId.current) history.back();
-      entryId.current = null;
+    if (dialog.open && dialog.dataset.state === 'open') {
+      dropEntry();
       dialog.dataset.state = 'closing';
       const timer = setTimeout(() => {
+        closingOurselves.current = true;
         dialog.close();
         delete dialog.dataset.state;
       }, exitDuration(dialog));
@@ -62,6 +76,16 @@ export function useModal(open: boolean, onClose: () => void) {
       e.preventDefault(); // Escape: close through the parent, with the animation
       onCloseRef.current();
     };
+    const onNativeClose = () => {
+      if (closingOurselves.current) {
+        closingOurselves.current = false;
+        return;
+      }
+      // Closed by the browser, not by us: tidy up and tell the parent.
+      if (dialog) delete dialog.dataset.state;
+      dropEntry();
+      onCloseRef.current();
+    };
     const onPopState = () => {
       if (entryId.current && topEntryId() !== entryId.current) {
         entryId.current = null;
@@ -69,9 +93,11 @@ export function useModal(open: boolean, onClose: () => void) {
       }
     };
     dialog?.addEventListener('cancel', onCancel);
+    dialog?.addEventListener('close', onNativeClose);
     addEventListener('popstate', onPopState);
     return () => {
       dialog?.removeEventListener('cancel', onCancel);
+      dialog?.removeEventListener('close', onNativeClose);
       removeEventListener('popstate', onPopState);
       // Unmounted while open (e.g. navigation): leave no dead history entry.
       if (entryId.current && topEntryId() === entryId.current) history.back();

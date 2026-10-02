@@ -36,6 +36,8 @@
 }
 
 .ui-sheet[data-state='closing'] {
+  /* On its way out: a tap during the exit lands nowhere, not on what slides past. */
+  pointer-events: none;
   animation: ui-sheet-out var(--duration-base) ease-in forwards;
 }
 
