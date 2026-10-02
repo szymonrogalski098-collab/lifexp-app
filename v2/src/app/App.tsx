@@ -1,5 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { GatePage } from '@/features/auth/GatePage';
+import { DraftsReview } from '@/features/offline/DraftsReview';
+import { generalRate } from '@/domain/points';
 import { language, t } from '@/i18n';
 import { session } from '@/stores/session';
 import { AppShell } from './AppShell';
@@ -70,6 +72,10 @@ export function App() {
       ) : (
         <ComingSoonPage feature={route.feature} />
       )}
+      <DraftsReview
+        uid={gate.user.uid}
+        rate={generalRate(gate.profile.rateGeneral.zloty, gate.profile.rateGeneral.points)}
+      />
     </AppShell>
   );
 }

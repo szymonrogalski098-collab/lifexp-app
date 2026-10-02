@@ -25,6 +25,23 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* ── Drafts waiting from offline (stage 3f) ── */
+.today-drafts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.today-drafts__title {
+  font-weight: var(--font-weight-semibold);
+}
+
+.today-drafts__note {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 /* ── Points hero: the dark card of the reference ── */
 
 .today-hero {

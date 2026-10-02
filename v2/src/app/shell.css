@@ -122,6 +122,16 @@
 
 /* ── Top bar ────────────────────────────────────────────────────────────── */
 
+/* No connection (stage 3f): what happens to new entries, under the top bar. */
+.shell__offline {
+  padding: var(--space-2) var(--space-4);
+  background: color-mix(in srgb, var(--color-warning) 16%, var(--color-bg));
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
 .topbar {
   position: sticky;
   top: 0;

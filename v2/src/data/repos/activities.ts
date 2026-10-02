@@ -32,11 +32,18 @@ const activitiesOf = (uid: string) => collection(db, 'users', uid, 'activities')
 const defsOf = (uid: string) => collection(db, 'users', uid, 'activityDefs');
 const dayOf = (uid: string, key: string) => doc(db, 'users', uid, 'dailyLog', key);
 
-/** Every definition with a name, in v1's order. */
+/**
+ * Every definition with a name, in v1's order. An empty answer from the local cache
+ * says nothing yet (never read on this device), so it waits for the server instead
+ * of reporting "no definitions".
+ */
 export function watchActivityDefs(uid: string, onChange: (defs: ActivityDef[]) => void, onError: OnError) {
   return onSnapshot(
     defsOf(uid),
-    (snap) => onChange(sortActivityDefs(snap.docs.flatMap((d) => activityDefFromData(d.id, d.data()) ?? []))),
+    (snap) => {
+      if (snap.empty && snap.metadata.fromCache) return;
+      onChange(sortActivityDefs(snap.docs.flatMap((d) => activityDefFromData(d.id, d.data()) ?? [])));
+    },
     onError,
   );
 }
@@ -61,7 +68,10 @@ export interface LogActivityInput {
   minutes: number;
   desc: string;
   pointsPerHour: number;
+  /** The entry's time; for an offline draft, when the draft was made. */
   now: Date;
+  /** The UTC day whose dailyLog gets the points; the day of `now` unless a draft says otherwise. */
+  day?: string;
 }
 
 export type LogActivityOutcome = { ok: true; points: number; earned: number } | { ok: false; problem: 'dailyLimit' };
@@ -73,14 +83,17 @@ export type LogActivityOutcome = { ok: true; points: number; earned: number } | 
  */
 export function logActivity(uid: string, input: LogActivityInput): Promise<LogActivityOutcome> {
   return runTransaction(db, async (tx): Promise<LogActivityOutcome> => {
-    const dayRef = dayOf(uid, utcDayKey(input.now));
+    const dayRef = dayOf(uid, input.day ?? utcDayKey(input.now));
     const day = await tx.get(dayRef);
     const user = await tx.get(userOf(uid));
     const earnedToday = day.exists() ? numberOr(day.data().pointsEarned) : 0;
     const credit = creditActivity(input.minutes, input.pointsPerHour, earnedToday, numberOr(user.data()?.dailyLimit));
     if (credit.points === 0) return { ok: false, problem: 'dailyLimit' };
 
-    tx.set(doc(activitiesOf(uid)), newActivityData({ ...input, points: credit.points }));
+    tx.set(
+      doc(activitiesOf(uid)),
+      newActivityData({ type: input.type, typeName: input.typeName, minutes: input.minutes, desc: input.desc, points: credit.points, now: input.now }),
+    );
     if (day.exists()) tx.update(dayRef, { pointsEarned: increment(credit.points) });
     else tx.set(dayRef, { pointsEarned: credit.points, gamingMinutes: 0 });
     tx.update(userOf(uid), {

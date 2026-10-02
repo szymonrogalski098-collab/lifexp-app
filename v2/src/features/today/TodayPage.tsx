@@ -15,7 +15,17 @@ import {
   Zap,
 } from 'lucide-preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { activeDays, generatorPool, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
+import {
+  GENERATED_TYPE,
+  activeDays,
+  activityProblem,
+  earnedPoints,
+  generatorPool,
+  type Activity,
+  type ActivityDraft,
+  type DayLog,
+} from '@/domain/activity';
+import { activityDraftPayload } from '@/domain/drafts';
 import { choresOnCard, type ChoreDef, type ChoresCardSettings } from '@/domain/chores';
 import { newAchievements } from '@/domain/achievements';
 import { goalProgress } from '@/domain/goals';
@@ -32,6 +42,7 @@ import { formatMoney } from '@/lib/money';
 import { ensureActivityDefs, saveActivity } from '@/services/activity';
 import { logChore, saveChoresCard } from '@/services/chores';
 import { awardAchievements, recordFreeze } from '@/services/progress';
+import { addDraft, drafts, reviewRequested } from '@/offline/queue';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
@@ -435,7 +446,34 @@ export default function TodayPage({ path, navigate }: RouteProps) {
     });
   };
 
+  /** Offline (v1 queueActivityDraft): the activity waits as a draft, its points estimated; the limit applies when confirmed. */
+  const saveDraft = (draft: ActivityDraft) => {
+    const problem = activityProblem(draft);
+    if (problem) return problem;
+    const def = (sources.activityDefs ?? []).find((d) => d.id === draft.type);
+    const generated = draft.type === GENERATED_TYPE ? draft.generated : null;
+    const name = generated?.name ?? def?.name;
+    const rate = generated?.points ?? def?.points;
+    if (!name || rate === undefined || !draft.type || draft.minutes === null) return 'typeRequired';
+    addDraft(
+      'activity',
+      t('offline.sumActivity', { name, min: draft.minutes, pts: earnedPoints(draft.minutes, rate) }),
+      activityDraftPayload({
+        type: draft.type,
+        typeName: generated?.name ?? null,
+        minutes: draft.minutes,
+        desc: draft.desc.trim(),
+        pointsPerHour: rate,
+        day: utcDayKey(new Date()),
+      }),
+    );
+    closeSheet();
+    notify({ message: t('offline.draftSaved') });
+    return null;
+  };
+
   const save = async (draft: ActivityDraft) => {
+    if (!navigator.onLine) return saveDraft(draft);
     const defs = sources.activityDefs ?? [];
     const before = levelOf(profile.points.earnedAllTime).level;
     try {
@@ -471,6 +509,20 @@ export default function TodayPage({ path, navigate }: RouteProps) {
         </header>
 
         {sources.failed && <p class="today-error" role="alert">{t('today.loadFailed')}</p>}
+
+        {drafts.value.length > 0 && (
+          <Card>
+            <div class="today-drafts">
+              <div>
+                <p class="today-drafts__title">{t('offline.pending', { count: drafts.value.length })}</p>
+                <p class="today-drafts__note">{t('offline.pendingNote')}</p>
+              </div>
+              <Button variant="secondary" onClick={() => (reviewRequested.value = true)}>
+                {t('offline.review')}
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <PointsHero profile={profile} />
         <LevelCard profile={profile} />

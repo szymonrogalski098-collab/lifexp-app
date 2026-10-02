@@ -715,6 +715,32 @@
       }
     ]
   },
+  "offline": {
+    "reviewTitle": "Drafts made offline",
+    "reviewLead": "Confirm or discard each draft. Saving uses the current state of your account: today's limit and your balance.",
+    "add": "Add",
+    "discard": "Discard",
+    "addNamed": "Add: {{summary}}",
+    "discardNamed": "Discard: {{summary}}",
+    "added": "Draft saved to your account.",
+    "discarded": "Draft discarded.",
+    "empty": "All drafts processed.",
+    "gamingNote": "Add the gaming session in the current version of LifeXP, or discard it here.",
+    "otherNote": "Open this draft in the current version of LifeXP.",
+    "invalid": "This draft can't be saved. You can discard it.",
+    "failed": "Couldn't save. Check your connection and try again.",
+    "pending_one": "You have {{count}} draft to confirm",
+    "pending_few": "You have {{count}} drafts to confirm",
+    "pending_many": "You have {{count}} drafts to confirm",
+    "pending_other": "You have {{count}} drafts to confirm",
+    "pendingNote": "Made without internet. Confirm or discard them.",
+    "review": "Review",
+    "banner": "You're offline: new entries are saved as drafts to confirm.",
+    "draftSaved": "No connection: saved as a draft. Confirm it once you're back online.",
+    "sumActivity": "Activity: {{name}} — {{min}} min (~{{pts}} pts)",
+    "sumExpense": "Expense: {{amount}} — {{cat}}",
+    "sumIncome": "Income: {{amount}} — {{cat}}"
+  },
   "add": {
     "title": "Add",
     "intro": "Adding moves to the new version with each module. What is not here yet, you add in the current version of LifeXP.",
