@@ -29,6 +29,7 @@ import { formatLongDate, formatWeekdayShort, localDayKey, utcDayKey, weekOf } fr
 import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { ensureActivityDefs, saveActivity } from '@/services/activity';
+import { logChore } from '@/services/chores';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
@@ -163,22 +164,30 @@ interface ChoresCardProps {
   profile: Profile;
   defs: readonly ChoreDef[];
   entries: readonly ChoreEntry[];
+  /** A tap on a chore logs it for today (owner's request 2026-10-02). */
+  onLog: (def: ChoreDef) => void;
 }
 
 /** The reference's "Today's duties": v1's chore definitions, marked when logged today (local day, G8). */
-function ChoresCard({ profile, defs, entries }: ChoresCardProps) {
+function ChoresCard({ profile, defs, entries, onLog }: ChoresCardProps) {
   const rows = todayChores(defs, entries, localDayKey(new Date()));
   const unpaid = unpaidChores(entries, choresRate(profile.rateChores.zloty, profile.rateChores.points));
   const done = rows.filter((row) => row.doneToday > 0).length;
+  const defById = new Map(defs.map((def) => [def.id, def]));
   return (
     <Section
       title={t('today.chores')}
       action={
-        rows.length > 0 && (
-          <span class="today-card__meta" data-testid="chores-progress">
-            {t('today.choresProgress', { done, total: rows.length })}
-          </span>
-        )
+        <span class="today-chores__head">
+          {rows.length > 0 && (
+            <span class="today-card__meta" data-testid="chores-progress">
+              {t('today.choresProgress', { done, total: rows.length })}
+            </span>
+          )}
+          <a class="today-card__link" href="#/chores/defs">
+            {t('today.choresEdit')}
+          </a>
+        </span>
       }
     >
       <Card padding="none">
@@ -193,28 +202,32 @@ function ChoresCard({ profile, defs, entries }: ChoresCardProps) {
           />
         ) : (
           <List label={t('today.chores')}>
-            {rows.map((row) => (
-              <ListRow
-                key={row.choreId}
-                leading={
-                  <IconTile>{row.emoji ? <span class="today-chore__emoji">{row.emoji}</span> : <ClipboardCheck />}</IconTile>
-                }
-                title={row.name}
-                meta={
-                  row.doneToday > 1
-                    ? t('today.choreDoneTimes', { count: row.doneToday })
-                    : row.doneToday === 1
-                      ? t('today.choreDone')
-                      : undefined
-                }
-                value={t('units.pointsGained', { points: row.points })}
-                trailing={
-                  <span class={`today-check${row.doneToday > 0 ? ' today-check--done' : ''}`} aria-hidden="true">
-                    {row.doneToday > 0 && <Check />}
-                  </span>
-                }
-              />
-            ))}
+            {rows.map((row) => {
+              const def = defById.get(row.choreId);
+              return (
+                <ListRow
+                  key={row.choreId}
+                  onClick={def ? () => onLog(def) : undefined}
+                  leading={
+                    <IconTile>{row.emoji ? <span class="today-chore__emoji">{row.emoji}</span> : <ClipboardCheck />}</IconTile>
+                  }
+                  title={row.name}
+                  meta={
+                    row.doneToday > 1
+                      ? t('today.choreDoneTimes', { count: row.doneToday })
+                      : row.doneToday === 1
+                        ? t('today.choreDone')
+                        : undefined
+                  }
+                  value={t('units.pointsGained', { points: row.points })}
+                  trailing={
+                    <span class={`today-check${row.doneToday > 0 ? ' today-check--done' : ''}`} aria-hidden="true">
+                      {row.doneToday > 0 && <Check />}
+                    </span>
+                  }
+                />
+              );
+            })}
           </List>
         )}
         <div class="today-chores__unpaid">
@@ -415,6 +428,17 @@ export default function TodayPage({ path, navigate }: RouteProps) {
     lastToast.current = showToast(input);
   };
 
+  const logChoreToday = (def: ChoreDef) => {
+    const { saved, undo } = logChore(uid, def, localDayKey(new Date()));
+    const failed = () => notify({ message: t('chores.saveFailed'), tone: 'negative' });
+    saved.catch(failed);
+    notify({
+      message: t('chores.added', { name: def.name, points: def.points }),
+      tone: 'positive',
+      action: { label: t('ui.undo'), onAction: () => void undo().catch(failed) },
+    });
+  };
+
   const save = async (draft: ActivityDraft) => {
     const defs = sources.activityDefs ?? [];
     const before = levelOf(profile.points.earnedAllTime).level;
@@ -470,7 +494,7 @@ export default function TodayPage({ path, navigate }: RouteProps) {
 
         {moduleOn(profile, 'chores') &&
           (sources.choreDefs && sources.choreEntries ? (
-            <ChoresCard profile={profile} defs={sources.choreDefs} entries={sources.choreEntries} />
+            <ChoresCard profile={profile} defs={sources.choreDefs} entries={sources.choreEntries} onLog={logChoreToday} />
           ) : (
             <Card>
               <Skeleton />

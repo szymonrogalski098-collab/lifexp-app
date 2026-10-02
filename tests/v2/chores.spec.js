@@ -428,3 +428,35 @@ test.describe('v1 on a desktop: the list of chores', () => {
     await expect(page.locator('#chore-sheet-list')).toContainText('Podlanie kwiatów');
   });
 });
+
+// ── Today (owner's request 2026-10-02): a tap logs the chore for today, with "Cofnij" ──
+
+test('a tap on Today logs the chore for today; "Cofnij" takes it back', async ({ page }) => {
+  const account = await choresAccount('chores-today-tap');
+  await openSignedIn(page, account, '#/today');
+  const chores = page.getByRole('list', { name: 'Obowiązki dziś' });
+  await chores.getByRole('button', { name: /Opróżnienie zmywarki/ }).click();
+  await expect(page.getByText('Dodano: Opróżnienie zmywarki (+15 pkt)')).toBeVisible();
+  await expect(page.getByTestId('chores-progress')).toHaveText('1 z 3 dziś');
+  await expect.poll(async () => (await entriesOf(account.uid).get()).docs.map((d) => d.data().dateISO)).toEqual([localDay()]);
+  await page.getByRole('button', { name: 'Cofnij' }).click();
+  await expect.poll(async () => (await entriesOf(account.uid).get()).size).toBe(0);
+  await expect(page.getByTestId('chores-progress')).toHaveText('0 z 3 dziś');
+
+  // A one-time chore leaves the list when logged and comes back with "Cofnij".
+  await chores.getByRole('button', { name: /Mycie okien/ }).click();
+  await expect.poll(async () => (await defsOf(account.uid).doc('windows_once').get()).exists).toBe(false);
+  await page.getByRole('button', { name: 'Cofnij' }).click();
+  await expect.poll(async () => (await defsOf(account.uid).doc('windows_once').get()).data()).toEqual({
+    name: 'Mycie okien',
+    desc: '',
+    emoji: '🪟',
+    points: 20,
+    oneTime: true,
+    order: 2,
+  });
+  await expect.poll(async () => (await entriesOf(account.uid).get()).size).toBe(0);
+
+  await page.getByRole('link', { name: 'Zmień listę' }).click();
+  await expect(page).toHaveURL(/#\/chores\/defs$/);
+});

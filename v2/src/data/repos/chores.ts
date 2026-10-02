@@ -46,10 +46,22 @@ const payoutsOf = (uid: string) => collection(db, 'users', uid, 'chorePayouts');
  * definition (G8.4) — in one batch, so neither can happen without the other
  * (v1 writes them one after another and swallows a failed delete).
  */
-export function addChoreEntry(uid: string, def: ChoreDef, dateISO: string, now: Date): Promise<void> {
+export function addChoreEntry(uid: string, def: ChoreDef, dateISO: string, now: Date): { id: string; saved: Promise<void> } {
+  const ref = doc(entriesOf(uid));
   const batch = writeBatch(db);
-  batch.set(doc(entriesOf(uid)), newChoreEntryData(def, dateISO, now));
+  batch.set(ref, newChoreEntryData(def, dateISO, now));
   if (def.oneTime) batch.delete(doc(defsOf(uid), def.id));
+  return { id: ref.id, saved: batch.commit() };
+}
+
+/** Undo of addChoreEntry in one batch: the entry goes, a one-time definition comes back. */
+export function undoChoreEntry(uid: string, entryId: string, def: ChoreDef): Promise<void> {
+  const batch = writeBatch(db);
+  batch.delete(doc(entriesOf(uid), entryId));
+  if (def.oneTime) {
+    const { id, ...data } = def;
+    batch.set(doc(defsOf(uid), id), choreDefData(data));
+  }
   return batch.commit();
 }
 
