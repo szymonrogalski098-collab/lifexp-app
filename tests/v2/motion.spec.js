@@ -5,6 +5,29 @@ const { test, expect, openSignedIn, screenSettled } = require('../support/v2');
 
 test.use({ viewport: { width: 390, height: 844 } });
 
+/**
+ * Records every screen rise-in (ui/motion.ts playEnter, a Web Animation on
+ * .shell__main) with the properties it moves. Counting started animations instead of
+ * sampling running ones keeps the check right on a slow machine, where a 250 ms
+ * animation can be over before the test looks.
+ */
+function recordScreenEntries(page) {
+  return page.addInitScript(() => {
+    window.__entries = [];
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (keyframes, options) {
+      if (this.classList.contains('shell__main')) {
+        const frames = Array.isArray(keyframes) ? keyframes : [keyframes];
+        const props = frames.flatMap((k) => Object.keys(k).filter((p) => !['offset', 'easing', 'composite'].includes(p)));
+        window.__entries.push([...new Set(props)].sort());
+      }
+      return animate.call(this, keyframes, options);
+    };
+  });
+}
+
+const entries = (page) => page.evaluate(() => window.__entries);
+
 /** Animations running on the element (CSS and Web Animations alike), by the properties they change. */
 function animatedProperties(locator) {
   return locator.evaluate((el) =>
@@ -15,11 +38,11 @@ function animatedProperties(locator) {
 }
 
 test('a new screen rises in, moving only transform and opacity', async ({ page, account }) => {
+  await recordScreenEntries(page);
   await openSignedIn(page, account, '#/today');
+  const before = (await entries(page)).length;
   await page.locator('.tabbar').getByRole('link', { name: 'Pieniądze' }).click();
-  const props = await animatedProperties(page.locator('.shell__main'));
-  expect(props.length).toBeGreaterThan(0);
-  expect([...new Set(props)].sort()).toEqual(['opacity', 'transform']);
+  await expect.poll(async () => (await entries(page)).slice(before)).toEqual([['opacity', 'transform']]);
 });
 
 test('the segmented control slides one thumb to the choice', async ({ page, account }) => {
@@ -59,12 +82,14 @@ test.describe('with reduced motion', () => {
 });
 
 test('switching views of one module slides the switch and brings in only the content below', async ({ page, account }) => {
+  await recordScreenEntries(page);
   await openSignedIn(page, account, '#/stats');
   const views = page.getByRole('navigation', { name: 'Widok statystyk' });
   const thumb = views.locator('.ui-view-switch__thumb');
   await screenSettled(page);
   const before = await thumb.boundingBox();
 
+  const entered = (await entries(page)).length;
   await views.getByRole('link', { name: 'Historia' }).click();
   // The screen stays put (no rise-in hiding the switch) ...
   expect(await animatedProperties(page.locator('.shell__main'))).toEqual([]);
@@ -74,7 +99,9 @@ test('switching views of one module slides the switch and brings in only the con
   const panel = page.locator('.ui-view-panel').first();
   expect([...new Set(await animatedProperties(panel))].sort()).toEqual(['opacity', 'transform']);
 
+  expect((await entries(page)).length).toBe(entered);
+
   // Another module is a new screen: that one still rises in.
   await page.locator('.tabbar').getByRole('link', { name: 'Pieniądze' }).click();
-  expect((await animatedProperties(page.locator('.shell__main'))).length).toBeGreaterThan(0);
+  await expect.poll(async () => (await entries(page)).length).toBe(entered + 1);
 });

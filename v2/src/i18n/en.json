@@ -1085,6 +1085,30 @@
     "replyPh": "Write a reply",
     "sendReply": "Send",
     "unread": "New message",
-    "you": "You"
+    "you": "You",
+    "views": "Reports and updates",
+    "viewReports": "Reports",
+    "viewBroadcasts": "Messages",
+    "viewUpdates": "Updates",
+    "updatesIntro": "What we added and fixed in each version of LifeXP.",
+    "version": "Version {{v}}"
+  },
+  "broadcasts": {
+    "close": "Close",
+    "newTitle": "Message to everyone",
+    "hint": "Everyone sees it once as a band at the top of the screen, on their next visit or at once if the app is open.",
+    "text": "Text",
+    "seconds": "Time on screen",
+    "secondsUnit": "s",
+    "secondsHint": "From {{min}} to {{max}} seconds.",
+    "send": "Send to everyone",
+    "needText": "Enter a message.",
+    "sent": "Message sent.",
+    "sentList": "Sent",
+    "none": "No messages sent.",
+    "forSeconds": "{{s}} s",
+    "deleteNamed": "Delete: {{text}}",
+    "confirmDelete": "Delete this message?",
+    "deleted": "Message deleted."
   }
 }

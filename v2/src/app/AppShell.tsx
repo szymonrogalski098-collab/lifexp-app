@@ -127,7 +127,8 @@ export function AppShell({ title, activeId, path, account, modules, onSignOut, c
     return () => removeEventListener('popstate', onPopState);
   }, []);
 
-  useEffect(() => {
+  // Layout effect: listening from the frame the drawer first shows, so no key is lost.
+  useLayoutEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeDrawer();
@@ -148,7 +149,9 @@ export function AppShell({ title, activeId, path, account, modules, onSignOut, c
     wasOpen.current = open;
   }, [open]);
 
-  useEffect(() => {
+  // Layout effect: the new screen starts rising before its first frame is painted,
+  // so it never shows for a frame in its final place and then jumps.
+  useLayoutEffect(() => {
     if (contentRef.current) contentRef.current.scrollTop = 0;
     scrollTo(0, 0);
     // Every screen change, including the first one after start, rises into place.

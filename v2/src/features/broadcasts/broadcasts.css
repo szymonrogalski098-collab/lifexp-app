@@ -1,0 +1,52 @@
+/* The admin's message: a band over the top bar that slides in and out (transform only). */
+
+.broadcast {
+  position: fixed;
+  z-index: var(--z-toast);
+  inset: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-4) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-1);
+  animation: broadcast-in var(--duration-enter) var(--ease-out);
+}
+
+.broadcast[data-state='leaving'] {
+  animation: broadcast-out var(--duration-exit) var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+.broadcast__text {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.broadcast__close {
+  flex-shrink: 0;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@keyframes broadcast-in {
+  from {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes broadcast-out {
+  to {
+    transform: translateY(-100%);
+  }
+}
