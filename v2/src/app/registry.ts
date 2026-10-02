@@ -127,7 +127,15 @@ export const FEATURES: readonly FeatureDef[] = [
   },
   { id: 'games', labelKey: 'nav.games', icon: Gamepad2, paths: ['/games'], nav: { group: 'main', order: 80 }, stage: '7' },
   { id: 'reports', labelKey: 'nav.reports', icon: Megaphone, paths: ['/reports'], nav: { group: 'secondary', order: 10 }, stage: '4' },
-  { id: 'settings', labelKey: 'nav.settings', icon: Settings, paths: ['/settings/:section?'], nav: { group: 'secondary', order: 20 }, stage: '4' },
+  {
+    id: 'settings',
+    labelKey: 'nav.settings',
+    icon: Settings,
+    paths: ['/settings/:section?'],
+    nav: { group: 'secondary', order: 20 },
+    stage: '4',
+    view: () => import('@/features/settings/SettingsModule'),
+  },
   { id: 'exus', labelKey: 'nav.exus', icon: Sparkles, paths: ['/exus'], nav: null, stage: '5' },
   // Not in the menu: a preview of the ui/ components in every theme.
   {

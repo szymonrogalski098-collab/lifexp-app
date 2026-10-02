@@ -102,10 +102,18 @@ function todayUtcKey() {
  * Log in through the real login form and wait until the dashboard has booted.
  * The "What's new" modal is marked as seen so it does not cover the UI.
  */
-async function signInToApp(page, { email, password }) {
-  await page.addInitScript((version) => {
+function skipWhatsNew(page) {
+  return page.addInitScript((version) => {
     try { localStorage.setItem('lifexp-seen-version', version); } catch (e) { /* ignore */ }
   }, APP_VERSION);
+}
+
+async function waitForApp(page) {
+  await page.waitForFunction(() => document.getElementById('boot-overlay')?.hidden === true, null, { timeout: 20000 });
+}
+
+async function signInToApp(page, { email, password }) {
+  await skipWhatsNew(page);
   await page.goto('/index.html?emulator=1');
   await page.fill('#login-email', email);
   await page.fill('#login-password', password);
@@ -113,7 +121,14 @@ async function signInToApp(page, { email, password }) {
     page.waitForURL('**/app.html'),
     page.click('#form-login button'),
   ]);
-  await page.waitForFunction(() => document.getElementById('boot-overlay')?.hidden === true, null, { timeout: 20000 });
+  await waitForApp(page);
 }
 
-module.exports = { PROJECT_ID, auth, db, serveCdnFromNpm, createUser, readyProfile, todayUtcKey, signInToApp };
+/** v1's app for the session this page already has (v1 and v2 share the sign-in). */
+async function openApp(page) {
+  await skipWhatsNew(page);
+  await page.goto('/app.html?emulator=1');
+  await waitForApp(page);
+}
+
+module.exports = { PROJECT_ID, auth, db, serveCdnFromNpm, createUser, readyProfile, todayUtcKey, signInToApp, openApp };
