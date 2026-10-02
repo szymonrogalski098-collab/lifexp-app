@@ -880,5 +880,61 @@
     "confirmBody": "Tej operacji nie da się cofnąć.",
     "deleted": "Usunięto notatkę",
     "errorMessage": "Nie udało się zapisać. Sprawdź połączenie i spróbuj ponownie."
+  },
+  "settings": {
+    "app": "Aplikacja",
+    "inModules": "W modułach",
+    "appearance": "Wygląd",
+    "account": "Konto",
+    "points": "Punkty i nagrody",
+    "pointsMeta": "Limit {{limit}} pkt dziennie, kursy punktów",
+    "choresMeta": "Lista obowiązków i ich punkty",
+    "moneyMeta": "Miesięczny limit i kategorie",
+    "notFound": "Nie ma takiej sekcji ustawień.",
+    "theme": "Motyw",
+    "family": "Styl",
+    "mode": "Tryb",
+    "families": {
+      "lifexp": "LifeXP",
+      "ios": "iOS",
+      "gold": "Gold"
+    },
+    "modes": {
+      "dark": "Ciemny",
+      "light": "Jasny",
+      "system": "Jak system"
+    },
+    "onlyDark": "Gold ma tylko tryb ciemny.",
+    "themeDevice": "Motyw zapisuje się na tym urządzeniu.",
+    "language": "Język",
+    "languages": {
+      "pl": "Polski",
+      "en": "English"
+    },
+    "languageEverywhere": "Język zapisuje się na koncie, więc obowiązuje też na innych urządzeniach i w obecnej wersji.",
+    "profile": "Profil",
+    "name": "Imię",
+    "nameHint": "Tak LifeXP się do Ciebie zwraca.",
+    "nameTooLong": "Imię może mieć najwyżej {{max}} znaków.",
+    "save": "Zapisz",
+    "saved": "Zapisano.",
+    "saveFailed": "Nie udało się zapisać. Sprawdź połączenie i spróbuj ponownie.",
+    "dailyLimit": "Dzienny limit punktów",
+    "dailyLimitLabel": "Limit na dzień",
+    "dailyLimitHint": "Od {{min}} do {{max}} punktów. Powyżej limitu aktywności nie dają już punktów.",
+    "dailyLimitRange": "Wpisz liczbę od {{min}} do {{max}}.",
+    "saveLimit": "Zapisz limit",
+    "limitSaved": "Dzienny limit: {{limit}} pkt.",
+    "rateGeneral": "Kurs punktów",
+    "rateGeneralHint": "Ile są warte punkty: wartość punktów na „Dziś” i koszt wydatków w punktach.",
+    "rateChores": "Kurs obowiązków",
+    "rateChoresHint": "Ile płacą obowiązki przy wypłacie.",
+    "rateZloty": "Złotych",
+    "ratePoints": "Za punktów",
+    "ratePerPoint": "1 pkt = {{amount}}",
+    "rateNeedZloty": "Wpisz kwotę większą od zera.",
+    "rateNeedPoints": "Wpisz co najmniej 1 punkt.",
+    "rateTooLarge": "Najwyżej 100 000 zł i 100 000 punktów.",
+    "saveRate": "Zapisz kurs"
   }
 }

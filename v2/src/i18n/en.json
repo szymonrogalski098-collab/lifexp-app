@@ -880,5 +880,61 @@
     "confirmBody": "This cannot be undone.",
     "deleted": "Note deleted",
     "errorMessage": "Could not save. Check your connection and try again."
+  },
+  "settings": {
+    "app": "App",
+    "inModules": "In modules",
+    "appearance": "Appearance",
+    "account": "Account",
+    "points": "Points and rewards",
+    "pointsMeta": "Limit {{limit}} pts a day, point rates",
+    "choresMeta": "Chore list and their points",
+    "moneyMeta": "Monthly limit and categories",
+    "notFound": "There is no such settings section.",
+    "theme": "Theme",
+    "family": "Style",
+    "mode": "Mode",
+    "families": {
+      "lifexp": "LifeXP",
+      "ios": "iOS",
+      "gold": "Gold"
+    },
+    "modes": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "onlyDark": "Gold comes in dark only.",
+    "themeDevice": "The theme is saved on this device.",
+    "language": "Language",
+    "languages": {
+      "pl": "Polski",
+      "en": "English"
+    },
+    "languageEverywhere": "The language is saved to your account, so it also applies on other devices and in the current version.",
+    "profile": "Profile",
+    "name": "Name",
+    "nameHint": "What LifeXP calls you.",
+    "nameTooLong": "The name can be at most {{max}} characters.",
+    "save": "Save",
+    "saved": "Saved.",
+    "saveFailed": "Could not save. Check your connection and try again.",
+    "dailyLimit": "Daily points limit",
+    "dailyLimitLabel": "Limit per day",
+    "dailyLimitHint": "From {{min}} to {{max}} points. Past the limit, activities earn no more points.",
+    "dailyLimitRange": "Enter a number from {{min}} to {{max}}.",
+    "saveLimit": "Save limit",
+    "limitSaved": "Daily limit: {{limit}} pts.",
+    "rateGeneral": "Point rate",
+    "rateGeneralHint": "What points are worth: their value on Today and what expenses cost in points.",
+    "rateChores": "Chore rate",
+    "rateChoresHint": "What chores pay out.",
+    "rateZloty": "Złoty",
+    "ratePoints": "For points",
+    "ratePerPoint": "1 pt = {{amount}}",
+    "rateNeedZloty": "Enter an amount above zero.",
+    "rateNeedPoints": "Enter at least 1 point.",
+    "rateTooLarge": "At most 100,000 zł and 100,000 points.",
+    "saveRate": "Save rate"
   }
 }

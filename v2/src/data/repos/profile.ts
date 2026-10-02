@@ -1,8 +1,9 @@
-// Live users/{uid}: one listener for the whole session (PLAN.md 4.5), and the two
+// Live users/{uid}: one listener for the whole session (PLAN.md 4.5), the two
 // writes the streak and the badges need (stage 3e), each a transaction on the
-// server's profile so two tabs record a freeze or a badge once.
-import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
-import type { Profile } from '@/domain/profile';
+// server's profile so two tabs record a freeze or a badge once, and the plain
+// settings fields (stage 4), written as v1 settings.js writes them.
+import { doc, onSnapshot, runTransaction, updateDoc } from 'firebase/firestore';
+import type { Language, Profile } from '@/domain/profile';
 import { isFreezeAvailable } from '@/domain/streak';
 import { profileFromData } from '../converters/profile';
 import { db } from '../firebase';
@@ -44,4 +45,20 @@ export function addAchievements(uid: string, ids: readonly string[]): Promise<st
     if (added.length > 0) tx.update(ref, { achievements: [...held, ...added] });
     return added;
   });
+}
+
+/** users/{uid} fields Settings changes, under v1's names and types. */
+export interface SettingsFields {
+  name?: string;
+  dailyLimit?: number;
+  lang?: Language;
+  pointsRateGeneralZl?: number;
+  pointsRateGeneralPts?: number;
+  pointsRateChoresZl?: number;
+  pointsRateChoresPts?: number;
+}
+
+/** One update of the given fields; others stay as they are. Queued offline like any write. */
+export function updateSettings(uid: string, fields: SettingsFields): Promise<void> {
+  return updateDoc(doc(db, 'users', uid), { ...fields });
 }

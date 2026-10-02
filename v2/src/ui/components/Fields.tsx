@@ -155,13 +155,15 @@ interface MoneyFieldProps {
   hint?: ComponentChildren;
   error?: string | null;
   disabled?: boolean;
+  /** 'lg' (default): the amount is the point of the form; 'md': one field among others, e.g. a rate. */
+  size?: 'lg' | 'md';
 }
 
 /**
  * Amount input (U13): decimal keypad with a comma, no number spinners, the amount
  * shown large. Keeps the typed text while editing and normalises it on blur.
  */
-export function MoneyField({ label, value, onChange, hint, error, disabled }: MoneyFieldProps) {
+export function MoneyField({ label, value, onChange, hint, error, disabled, size = 'lg' }: MoneyFieldProps) {
   const id = useId();
   const [text, setText] = useState(value === null ? '' : formatMoneyInput(value));
   const [touched, setTouched] = useState(false);
@@ -179,7 +181,7 @@ export function MoneyField({ label, value, onChange, hint, error, disabled }: Mo
       <div class="ui-field__control ui-field__control--money">
         <input
           id={id}
-          class="ui-field__input ui-field__input--money numeric"
+          class={`ui-field__input numeric${size === 'lg' ? ' ui-field__input--money' : ''}`}
           inputMode="decimal"
           autoComplete="off"
           placeholder="0,00"

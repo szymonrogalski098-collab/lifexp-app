@@ -88,9 +88,11 @@ ui (design system) i i18n nie znają domeny ani danych
 
 ## Praca
 
-- Przerwy na zgłoszenia (decyzja właściciela 2026-10-01): po zakończeniu etapu (ostatni PR scalony, deploy zielony)
-  i po poprawkach zgłoszonych przez właściciela zatrzymaj się. Podaj krótką listę, co sprawdzić na telefonie, i czekaj
-  na błędy albo „kontynuuj”. Kroki wewnątrz etapu (np. 3c-1 → 3c-2) idą bez przerwy.
+- Scalanie i testy (decyzja właściciela 2026-10-02, zastępuje przerwy na zgłoszenia z 2026-10-01): AI samo scala swoje
+  PR-y, gdy CI jest zielone i nie ma konfliktu, i samo testuje każdy etap: e2e na emulatorach, telefon w Playwright
+  (np. Pixel 7), zrzuty ekranu w motywach, po deployu strona produkcyjna bez logowania. Etapy idą jeden po drugim bez
+  czekania. Zatrzymaj się i czekaj na właściciela tylko wtedy, gdy czegoś nie da się sprawdzić samemu (prawdziwe konto
+  i dane produkcyjne, prawdziwy telefon, wysyłka e-maili, powiadomienia push): powiedz wtedy dokładnie, co sprawdzić.
 - Przed PR: `npm run check --prefix v2` (i `npm test`, gdy ruszasz v1).
 - Małe PR-y: jeden element etapu, moduł albo serwis na PR. Opis PR i komentarze w kodzie po polsku albo
   angielsku, tak jak w otaczającym kodzie.
