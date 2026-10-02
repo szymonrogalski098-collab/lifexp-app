@@ -1,6 +1,9 @@
-// Live users/{uid}: one listener for the whole session (PLAN.md 4.5).
-import { doc, onSnapshot } from 'firebase/firestore';
+// Live users/{uid}: one listener for the whole session (PLAN.md 4.5), and the two
+// writes the streak and the badges need (stage 3e), each a transaction on the
+// server's profile so two tabs record a freeze or a badge once.
+import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import type { Profile } from '@/domain/profile';
+import { isFreezeAvailable } from '@/domain/streak';
 import { profileFromData } from '../converters/profile';
 import { db } from '../firebase';
 
@@ -15,4 +18,30 @@ export function watchProfile(
     (snap) => onChange(snap.exists() ? profileFromData(snap.data()) : null),
     onError,
   );
+}
+
+/**
+ * G3: the freeze bridges a gap today (UTC day `day`). Recorded only while the
+ * server's profile still has it available; resolves to whether it wrote.
+ */
+export function recordStreakFreeze(uid: string, day: string, now: Date): Promise<boolean> {
+  const ref = doc(db, 'users', uid);
+  return runTransaction(db, async (tx) => {
+    const lastUsed: unknown = (await tx.get(ref)).data()?.streakFreezeLastUsed;
+    if (!isFreezeAvailable(typeof lastUsed === 'string' ? lastUsed : null, now)) return false;
+    tx.update(ref, { streakFreezeLastUsed: day });
+    return true;
+  });
+}
+
+/** G4: the badges added after the ones the server has, in the order given; resolves to the ids added. */
+export function addAchievements(uid: string, ids: readonly string[]): Promise<string[]> {
+  const ref = doc(db, 'users', uid);
+  return runTransaction(db, async (tx) => {
+    const raw: unknown = (await tx.get(ref)).data()?.achievements;
+    const held = Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string') : [];
+    const added = ids.filter((id) => !held.includes(id));
+    if (added.length > 0) tx.update(ref, { achievements: [...held, ...added] });
+    return added;
+  });
 }

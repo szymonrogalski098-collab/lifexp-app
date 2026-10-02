@@ -41,6 +41,9 @@ export function profileFromData(data: DocumentData): Profile {
     goals: goalsFromData(data.goals),
     moneyIncomeAllTime: typeof data.moneyIncomeAllTime === 'number' ? groszeFromZloty(data.moneyIncomeAllTime) : null,
     choresCard: choresCardFromData(data.choresCard),
+    achievements: Array.isArray(data.achievements)
+      ? data.achievements.filter((id: unknown): id is string => typeof id === 'string')
+      : [],
   };
 }
 

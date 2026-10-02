@@ -91,7 +91,8 @@
     "cardNoneChosen": "Zaznacz co najmniej jeden obowiązek.",
     "cardSave": "Zapisz",
     "cardSaved": "Zapisano listę na „Dziś”.",
-    "cardManage": "Dodaj lub usuń obowiązki"
+    "cardManage": "Dodaj lub usuń obowiązki",
+    "newBadge": "Nowa odznaka: {{list}}!"
   },
   "stats": {
     "views": "Widok statystyk",
@@ -123,7 +124,69 @@
     "showMore": "Pokaż więcej",
     "noHistory": "Brak aktywności. Zacznij zarabiać punkty!",
     "historyFailed": "Nie udało się wczytać historii. Sprawdź połączenie.",
-    "loadFailed": "Nie udało się wczytać części danych. Sprawdź połączenie."
+    "loadFailed": "Nie udało się wczytać części danych. Sprawdź połączenie.",
+    "badges": "Osiągnięcia",
+    "badgesCount": "{{count}} z {{total}}",
+    "badgeEarned": "zdobyte",
+    "badgeLocked": "jeszcze nie"
+  },
+  "achievements": {
+    "first_activity": {
+      "name": "Pierwsza iskra",
+      "desc": "Zaloguj pierwszą aktywność"
+    },
+    "pts_1000": {
+      "name": "Tysiąc punktów",
+      "desc": "Zarobić 1 000 pkt łącznie"
+    },
+    "pts_5000": {
+      "name": "Pięć tysięcy",
+      "desc": "Zarobić 5 000 pkt łącznie"
+    },
+    "first_purchase": {
+      "name": "Pierwszy zakup",
+      "desc": "Wydaj punkty po raz pierwszy"
+    },
+    "streak_7": {
+      "name": "Tygodniowy wojownik",
+      "desc": "7 dni z rzędu"
+    },
+    "streak_30": {
+      "name": "Miesięczna legenda",
+      "desc": "30 dni z rzędu"
+    },
+    "gaming_hour": {
+      "name": "Maraton gracza",
+      "desc": "60 min grania w jeden dzień"
+    },
+    "daily_limit": {
+      "name": "Limit dobity!",
+      "desc": "Dobij dzienny limit punktów"
+    },
+    "money_100": {
+      "name": "Pierwsza setka",
+      "desc": "Zdobądź łącznie 100 zł w Pieniądzach"
+    },
+    "money_500": {
+      "name": "Pięć stówek",
+      "desc": "Zdobądź łącznie 500 zł w Pieniądzach"
+    },
+    "money_1000": {
+      "name": "Tysiąc na koncie",
+      "desc": "Zdobądź łącznie 1 000 zł w Pieniądzach"
+    },
+    "money_2500": {
+      "name": "Poważny ciułacz",
+      "desc": "Zdobądź łącznie 2 500 zł w Pieniądzach"
+    },
+    "money_5000": {
+      "name": "Pięć tysięcy zł",
+      "desc": "Zdobądź łącznie 5 000 zł w Pieniądzach"
+    },
+    "money_10000": {
+      "name": "Mistrz pieniędzy",
+      "desc": "Zdobądź łącznie 10 000 zł w Pieniądzach"
+    }
   },
   "units": {
     "minutes": "{{m}} min",

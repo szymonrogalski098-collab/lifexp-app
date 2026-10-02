@@ -3,6 +3,7 @@
 // of its dashboard (docs/v2/GOLDEN.md G14). Nothing here writes.
 import { Lightbulb } from 'lucide-preact';
 import { useEffect } from 'preact/hooks';
+import { ACHIEVEMENTS } from '@/domain/achievements';
 import type { Profile } from '@/domain/profile';
 import { generalRate } from '@/domain/points';
 import {
@@ -148,6 +149,40 @@ function Facts({ facts, names }: { facts: readonly StatsFact[]; names: ReadonlyM
   );
 }
 
+/** G4: every badge, earned ones in full colour; each name with its condition. */
+function Badges({ held }: { held: readonly string[] }) {
+  const earned = ACHIEVEMENTS.filter((a) => held.includes(a.id)).length;
+  return (
+    <Section
+      title={t('stats.badges')}
+      action={
+        <span class="stats-note numeric" data-testid="badges-count">
+          {t('stats.badgesCount', { count: earned, total: ACHIEVEMENTS.length })}
+        </span>
+      }
+    >
+      <Card>
+        <ul class="stats-badges" aria-label={t('stats.badges')}>
+          {ACHIEVEMENTS.map((a) => {
+            const done = held.includes(a.id);
+            const key = a.id as 'first_activity';
+            return (
+              <li key={a.id} class={`stats-badge${done ? ' stats-badge--earned' : ''}`}>
+                <span class="stats-badge__emoji" aria-hidden="true">
+                  {a.emoji}
+                </span>
+                <span class="stats-badge__name">{t(`achievements.${key}.name`)}</span>
+                <span class="stats-badge__desc">{t(`achievements.${key}.desc`)}</span>
+                <span class="visually-hidden">{t(done ? 'stats.badgeEarned' : 'stats.badgeLocked')}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+    </Section>
+  );
+}
+
 function Loading() {
   return (
     <Card>
@@ -197,6 +232,8 @@ export function OverviewView({ uid, profile }: { uid: string; profile: Profile }
           names={sources.activityNames}
         />
       )}
+
+      <Badges held={profile.achievements} />
     </>
   );
 }

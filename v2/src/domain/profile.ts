@@ -44,6 +44,8 @@ export interface Profile {
   moneyIncomeAllTime: number | null;
   /** What Today's chore card shows (v2 only; v1 ignores the field). */
   choresCard: ChoresCardSettings;
+  /** Ids of the badges earned (G4), never taken away. */
+  achievements: readonly string[];
 }
 
 /** users.points — v1 keeps all three in step. */

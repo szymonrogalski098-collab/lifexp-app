@@ -63,3 +63,53 @@
   align-items: center;
   gap: var(--space-3);
 }
+
+/* ── Badges (G4): earned in colour, the rest dimmed, each with its condition ── */
+
+.stats-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats-badge {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.stats-badge--earned {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.stats-badge__emoji {
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.stats-badge:not(.stats-badge--earned) .stats-badge__emoji {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.stats-badge__name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.stats-badge:not(.stats-badge--earned) .stats-badge__name {
+  color: var(--color-text-secondary);
+}
+
+.stats-badge__desc {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}

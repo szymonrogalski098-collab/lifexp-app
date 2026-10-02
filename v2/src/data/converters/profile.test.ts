@@ -24,6 +24,7 @@ describe('profile converter', () => {
           { id: 'g3', type: 'money', saved: 0.1 },
         ],
         moneyIncomeAllTime: 18.45,
+        achievements: ['first_activity', 3, 'streak_7'],
       }),
     ).toEqual({
       name: 'Ala',
@@ -46,6 +47,7 @@ describe('profile converter', () => {
       ],
       moneyIncomeAllTime: 1845,
       choresCard: { mode: 'random', ids: [] },
+      achievements: ['first_activity', 'streak_7'],
     });
   });
 
@@ -98,6 +100,7 @@ describe('profile converter', () => {
       goals: [],
       moneyIncomeAllTime: null,
       choresCard: { mode: 'random', ids: [] },
+      achievements: [],
     });
   });
 });

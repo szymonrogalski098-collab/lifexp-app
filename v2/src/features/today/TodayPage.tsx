@@ -16,10 +16,11 @@ import {
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { activeDays, type Activity, type ActivityDraft, type DayLog } from '@/domain/activity';
 import { choresOnCard, type ChoreDef, type ChoresCardSettings } from '@/domain/chores';
+import { newAchievements } from '@/domain/achievements';
 import { goalProgress } from '@/domain/goals';
 import type { Profile } from '@/domain/profile';
-import { dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
-import { calculateStreak, isFreezeAvailable } from '@/domain/streak';
+import { DAILY_LIMIT_DEFAULT, dailyProgress, generalRate, levelOf, levelTitleIndex, pointsToGrosze, XP_PER_LEVEL } from '@/domain/points';
+import { calculateStreak, frozenDay, isFreezeAvailable } from '@/domain/streak';
 import { ActivityRow, formatDuration } from '@/features/shared/activity';
 import { goalAmount, useCelebration } from '@/features/shared/goals';
 import { locale, t } from '@/i18n';
@@ -29,6 +30,7 @@ import { formatInteger } from '@/lib/format';
 import { formatMoney } from '@/lib/money';
 import { ensureActivityDefs, saveActivity } from '@/services/activity';
 import { logChore, saveChoresCard } from '@/services/chores';
+import { awardAchievements, recordFreeze } from '@/services/progress';
 import { account } from '@/stores/session';
 import { today as todaySources, watchToday } from '@/stores/today';
 import { dismissToast, showToast, type ToastInput } from '@/ui/toast';
@@ -86,10 +88,62 @@ function LevelCard({ profile }: { profile: Profile }) {
   );
 }
 
-function StreakCard({ profile, days, todayKey }: { profile: Profile; days: ReadonlyMap<string, DayLog>; todayKey: string }) {
+/** G3 on Today's data: the streak, with a freeze used before still bridging its gap. */
+function streakOf(profile: Profile, days: ReadonlyMap<string, DayLog>, todayKey: string) {
   const active = activeDays(days);
   const freezeAvailable = isFreezeAvailable(profile.streakFreezeLastUsed, new Date());
-  const streak = calculateStreak(active, todayKey, freezeAvailable);
+  const streak = calculateStreak(active, todayKey, freezeAvailable, frozenDay(active, profile.streakFreezeLastUsed));
+  return { active, freezeAvailable, streak };
+}
+
+interface RecordProgressProps {
+  uid: string;
+  profile: Profile;
+  days: ReadonlyMap<string, DayLog>;
+  todayKey: string;
+}
+
+/**
+ * G3, G4: a freeze bridging a gap today and badges earned now are recorded once, by
+ * the services, after the screen showed them (v1 writes them while rendering).
+ * Renders nothing.
+ */
+function RecordProgress({ uid, profile, days, todayKey }: RecordProgressProps) {
+  const { streak } = streakOf(profile, days, todayKey);
+  useEffect(() => {
+    if (streak.newFreeze) recordFreeze(uid, todayKey).catch(() => {});
+  }, [uid, streak.newFreeze, todayKey]);
+
+  const todayLog = days.get(todayKey);
+  const input = {
+    earnedAllTime: profile.points.earnedAllTime,
+    spentAllTime: profile.points.spentAllTime,
+    streak: streak.days,
+    pointsToday: todayLog?.pointsEarned ?? 0,
+    gamingMinutesToday: todayLog?.gamingMinutes ?? 0,
+    dailyLimit: profile.dailyLimit || DAILY_LIMIT_DEFAULT,
+    moneyIncomeAllTime: profile.moneyIncomeAllTime,
+  };
+  const due = newAchievements(profile.achievements, input)
+    .map((a) => a.id)
+    .join(',');
+  useEffect(() => {
+    if (!due) return;
+    awardAchievements(uid, profile.achievements, input)
+      .then((added) => {
+        if (added.length === 0) return;
+        const list = added
+          .map((a) => `${a.emoji} ${t(`achievements.${a.id}.name` as 'achievements.first_activity.name')}`)
+          .join(', ');
+        showToast({ message: t('today.newBadge', { list }), tone: 'positive' });
+      })
+      .catch(() => {});
+  }, [uid, due]);
+  return null;
+}
+
+function StreakCard({ profile, days, todayKey }: { profile: Profile; days: ReadonlyMap<string, DayLog>; todayKey: string }) {
+  const { active, freezeAvailable, streak } = streakOf(profile, days, todayKey);
   const lang = locale();
   return (
     <Card>
@@ -408,6 +462,7 @@ export default function TodayPage({ path, navigate }: RouteProps) {
 
         {sources.days ? (
           <>
+            <RecordProgress uid={uid} profile={profile} days={sources.days} todayKey={todayKey} />
             <StreakCard profile={profile} days={sources.days} todayKey={todayKey} />
             <TodayCard profile={profile} day={sources.days.get(todayKey)} onLog={openSheet} />
           </>

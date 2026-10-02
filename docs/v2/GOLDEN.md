@@ -105,6 +105,10 @@ odbierane.
 | `daily_limit` | pointsEarned dziś ≥ dailyLimit |
 | `money_100` … `money_10000` | moneyIncomeAllTime ≥ 100 / 500 / 1000 / 2500 / 5000 / 10000 |
 
+v2 (etap 3e-2): te same warunki (`domain/achievements.ts`), sprawdzane na „Dziś”; nowe odznaki zapisuje
+serwis transakcją na liście z serwera (dopisuje, nigdy nie odbiera, bez duplikatów z dwóch kart) i ogłasza
+toastem; siatka 14 odznak w Statystykach. e2e `tests/v2/progress.spec.js`: v1 i v2 dopisują te same id.
+
 ## G5. Money: transakcje
 
 `money.js:257-351`. Kurs ogólny `r = pointsRateGeneralZl / pointsRateGeneralPts` (domyślnie 1/10).
