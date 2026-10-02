@@ -59,3 +59,25 @@ export function watchMyReportsState(uid: string): () => void {
     stop?.();
   };
 }
+
+/** Every report, for the admin; undefined = still loading. */
+export const allReports = signal<MyReportsState>(EMPTY);
+
+export function watchAllReportsState(): () => void {
+  allReports.value = EMPTY;
+  let stopped = false;
+  let stop: (() => void) | null = null;
+  const fail = () => {
+    if (!stopped) allReports.value = { ...allReports.value, failed: true };
+  };
+  void import('@/data/repos/reports')
+    .then((repo) => {
+      if (stopped) return;
+      stop = repo.watchAllReports((reports) => !stopped && (allReports.value = { reports, failed: false }), fail);
+    })
+    .catch(fail);
+  return () => {
+    stopped = true;
+    stop?.();
+  };
+}

@@ -1091,7 +1091,38 @@
     "viewBroadcasts": "Wiadomości",
     "viewUpdates": "Aktualizacje",
     "updatesIntro": "Co dodaliśmy i naprawiliśmy w kolejnych wersjach LifeXP.",
-    "version": "Wersja {{v}}"
+    "version": "Wersja {{v}}",
+    "adminTabs": "Zgłoszenia według stanu",
+    "tabs": {
+      "new": "Nowe",
+      "spam": "Spam",
+      "postponed": "Odłożone",
+      "history": "Historia"
+    },
+    "noneInTab": "Nic tu nie ma.",
+    "spamExpires": "Zniknie samo za {{h}} h, jeśli nic nie zrobisz.",
+    "actions": {
+      "accept": "Przyjmij",
+      "reject": "Odrzuć",
+      "postpone": "Odłóż",
+      "rescue": "To nie spam",
+      "delete": "Usuń"
+    },
+    "didAccept": "Przyjęto. Zgłaszający dostał dodatkowe zgłoszenie.",
+    "didReject": "Odrzucono.",
+    "didPostpone": "Odłożono.",
+    "didRescue": "To nie spam: przeniesiono do nowych.",
+    "didDelete": "Usunięto zgłoszenie.",
+    "confirmDelete": "Usunąć to zgłoszenie na stałe?",
+    "keywordsTitle": "Filtr spamu",
+    "keywordsInfo": "Zgłoszenie trafia do spamu, jeśli opis nie zawiera żadnego z tych słów.",
+    "keywordNew": "Nowe słowo",
+    "keywordAdd": "Dodaj słowo",
+    "keywordAdded": "Słowo dodane.",
+    "keywordDeleted": "Usunięto słowo: {{word}}.",
+    "keywordRemoveNamed": "Usuń słowo: {{word}}",
+    "keywordExists": "To słowo już jest na liście.",
+    "keywordEmpty": "Wpisz słowo."
   },
   "broadcasts": {
     "close": "Zamknij",
