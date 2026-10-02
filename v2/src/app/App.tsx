@@ -14,6 +14,7 @@ import { currentPath, navigate } from './router';
 import { signOut } from './sign-out';
 
 const loadLoginPage = () => import('@/features/auth/LoginPage');
+const loadSetupPage = () => import('@/features/auth/SetupPage');
 
 function gateTitle(gate: Gate): string {
   switch (gate.kind) {
@@ -23,6 +24,8 @@ function gateTitle(gate: Gate): string {
     case 'finishSetup':
     case 'failed':
       return t(`auth.${gate.kind}.title`);
+    case 'setup':
+      return t('setup.title');
     default:
       return '';
   }
@@ -38,6 +41,14 @@ function GateScreen({ gate }: { gate: Exclude<Gate, { kind: 'ready' }> }) {
       return <GatePage kind="verify" email={gate.email} onSignOut={signOut} />;
     case 'finishSetup':
       return <GatePage kind="finishSetup" onSignOut={signOut} />;
+    case 'setup':
+      return (
+        <LazyView
+          load={loadSetupPage}
+          props={{ step: gate.step, uid: gate.user.uid, onSignOut: signOut }}
+          fallback={<BootScreen />}
+        />
+      );
     case 'failed':
       return <GatePage kind="failed" onSignOut={gate.signedIn ? signOut : undefined} />;
   }

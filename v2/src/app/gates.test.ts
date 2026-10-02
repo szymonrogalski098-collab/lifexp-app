@@ -9,6 +9,8 @@ const ready: Profile = {
   email: 'ala@example.com',
   emailVerified: true,
   accountModeChosen: true,
+  accountMode: 'solo',
+  parentEmail: '',
   modulesChosen: true,
   enabledModules: ['chores'],
   disabledModules: null,
@@ -62,8 +64,10 @@ describe('boot gates', () => {
     expect(signedIn({ ...ready, emailVerified: false, accountModeChosen: false }).kind).toBe('verify');
   });
 
-  test('account mode or module survey missing: finish setup in v1', () => {
-    expect(signedIn({ ...ready, accountModeChosen: false })).toEqual({ kind: 'finishSetup' });
-    expect(signedIn({ ...ready, modulesChosen: false })).toEqual({ kind: 'finishSetup' });
+  test('account mode, then the module survey, asked in v2 (stage 4b)', () => {
+    const noMode = { ...ready, accountModeChosen: false, modulesChosen: false };
+    expect(signedIn(noMode)).toEqual({ kind: 'setup', step: 'accountMode', user, profile: noMode });
+    const noModules = { ...ready, modulesChosen: false };
+    expect(signedIn(noModules)).toEqual({ kind: 'setup', step: 'modules', user, profile: noModules });
   });
 });

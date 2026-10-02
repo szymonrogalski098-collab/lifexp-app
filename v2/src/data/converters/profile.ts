@@ -22,6 +22,8 @@ export function profileFromData(data: DocumentData): Profile {
     emailVerified: data.emailVerified === true,
     // v1 gates on `=== undefined` (core.js), so any stored value counts as chosen.
     accountModeChosen: data.accountMode !== undefined,
+    accountMode: data.accountMode === 'solo' || data.accountMode === 'supervised' ? data.accountMode : null,
+    parentEmail: typeof data.parentEmail === 'string' ? data.parentEmail : '',
     modulesChosen: data.enabledModules !== undefined,
     enabledModules: stringsOrNull(data.enabledModules),
     disabledModules: stringsOrNull(data.disabledModules),

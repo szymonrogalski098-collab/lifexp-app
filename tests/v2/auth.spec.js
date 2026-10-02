@@ -137,23 +137,31 @@ test.describe('gates handed over to v1', () => {
     expect((await db.doc(`users/${account.uid}`).get()).get('emailVerified')).toBe(false);
   });
 
+  // Since stage 4b v2 asks v1's first-run questions itself (tests/v2/setup.spec.js).
   const UNFINISHED = [
-    ['account mode never chosen', { without: ['accountMode'] }],
-    ['module survey not done', { without: ['enabledModules', 'onboardingDone'] }],
-    ['no profile document yet (first Google sign-in)', { profile: null }],
+    ['account mode never chosen', { without: ['accountMode'] }, 'Jak chcesz korzystać z LifeXP?'],
+    ['module survey not done', { without: ['enabledModules', 'onboardingDone'] }, 'Z czego chcesz korzystać?'],
   ];
-  for (const [state, options] of UNFINISHED) {
-    test(`unfinished setup goes to v1: ${state}`, async ({ page }) => {
+  for (const [state, options, question] of UNFINISHED) {
+    test(`unfinished setup is asked in v2: ${state}`, async ({ page }) => {
       const account = await createAccount(options);
       await page.goto(appUrl('#/today'));
       await signIn(page, account);
-      await expect(page.getByRole('heading', { name: 'Dokończ konfigurację konta' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Dokończ konfigurację' })).toHaveAttribute('href', '../app.html');
-
+      await expect(page.getByRole('heading', { name: question })).toBeVisible();
       await page.getByRole('button', { name: 'Wyloguj' }).click();
       await expect(loginHeading(page)).toBeVisible();
-      // v1 creates the profile on its next start; v2 never writes one.
-      if (options.profile === null) expect((await db.doc(`users/${account.uid}`).get()).exists).toBe(false);
     });
   }
+
+  test('no profile document yet (first Google sign-in) goes to v1, which creates it', async ({ page }) => {
+    const account = await createAccount({ profile: null });
+    await page.goto(appUrl('#/today'));
+    await signIn(page, account);
+    await expect(page.getByRole('heading', { name: 'Dokończ zakładanie konta' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Dokończ w obecnej wersji' })).toHaveAttribute('href', '../app.html');
+    await page.getByRole('button', { name: 'Wyloguj' }).click();
+    await expect(loginHeading(page)).toBeVisible();
+    // v1 creates the profile on its next start; v2 never writes one.
+    expect((await db.doc(`users/${account.uid}`).get()).exists).toBe(false);
+  });
 });

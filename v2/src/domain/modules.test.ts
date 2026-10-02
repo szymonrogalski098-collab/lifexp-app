@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isModuleOn, toggleModule } from './modules';
+import { isModuleOn, surveyModules, toggleModule } from './modules';
 
 const choice = (enabledModules: string[] | null, disabledModules: string[] | null = null) => ({
   enabledModules,
@@ -53,6 +53,15 @@ describe('toggleModule', () => {
     expect(toggleModule(choice(['chores'], ['money', 'notes', 'stats', 'games', 'aichat']), 'money', true)).toEqual({
       enabledModules: ['chores', 'money'],
       disabledModules: ['notes', 'stats', 'games', 'aichat'],
+    });
+  });
+});
+
+describe('surveyModules', () => {
+  it("writes the survey in v1's order, with what was unticked as off", () => {
+    expect(surveyModules(['notes', 'chores', 'aichat'])).toEqual({
+      enabledModules: ['chores', 'notes', 'aichat'],
+      disabledModules: ['money', 'stats', 'games'],
     });
   });
 });

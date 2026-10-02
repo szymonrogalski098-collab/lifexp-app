@@ -782,9 +782,9 @@
       "action": "Potwierdź e-mail"
     },
     "finishSetup": {
-      "title": "Dokończ konfigurację konta",
-      "body": "Wybierz tryb konta i moduły w obecnej wersji LifeXP. Ta wersja przejmie te ustawienia sama.",
-      "action": "Dokończ konfigurację"
+      "title": "Dokończ zakładanie konta",
+      "body": "Konto nie ma jeszcze profilu. Obecna wersja LifeXP go założy, potem wrócisz tutaj.",
+      "action": "Dokończ w obecnej wersji"
     },
     "failed": {
       "title": "Nie udało się uruchomić LifeXP",
@@ -934,6 +934,12 @@
     },
     "languageEverywhere": "Język zapisuje się na koncie, więc obowiązuje też na innych urządzeniach i w obecnej wersji.",
     "profile": "Profil",
+    "accountMode": "Tryb konta",
+    "accountModeHint": "Zmienisz go w każdej chwili. Przejście na solo zrywa połączenie z rodzicem.",
+    "accountModeSaved": "Tryb konta zaktualizowany.",
+    "goSoloTitle": "Przełączyć na solo?",
+    "goSoloBody": "Rodzic straci dostęp do Twoich danych, a raport tygodniowy przestanie przychodzić. Adres rodzica zostanie usunięty z konta.",
+    "goSolo": "Przełącz na solo",
     "name": "Imię",
     "nameHint": "Tak LifeXP się do Ciebie zwraca.",
     "nameTooLong": "Imię może mieć najwyżej {{max}} znaków.",
@@ -957,5 +963,23 @@
     "rateNeedPoints": "Wpisz co najmniej 1 punkt.",
     "rateTooLarge": "Najwyżej 100 000 zł i 100 000 punktów.",
     "saveRate": "Zapisz kurs"
+  },
+  "setup": {
+    "title": "Pierwsze kroki",
+    "modeTitle": "Jak chcesz korzystać z LifeXP?",
+    "changeLater": "Możesz to zmienić w każdej chwili w Ustawieniach.",
+    "modes": {
+      "solo": "Solo",
+      "supervised": "Nadzorowane"
+    },
+    "modeDescriptions": {
+      "solo": "Prowadzisz konto samodzielnie, bez nadzoru.",
+      "supervised": "Rodzic albo opiekun widzi Twoje postępy i dostaje cotygodniowe raporty."
+    },
+    "continue": "Kontynuuj",
+    "modulesTitle": "Z czego chcesz korzystać?",
+    "modulesIntro": "Wyłącz to, czego nie potrzebujesz. Zmienisz to w każdej chwili w Ustawieniach.",
+    "start": "Zapisz i zacznij",
+    "saveFailed": "Nie udało się zapisać. Sprawdź połączenie i spróbuj ponownie."
   }
 }

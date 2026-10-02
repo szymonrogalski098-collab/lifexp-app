@@ -2,8 +2,8 @@
 // writes the streak and the badges need (stage 3e), each a transaction on the
 // server's profile so two tabs record a freeze or a badge once, and the plain
 // settings fields (stage 4), written as v1 settings.js writes them.
-import { doc, onSnapshot, runTransaction, updateDoc } from 'firebase/firestore';
-import type { Language, Profile } from '@/domain/profile';
+import { deleteField, doc, onSnapshot, runTransaction, updateDoc } from 'firebase/firestore';
+import type { AccountMode, Language, Profile } from '@/domain/profile';
 import { isFreezeAvailable } from '@/domain/streak';
 import { profileFromData } from '../converters/profile';
 import { db } from '../firebase';
@@ -58,9 +58,29 @@ export interface SettingsFields {
   pointsRateChoresPts?: number;
   enabledModules?: string[];
   disabledModules?: string[];
+  /** v1 saveOnboarding() sets it with the survey. */
+  onboardingDone?: boolean;
+  accountMode?: AccountMode;
 }
 
 /** One update of the given fields; others stay as they are. Queued offline like any write. */
 export function updateSettings(uid: string, fields: SettingsFields): Promise<void> {
   return updateDoc(doc(db, 'users', uid), { ...fields });
+}
+
+/**
+ * v1 setAccountMode() going solo with a parent linked: solo means solo, so the
+ * parent's e-mail, its verification and the weekly report go (the rules give the
+ * parent access only through parentEmail). One update, as in v1.
+ */
+export function goSoloUnlinkingParent(uid: string): Promise<void> {
+  return updateDoc(doc(db, 'users', uid), {
+    accountMode: 'solo',
+    autoReport: false,
+    parentEmail: '',
+    parentEmailVerifiedAt: deleteField(),
+    pendingParentEmail: deleteField(),
+    parentEmailCode: deleteField(),
+    parentEmailCodeExpiry: deleteField(),
+  });
 }
