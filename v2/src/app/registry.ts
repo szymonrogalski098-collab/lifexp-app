@@ -175,8 +175,17 @@ export const FEATURES: readonly FeatureDef[] = [
 
 export const DEFAULT_PATH = '/today';
 
+/**
+ * Where the menu and the tab bar take a module: its first path without route
+ * params ("/settings/:section?" → "/settings"). The pattern itself is no address:
+ * opened as one, ":section" read as a section name.
+ */
+export function featurePath(feature: FeatureDef): string {
+  return '/' + feature.paths[0].split('/').filter((part) => part && !part.startsWith(':')).join('/');
+}
+
 export function featureHref(feature: FeatureDef): string {
-  return `#${feature.paths[0]}`;
+  return `#${featurePath(feature)}`;
 }
 
 /** Everything on: what a list shows before the profile says otherwise. */

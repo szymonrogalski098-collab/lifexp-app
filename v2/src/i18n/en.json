@@ -908,7 +908,7 @@
       "chores": "Household and one-time chores for points, paid out to Money.",
       "money": "Income, expenses, categories and loans.",
       "notes": "A notebook.",
-      "stats": "History, stats, badges and logging activities for points.",
+      "stats": "Points, level and streak on Today, logging activities, history, stats and badges.",
       "games": "Offline mini-games, no points.",
       "aichat": "An AI assistant that helps you log and plan."
     },

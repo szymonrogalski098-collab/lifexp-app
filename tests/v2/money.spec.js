@@ -3,7 +3,7 @@
 // points, income counter and documents; v1 lists what v2 saved; two tabs saving at
 // once still add up.
 const { createUser, db, serveCdnFromNpm, signInToApp } = require('../support/emulator');
-const { test, expect, openSignedIn } = require('../support/v2');
+const { test, expect, openSignedIn, screenSettled } = require('../support/v2');
 
 test.use({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
 
@@ -90,6 +90,19 @@ async function addInV2(page, { type = 'Wydatek', amount, category, newCategory, 
   await sheet.getByRole('button', { name: 'Zapisz transakcję' }).click();
   return sheet;
 }
+
+test('the settings forms keep each field and its button apart', async ({ page }) => {
+  const account = await moneyAccount('money-form-gap');
+  await openSignedIn(page, account, '#/money/settings');
+  await screenSettled(page);
+  const gap = async (field, button) => {
+    const f = await page.getByLabel(field, { exact: true }).boundingBox();
+    const b = await page.getByRole('button', { name: button }).boundingBox();
+    return b.y - (f.y + f.height);
+  };
+  expect(await gap('Nowa kategoria', 'Dodaj kategorię')).toBeGreaterThanOrEqual(12);
+  expect(await gap('Limit', 'Zapisz limit')).toBeGreaterThanOrEqual(12);
+});
 
 test('G5.1: an expense of 5,00 zł moves the balance and costs 50 points, as in v1', async ({ page }) => {
   const account = await moneyAccount('money-expense-v2');

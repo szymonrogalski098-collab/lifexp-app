@@ -6,7 +6,7 @@ import type { Ref } from 'preact';
 import type { ModuleChoice } from '@/domain/modules';
 import { t } from '@/i18n';
 import { isPlainClick } from './links';
-import { featureHref, tabItems, type FeatureDef, type ModuleId } from './registry';
+import { featureHref, featurePath, tabItems, type FeatureDef, type ModuleId } from './registry';
 
 interface TabBarProps {
   activeId: ModuleId;
@@ -33,7 +33,7 @@ export function TabBar({ activeId, modules, onSelect, onAdd, onMenu, menuOpen, m
         onClick={(e) => {
           if (!isPlainClick(e)) return;
           e.preventDefault();
-          onSelect(feature.paths[0]);
+          onSelect(featurePath(feature));
         }}
       >
         <Icon class="tabbar__icon" aria-hidden="true" />

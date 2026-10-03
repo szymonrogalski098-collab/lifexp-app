@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import pl from '@/i18n/pl.json';
-import { DEFAULT_PATH, FEATURES, isViewSwitch, navItems, resolveRoute, tabItems } from './registry';
+import { DEFAULT_PATH, FEATURES, featureHref, featurePath, isViewSwitch, navItems, resolveRoute, tabItems } from './registry';
 
 describe('module registry', () => {
   test('every route of PLAN.md 4.7 resolves to its module', () => {
@@ -22,6 +22,16 @@ describe('module registry', () => {
       '/games': 'games',
     };
     for (const [path, id] of Object.entries(expected)) expect(resolveRoute(path)?.feature.id, path).toBe(id);
+  });
+
+  test('the menu and the tab bar lead to an address of the module itself, never to a route pattern', () => {
+    for (const feature of FEATURES) {
+      const path = featurePath(feature);
+      expect(path, feature.id).not.toContain(':');
+      expect(resolveRoute(path)?.feature.id, path).toBe(feature.id);
+      expect(resolveRoute(path)?.params, path).toEqual({});
+    }
+    expect(featureHref(FEATURES.find((f) => f.id === 'settings')!)).toBe('#/settings');
   });
 
   test('unknown paths do not resolve', () => {
