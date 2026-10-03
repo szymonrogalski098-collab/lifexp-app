@@ -103,6 +103,22 @@ test.describe('phone: drawer', () => {
     await expect(page.locator('.shell')).toHaveAttribute('data-drawer', 'closed');
   });
 
+  test('Settings from the menu opens the list of sections, not a section named after the route pattern', async ({
+    page,
+    account,
+  }) => {
+    await openApp(page, account);
+    await menuButton(page).click();
+    await waitForDrawer(page, 'open');
+    const settings = page.getByRole('link', { name: 'Ustawienia' });
+    await expect(settings).toHaveAttribute('href', '#/settings');
+    await settings.click();
+    await waitForDrawer(page, 'closed');
+    await expect(page).toHaveURL(/#\/settings$/);
+    await expect(page.getByRole('link', { name: /^Moduły/ })).toBeVisible();
+    await expect(page.getByText('Nie ma takiej sekcji ustawień.')).toHaveCount(0);
+  });
+
   test('a tap on the revealed card closes the drawer', async ({ page, account }) => {
     await openApp(page, account);
     await menuButton(page).click();

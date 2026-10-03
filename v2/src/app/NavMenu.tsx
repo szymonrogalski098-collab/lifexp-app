@@ -5,7 +5,7 @@ import { LogOut, Sparkles } from 'lucide-preact';
 import { isModuleOn, type ModuleChoice } from '@/domain/modules';
 import { t } from '@/i18n';
 import { isPlainClick } from './links';
-import { featureHref, navItems, type FeatureDef, type ModuleId } from './registry';
+import { featureHref, featurePath, navItems, type FeatureDef, type ModuleId } from './registry';
 
 export interface Account {
   name: string;
@@ -33,7 +33,7 @@ export function NavMenu({ activeId, onSelect, account, modules, onSignOut }: Nav
           onClick={(e) => {
             if (!isPlainClick(e)) return;
             e.preventDefault();
-            onSelect(feature.paths[0]);
+            onSelect(featurePath(feature));
           }}
         >
           <Icon class="nav__icon" aria-hidden="true" />

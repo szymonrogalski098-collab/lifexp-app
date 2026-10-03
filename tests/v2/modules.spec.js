@@ -58,10 +58,22 @@ test('turning Money off takes it out of the tab bar, the menu, "+" and Today; tu
   });
 });
 
-test('with XP stats off, Today has no activity logging and "+" offers none', async ({ page }) => {
+/** Today's XP cards: points, level, streak, the day's limit. */
+function xpCards(page) {
+  return {
+    points: page.getByRole('region', { name: 'Twoje punkty' }),
+    level: page.getByTestId('level'),
+    streak: page.getByTestId('streak'),
+    today: page.getByTestId('today-points'),
+  };
+}
+
+test('with XP stats off, Today shows no points, level, streak or logging, and "+" offers none', async ({ page }) => {
   const account = await createUser({ tag: 'modules-stats', profile: { enabledModules: ['chores', 'money', 'notes'] } });
   await openSignedIn(page, account, '#/today');
-  await expect(page.getByTestId('today-points')).toBeVisible();
+  // Today has its data in (the chores card shows).
+  await expect(page.getByRole('heading', { name: 'Obowiązki dziś' })).toBeVisible();
+  for (const card of Object.values(xpCards(page))) await expect(card).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Zapisz aktywność' })).toHaveCount(0);
   await page.locator('.tabbar').getByRole('button', { name: 'Dodaj' }).click();
   const add = page.getByRole('dialog', { name: 'Dodaj' });
@@ -70,6 +82,13 @@ test('with XP stats off, Today has no activity logging and "+" offers none', asy
   await add.getByRole('button', { name: 'Zamknij' }).click();
   await page.goto(page.url().replace(/#.*$/, '#/stats'));
   await expect(page).toHaveURL(/#\/today$/);
+
+  // Turned back on, the cards are there again.
+  await page.goto(page.url().replace(/#.*$/, '#/settings/modules'));
+  await page.getByRole('switch', { name: 'Statystyki XP' }).check();
+  await expect(page.getByText('Moduł zaktualizowany.')).toBeVisible();
+  await page.goto(page.url().replace(/#.*$/, '#/today'));
+  for (const card of Object.values(xpCards(page))) await expect(card).toBeVisible();
 });
 
 test('B9 / M3: an account that chose the Planner before 24.08 sees Notes', async ({ page }) => {

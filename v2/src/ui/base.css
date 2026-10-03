@@ -64,6 +64,13 @@ a {
   outline-offset: 2px;
 }
 
+/* A column of fields and actions (every form and sheet): one rhythm between them. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 /* Children of flex/grid layouts with text must be allowed to shrink. */
 :where(.stack, .row, .grid) > * {
   min-width: 0;
