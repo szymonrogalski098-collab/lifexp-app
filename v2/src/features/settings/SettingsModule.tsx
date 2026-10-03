@@ -2,7 +2,7 @@
 // own address (#/settings/<section>), so Back returns to the list. The list says
 // what each section is set to now. Settings that belong to one module stay there
 // (chores in Obowiązki, the limit and categories in Pieniądze); the list links to them.
-import { Blocks, ClipboardCheck, Palette, Trophy, UserRound, Wallet, Zap } from 'lucide-preact';
+import { Blocks, ClipboardCheck, Palette, ShieldCheck, Trophy, UserRound, Wallet, Zap } from 'lucide-preact';
 import { OPTIONAL_MODULES, isModuleOn } from '@/domain/modules';
 import type { Profile } from '@/domain/profile';
 import { DAILY_LIMIT_DEFAULT } from '@/domain/points';
@@ -13,10 +13,11 @@ import { account } from '@/stores/session';
 import { themePreference } from '@/stores/theme';
 import { ButtonLink } from '@/ui/components/ButtonLink';
 import { EmptyState, IconTile, List, ListRow } from '@/ui/components/Display';
-import { Card, Page, Section } from '@/ui/components/Layout';
+import { Card, Page, Section, Stack } from '@/ui/components/Layout';
 import { AccountSection } from './AccountSection';
 import { ActivitiesSection } from './ActivitiesSection';
 import { AppearanceSection } from './AppearanceSection';
+import { ConsistencySection } from './ConsistencySection';
 import { ModulesSection } from './ModulesSection';
 import { PointsSection } from './PointsSection';
 import './settings.css';
@@ -27,6 +28,7 @@ const SECTIONS = {
   account: AccountSection,
   points: PointsSection,
   activities: ActivitiesSection,
+  consistency: ConsistencySection,
 } as const;
 
 type SectionId = keyof typeof SECTIONS;
@@ -100,6 +102,16 @@ function Home({ profile }: { profile: Profile }) {
               meta={t('settings.activitiesMeta')}
               href="#/settings/activities"
             />
+            <ListRow
+              leading={
+                <IconTile>
+                  <ShieldCheck />
+                </IconTile>
+              }
+              title={t('settings.consistency')}
+              meta={t('settings.consistencyMeta')}
+              href="#/settings/consistency"
+            />
           </List>
         </Card>
       </Section>
@@ -161,7 +173,9 @@ export default function SettingsModule({ params }: RouteProps) {
     <Page>
       {back}
       <h2 class="settings-title">{t(`settings.${id}`)}</h2>
-      <Body uid={current.user.uid} profile={current.profile} />
+      <Stack>
+        <Body uid={current.user.uid} profile={current.profile} />
+      </Stack>
     </Page>
   );
 }

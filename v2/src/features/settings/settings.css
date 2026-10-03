@@ -6,6 +6,7 @@
 }
 
 .settings-title {
+  margin-bottom: var(--space-3);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.01em;
@@ -172,4 +173,76 @@
 
 .settings-colors__name {
   font-size: var(--font-size-sm);
+}
+
+/* ── Data consistency (PLAN.md 5.5 point 4) ── */
+
+.settings-verdict {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Empty until the first check; out of the flow so it adds no gap, still a live region. */
+.settings-verdict:empty {
+  position: absolute;
+}
+
+.settings-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  animation: ui-fade-in var(--duration-enter) var(--ease-out);
+}
+
+.settings-checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-checks > * + * {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-separator);
+}
+
+.settings-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings-check__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.settings-check__title {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+.settings-check__status {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* "Z historii / Na koncie / Różnica": label left, number right, one per line. */
+.settings-check__values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.settings-check__values > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.settings-check__values dt {
+  color: var(--color-text-secondary);
 }
