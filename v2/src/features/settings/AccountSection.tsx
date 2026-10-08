@@ -6,6 +6,7 @@ import type { AccountMode, Profile } from '@/domain/profile';
 import { NAME_MAX, type NameProblem } from '@/domain/settings';
 import { t } from '@/i18n';
 import { accountModeNeedsConfirm, saveAccountMode, saveName } from '@/services/settings';
+import { ParentSection } from './ParentSection';
 import { useSettingsToast } from './toast';
 import { Button } from '@/ui/components/Button';
 import { ConfirmDialog } from '@/ui/components/ConfirmDialog';
@@ -86,6 +87,7 @@ export function AccountSection({ uid, profile }: { uid: string; profile: Profile
   return (
     <>
       <AccountModeCard uid={uid} profile={profile} />
+      {profile.accountMode === 'supervised' && <ParentSection uid={uid} profile={profile} />}
       <Section title={t('settings.profile')}>
         <Card>
           <form

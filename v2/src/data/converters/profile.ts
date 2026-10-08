@@ -24,6 +24,9 @@ export function profileFromData(data: DocumentData): Profile {
     accountModeChosen: data.accountMode !== undefined,
     accountMode: data.accountMode === 'solo' || data.accountMode === 'supervised' ? data.accountMode : null,
     parentEmail: typeof data.parentEmail === 'string' ? data.parentEmail : '',
+    parentEmailVerifiedAt: nonEmptyString(data.parentEmailVerifiedAt),
+    pendingParentEmail: nonEmptyString(data.pendingParentEmail),
+    autoReport: data.autoReport === true,
     modulesChosen: data.enabledModules !== undefined,
     enabledModules: stringsOrNull(data.enabledModules),
     disabledModules: stringsOrNull(data.disabledModules),
@@ -47,6 +50,10 @@ export function profileFromData(data: DocumentData): Profile {
       : [],
     lastBugReportAt: typeof data.lastBugReportAt === 'string' && data.lastBugReportAt !== '' ? data.lastBugReportAt : null,
   };
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 function stringsOrNull(value: unknown): string[] | null {
