@@ -29,6 +29,12 @@ export interface Profile {
   accountMode: AccountMode | null;
   /** The parent's verified or unverified e-mail (v1 parentEmail); '' = none. */
   parentEmail: string;
+  /** ISO time the parent's address was verified (v1 parentEmailVerifiedAt); null = never. */
+  parentEmailVerifiedAt: string | null;
+  /** An address a code was sent to and waits for (v1 pendingParentEmail). */
+  pendingParentEmail: string | null;
+  /** The weekly report to the parent is on (v1 autoReport). */
+  autoReport: boolean;
   /** v1's first-run module survey (enabledModules) is done. */
   modulesChosen: boolean;
   /** v1 module ids the person turned on (chores, money, notes, games, stats, aichat, …); null = not chosen. */

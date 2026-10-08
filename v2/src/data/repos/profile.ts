@@ -2,7 +2,8 @@
 // writes the streak and the badges need (stage 3e), each a transaction on the
 // server's profile so two tabs record a freeze or a badge once, and the plain
 // settings fields (stage 4), written as v1 settings.js writes them.
-import { deleteField, doc, onSnapshot, runTransaction, updateDoc } from 'firebase/firestore';
+import { deleteField, doc, getDocFromServer, onSnapshot, runTransaction, updateDoc } from 'firebase/firestore';
+import type { StoredCode } from '@/domain/parent-email';
 import type { AccountMode, Language, Profile } from '@/domain/profile';
 import { isFreezeAvailable } from '@/domain/streak';
 import { profileFromData } from '../converters/profile';
@@ -83,4 +84,44 @@ export function goSoloUnlinkingParent(uid: string): Promise<void> {
     parentEmailCode: deleteField(),
     parentEmailCodeExpiry: deleteField(),
   });
+}
+
+// ── The parent's e-mail (v1 settings.js sendParentEmailVerification and after) ──
+
+/** The code and its address wait on the profile, as v1 keeps them (rules: owner only). */
+export function startParentEmailVerification(uid: string, email: string, code: string, expiry: number): Promise<void> {
+  return updateDoc(doc(db, 'users', uid), { pendingParentEmail: email, parentEmailCode: code, parentEmailCodeExpiry: expiry });
+}
+
+/** v1 reads the code from the server, not from what the screen last saw. */
+export async function readParentCode(uid: string): Promise<StoredCode> {
+  const data = (await getDocFromServer(doc(db, 'users', uid))).data() ?? {};
+  return {
+    pendingParentEmail: typeof data.pendingParentEmail === 'string' && data.pendingParentEmail ? data.pendingParentEmail : null,
+    parentEmailCode: typeof data.parentEmailCode === 'string' && data.parentEmailCode ? data.parentEmailCode : null,
+    parentEmailCodeExpiry: typeof data.parentEmailCodeExpiry === 'number' ? data.parentEmailCodeExpiry : null,
+  };
+}
+
+export function confirmParentEmail(uid: string, email: string, now: Date): Promise<void> {
+  return updateDoc(doc(db, 'users', uid), {
+    parentEmail: email,
+    parentEmailVerifiedAt: now.toISOString(),
+    pendingParentEmail: deleteField(),
+    parentEmailCode: deleteField(),
+    parentEmailCodeExpiry: deleteField(),
+  });
+}
+
+export function cancelParentEmailVerification(uid: string): Promise<void> {
+  return updateDoc(doc(db, 'users', uid), {
+    pendingParentEmail: deleteField(),
+    parentEmailCode: deleteField(),
+    parentEmailCodeExpiry: deleteField(),
+  });
+}
+
+/** v1 toggleAutoReport(). */
+export function setAutoReport(uid: string, on: boolean): Promise<void> {
+  return updateDoc(doc(db, 'users', uid), { autoReport: on });
 }
