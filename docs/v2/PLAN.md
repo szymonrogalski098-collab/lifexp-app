@@ -1406,7 +1406,8 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 
 | PR | Zakres | Stan |
 |---|---|---|
-| 5a-1 | Rdzeń parsera komend w domenie (6.3), bez UI: tokenizer (cudzysłowy "…" i „…”, `klucz=wartość`, `--flaga`, jednostka pisana osobno doklejana do liczby: `12 zł`, `1 500 PLN`, `500 pkt`), rozpoznawacze (kwota w groszach z sygnałem jednostki, punkty, kwota celu zł/pkt, czas w minutach `90`/`1h30`/`1,5h`, dzień lokalny `dziś`/`jutro`/dzień tygodnia/`12.10`/`+3d`, wybór z listy bez względu na wielkość liter i polskie znaki), wypełnianie slotów od najbardziej szczegółowego typu, reszta to tekst; brakujące sloty nie są błędem (karta je pokaże); testy tabelaryczne | w toku |
+| 5a-1 | Rdzeń parsera komend w domenie (6.3), bez UI: tokenizer (cudzysłowy "…" i „…”, `klucz=wartość`, `--flaga`, jednostka pisana osobno doklejana do liczby: `12 zł`, `1 500 PLN`, `500 pkt`), rozpoznawacze (kwota w groszach z sygnałem jednostki, punkty, kwota celu zł/pkt, czas w minutach `90`/`1h30`/`1,5h`, dzień lokalny `dziś`/`jutro`/dzień tygodnia/`12.10`/`+3d`, wybór z listy bez względu na wielkość liter i polskie znaki), wypełnianie slotów od najbardziej szczegółowego typu, reszta to tekst; brakujące sloty nie są błędem (karta je pokaże); testy tabelaryczne | scalone (#56) |
+| 5a-2 | Rejestr komend w domenie (6.4: id, polskie aliasy, moduł, ryzyko, sloty; dopasowanie po id albo aliasie bez względu na wielkość liter i polskie znaki; komendy wyłączonych modułów znikają) i pierwszy ekran `#/exus` (z menu „Zapytaj Ex-us”): rozmowa w pamięci, `/pomoc [komenda]`, `/dzis` (punkty, limit, saldo, zadania na dziś i zaległe), `/zadanie <treść> <termin> [S/M/L]` przez ten sam serwis co ekran Zadań (limit 30, termin nie w przeszłości) z „Cofnij”; brakujące pola nazwane ze składnią; zwykły tekst czeka na AI (5b); e2e: menu, pomoc, nieznana komenda, zadanie w dowolnej kolejności i cofnięcie, podsumowanie, Ex-us wyłączony | w toku |
 
 
 

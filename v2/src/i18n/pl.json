@@ -1211,5 +1211,45 @@
     "deleteNamed": "Usuń: {{text}}",
     "confirmDelete": "Usunąć tę wiadomość?",
     "deleted": "Wiadomość usunięta."
+  },
+  "exus": {
+    "log": "Rozmowa z Ex-us",
+    "hello": "Cześć! Tu Ex-us. Wpisz /pomoc, żeby zobaczyć komendy.",
+    "inputLabel": "Wiadomość do Ex-us",
+    "placeholder": "Napisz do Ex-us albo wpisz /",
+    "send": "Wyślij",
+    "aiLater": "Rozmowa z AI dojdzie w następnym kroku. Na razie działają komendy: wpisz /pomoc.",
+    "unknown": "Nie znam komendy /{{name}}. Wpisz /pomoc, żeby zobaczyć listę.",
+    "helpIntro": "Komendy (kolejność argumentów dowolna):",
+    "commands": {
+      "help": "Lista komend albo opis jednej",
+      "today": "Podsumowanie dnia",
+      "create-task": "Nowe zadanie"
+    },
+    "missing": "Brakuje: {{fields}}.\n{{syntax}}",
+    "slots": {
+      "text": "treść",
+      "due": "termin"
+    },
+    "today": {
+      "points": "Punkty: {{total}} (dziś {{earned}} z limitu {{limit}}).",
+      "balance": "Saldo: {{amount}}.",
+      "tasks_one": "Zadania na dziś i zaległe: {{count}}.",
+      "tasks_few": "Zadania na dziś i zaległe: {{count}}.",
+      "tasks_many": "Zadania na dziś i zaległe: {{count}}.",
+      "tasks_other": "Zadania na dziś i zaległe: {{count}}."
+    },
+    "notReady": "Chwila, wczytuję zadania. Spróbuj za moment.",
+    "taskCreated": "Dodano zadanie „{{text}}” na {{date}} (rozmiar {{size}}).",
+    "taskProblem": {
+      "textRequired": "Opisz zadanie.",
+      "dueRequired": "Podaj termin, np. jutro albo pt.",
+      "dueInPast": "Termin nie może być w przeszłości."
+    },
+    "undone": "Cofnięto.",
+    "args": {
+      "help": "[komenda]",
+      "create-task": "<treść> <termin> [S/M/L]"
+    }
   }
 }
