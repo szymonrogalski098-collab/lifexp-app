@@ -1211,5 +1211,45 @@
     "deleteNamed": "Delete: {{text}}",
     "confirmDelete": "Delete this message?",
     "deleted": "Message deleted."
+  },
+  "exus": {
+    "log": "Conversation with Ex-us",
+    "hello": "Hi! Ex-us here. Type /help to see the commands.",
+    "inputLabel": "Message to Ex-us",
+    "placeholder": "Write to Ex-us or type /",
+    "send": "Send",
+    "aiLater": "Talking to the AI comes in the next step. For now commands work: type /help.",
+    "unknown": "I do not know /{{name}}. Type /help for the list.",
+    "helpIntro": "Commands (arguments in any order):",
+    "commands": {
+      "help": "The commands, or one of them explained",
+      "today": "The day in short",
+      "create-task": "A new task"
+    },
+    "missing": "Missing: {{fields}}.\n{{syntax}}",
+    "slots": {
+      "text": "text",
+      "due": "due date"
+    },
+    "today": {
+      "points": "Points: {{total}} (today {{earned}} of the {{limit}} limit).",
+      "balance": "Balance: {{amount}}.",
+      "tasks_one": "Tasks due today or overdue: {{count}}.",
+      "tasks_few": "Tasks due today or overdue: {{count}}.",
+      "tasks_many": "Tasks due today or overdue: {{count}}.",
+      "tasks_other": "Tasks due today or overdue: {{count}}."
+    },
+    "notReady": "One moment, loading the tasks. Try again shortly.",
+    "taskCreated": "Added \"{{text}}\" for {{date}} (size {{size}}).",
+    "taskProblem": {
+      "textRequired": "Describe the task.",
+      "dueRequired": "Give a due date, e.g. tomorrow or fri.",
+      "dueInPast": "The due date cannot be in the past."
+    },
+    "undone": "Undone.",
+    "args": {
+      "help": "[command]",
+      "create-task": "<text> <due date> [S/M/L]"
+    }
   }
 }

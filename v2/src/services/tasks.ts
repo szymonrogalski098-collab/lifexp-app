@@ -59,6 +59,11 @@ export function completeTask(uid: string, id: string, today: string): Promise<nu
   return completeInStore(uid, id, today);
 }
 
+/** Undo of a task just created (Ex-us "Cofnij"): the document goes again. */
+export function removeCreatedTask(uid: string, id: string): Promise<void> {
+  return removeTask(uid, id);
+}
+
 /** New in v2. `undo` puts the same document back. */
 export function deleteTask(uid: string, task: Task): { saved: Promise<void>; undo: () => Promise<void> } {
   return { saved: removeTask(uid, task.id), undo: () => restoreTask(uid, task) };

@@ -160,7 +160,16 @@ export const FEATURES: readonly FeatureDef[] = [
     stage: '4',
     view: () => import('@/features/settings/SettingsModule'),
   },
-  { id: 'exus', labelKey: 'nav.exus', optional: 'aichat', icon: Sparkles, paths: ['/exus'], nav: null, stage: '5' },
+  {
+    id: 'exus',
+    labelKey: 'nav.exus',
+    optional: 'aichat',
+    icon: Sparkles,
+    paths: ['/exus'],
+    nav: null,
+    stage: '5',
+    view: () => import('@/features/exus/ExusPage'),
+  },
   // Not in the menu: a preview of the ui/ components in every theme.
   {
     id: 'gallery',
