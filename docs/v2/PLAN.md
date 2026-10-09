@@ -1402,6 +1402,13 @@ nie przeszedł parytetu, nie blokuje kolejnych — ale nie wchodzi do cutover.
 | 4g-2 | Powiadomienia push i godziny przypomnień (`fcmTokens`, `notifHours`): zgodnie z R7 zostają w v1 do cutover (dwa Service Workery = dwie subskrypcje = podwójne powiadomienia); v2 ich nie czyta i nie zapisuje. Uwaga: wysyłka push i raportu tygodniowego nie działa dziś w ogóle (workflowy `notify`/`weekly-report` usunięte 19.08, R10, D2) — przełącznik raportu z 4g-1 zapisuje `autoReport`, ale nic go jeszcze nie czyta; wysyłka wraca w etapie 6 | przeniesione do etapów 6–7 |
 **Etap 4 zamknięty (2026-10-09).** DoD: parytet ustawień z v1 poza push (4g-2, R7) i wyborem czcionki (7.2); Notatnik widoczny dla kont, które przed 24.08 wybrały Planer (M3, #47, test `modules.spec.js`). Właściciel sprawdził prawdziwy e-mail z kodem (4g-1). Następny: etap 5 (Ex-us).
 
+**Etap 5 (start 2026-10-09)** — Ex-us lokalnie (5a), potem AI (5b):
+
+| PR | Zakres | Stan |
+|---|---|---|
+| 5a-1 | Rdzeń parsera komend w domenie (6.3), bez UI: tokenizer (cudzysłowy "…" i „…”, `klucz=wartość`, `--flaga`, jednostka pisana osobno doklejana do liczby: `12 zł`, `1 500 PLN`, `500 pkt`), rozpoznawacze (kwota w groszach z sygnałem jednostki, punkty, kwota celu zł/pkt, czas w minutach `90`/`1h30`/`1,5h`, dzień lokalny `dziś`/`jutro`/dzień tygodnia/`12.10`/`+3d`, wybór z listy bez względu na wielkość liter i polskie znaki), wypełnianie slotów od najbardziej szczegółowego typu, reszta to tekst; brakujące sloty nie są błędem (karta je pokaże); testy tabelaryczne | w toku |
+
+
 
 Kolejność od 2026-09-29: 1g → 2a (ekran „Dziś” tylko do odczytu, pierwszy ekran z danymi) → 1f. Właściciel
 nie widział dotąd zmian w aplikacji, a 1f (offline, manifest) też jest niewidoczne, więc ekran z danymi idzie przed nim.
