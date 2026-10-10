@@ -27,3 +27,47 @@
   background: var(--color-accent-soft);
   color: var(--color-text);
 }
+
+/* The command palette under the field (PLAN.md 6.3): name with syntax, then what it does. */
+.exus-palette {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--card-border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  animation: ui-fade-in var(--duration-enter) var(--ease-out);
+}
+
+.exus-palette li + li {
+  border-top: 1px solid var(--color-separator);
+}
+
+.exus-palette__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  transition: background-color var(--duration-exit) var(--ease-out);
+}
+
+.exus-palette__item:hover,
+.exus-palette__item:focus-visible {
+  background: var(--color-surface-raised);
+}
+
+.exus-palette__syntax {
+  font-weight: var(--font-weight-semibold);
+}
+
+.exus-palette__desc,
+.exus-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}

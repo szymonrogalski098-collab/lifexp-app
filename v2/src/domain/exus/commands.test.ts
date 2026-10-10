@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { availableCommands, COMMANDS, findCommand, parseInput, type CommandSpec } from './commands';
+import { availableCommands, COMMANDS, findCommand, palette, parseInput, type CommandSpec } from './commands';
 
 const TODAY = '2026-10-09';
 
@@ -45,5 +45,26 @@ describe('parseInput', () => {
 
   it('reads /pomoc with the command asked about', () => {
     expect(parseInput('/pomoc zadanie', TODAY, COMMANDS)).toMatchObject({ kind: 'command', args: { command: 'zadanie' }, missing: [] });
+  });
+});
+
+describe('palette', () => {
+  const ids = (draft: string) => palette(draft, COMMANDS).suggestions.map((c) => c.id);
+
+  it('shows every command for a bare "/", nothing for plain text', () => {
+    expect(ids('/')).toEqual(['help', 'today', 'create-task']);
+    expect(ids('zadanie')).toEqual([]);
+  });
+
+  it('puts names starting with what is typed first, then names containing it', () => {
+    expect(ids('/za')).toEqual(['create-task']);
+    expect(ids('/DZ')).toEqual(['today']);
+    expect(ids('/task')).toEqual(['create-task']);
+    expect(ids('/xyz')).toEqual([]);
+  });
+
+  it('once a space follows the name, offers its syntax instead of a list', () => {
+    expect(palette('/zadanie ', COMMANDS)).toMatchObject({ suggestions: [], current: { id: 'create-task' } });
+    expect(palette('/nic ', COMMANDS)).toEqual({ suggestions: [], current: null });
   });
 });

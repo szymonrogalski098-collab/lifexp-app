@@ -2,10 +2,11 @@
 // the AI later (5b). A command is read locally (domain/exus) and run through the
 // same services as the screens, so it obeys the same limits. The conversation
 // lives in memory for now; history on the device comes with the full UI (6.10).
+import { effect } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { availableCommands, findCommand, parseInput, type CommandSpec } from '@/domain/exus/commands';
+import { availableCommands, findCommand, palette, parseInput, type CommandSpec } from '@/domain/exus/commands';
 import { DAILY_LIMIT_DEFAULT } from '@/domain/points';
-import { TASKS_MAX, type TaskSize } from '@/domain/tasks';
+import { TASKS_MAX, type Task, type TaskSize } from '@/domain/tasks';
 import { isModuleOn } from '@/domain/modules';
 import { language, locale, t } from '@/i18n';
 import { formatDayMonth, localDayKey, utcDayKey } from '@/lib/dates';
@@ -29,9 +30,26 @@ interface Message {
 
 let nextId = 1;
 
+/** The task list once the listener has it; rejects when it cannot be read. */
+function loadedTasks(): Promise<readonly Task[]> {
+  return new Promise((resolve, reject) => {
+    const stop = effect(() => {
+      const { list, failed } = tasks.value;
+      if (!list && !failed) return;
+      queueMicrotask(() => stop());
+      if (list) resolve(list);
+      else reject(new Error('tasks'));
+    });
+  });
+}
+
 /** The command's name and arguments; the name is the Polish alias, or the id in English. */
+function commandName(spec: CommandSpec): string {
+  return language.value === 'en' ? spec.id : (spec.aliases[0] ?? spec.id);
+}
+
 function syntax(spec: CommandSpec): string {
-  const name = language.value === 'en' ? spec.id : (spec.aliases[0] ?? spec.id);
+  const name = commandName(spec);
   if (spec.id === 'today') return `/${name}`;
   return `/${name} ${t(`exus.args.${spec.id}`)}`;
 }
@@ -53,6 +71,7 @@ export default function ExusPage() {
   const [messages, setMessages] = useState<Message[]>(() => [{ id: nextId++, from: 'exus', text: t('exus.hello') }]);
   const [draft, setDraft] = useState('');
   const log = useRef<HTMLDivElement>(null);
+  const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     log.current?.lastElementChild?.scrollIntoView({ block: 'end' });
   }, [messages.length]);
@@ -84,9 +103,10 @@ export default function ExusPage() {
     return lines.join('\n');
   };
 
-  const createFromCommand = (args: Record<string, unknown>) => {
-    const list = tasks.value.list;
-    if (!list) return say(t('exus.notReady'));
+  const createFromCommand = async (args: Record<string, unknown>) => {
+    // A command typed before the list arrived waits for it instead of asking to try again.
+    const list = await loadedTasks().catch(() => null);
+    if (!list) return say(t('exus.tasksFailed'));
     const day = localDayKey(new Date());
     const text = String(args.text);
     const dueDate = String(args.due);
@@ -128,7 +148,14 @@ export default function ExusPage() {
     }
     if (spec.id === 'help') return say(helpText(commands, args.command as string | undefined));
     if (spec.id === 'today') return say(summary());
-    if (spec.id === 'create-task') return createFromCommand(args);
+    if (spec.id === 'create-task') return void createFromCommand(args);
+  };
+
+  const pal = palette(draft, commands);
+  /** A command from the palette goes into the field, ready for its arguments. */
+  const pick = (spec: CommandSpec) => {
+    setDraft(`/${commandName(spec)} `);
+    form.current?.querySelector('input')?.focus();
   };
 
   return (
@@ -143,6 +170,7 @@ export default function ExusPage() {
         </div>
         <Card>
           <form
+            ref={form}
             class="stack"
             noValidate
             onSubmit={(e) => {
@@ -157,6 +185,19 @@ export default function ExusPage() {
               placeholder={t('exus.placeholder')}
               autoComplete="off"
             />
+            {pal.suggestions.length > 0 && (
+              <ul class="exus-palette" aria-label={t('exus.paletteLabel')}>
+                {pal.suggestions.map((spec) => (
+                  <li key={spec.id}>
+                    <button type="button" class="exus-palette__item" onClick={() => pick(spec)}>
+                      <span class="exus-palette__syntax">{syntax(spec)}</span>
+                      <span class="exus-palette__desc">{t(`exus.commands.${spec.id}`)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {pal.current && <p class="exus-hint">{syntax(pal.current)}</p>}
             <div>
               <Button type="submit" variant="primary">
                 {t('exus.send')}

@@ -72,3 +72,21 @@ test('with Ex-us off, the menu has no Ex-us and its address leads to Today', asy
   await page.locator('.tabbar').getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByRole('button', { name: 'Zapytaj Ex-us' })).toHaveCount(0);
 });
+
+test('typing "/" opens the command palette; a tap puts the command in the field and shows its syntax', async ({ page }) => {
+  const account = await createUser({ tag: 'exus-palette' });
+  await openSignedIn(page, account, '#/exus');
+  const field = page.getByLabel('Wiadomość do Ex-us');
+  const list = page.getByRole('list', { name: 'Komendy pasujące do wpisu' });
+  await field.fill('/');
+  await expect(list.getByRole('button')).toHaveCount(3);
+  await field.fill('/za');
+  await expect(list.getByRole('button')).toHaveCount(1);
+  await list.getByRole('button', { name: /Nowe zadanie/ }).click();
+  await expect(field).toHaveValue('/zadanie ');
+  await expect(field).toBeFocused();
+  await expect(list).toHaveCount(0);
+  await expect(page.getByText('/zadanie <treść> <termin> [S/M/L]', { exact: true })).toBeVisible();
+  await field.fill('zwykły tekst');
+  await expect(list).toHaveCount(0);
+});

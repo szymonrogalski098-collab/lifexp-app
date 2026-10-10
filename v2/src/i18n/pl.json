@@ -1239,7 +1239,6 @@
       "tasks_many": "Zadania na dziś i zaległe: {{count}}.",
       "tasks_other": "Zadania na dziś i zaległe: {{count}}."
     },
-    "notReady": "Chwila, wczytuję zadania. Spróbuj za moment.",
     "taskCreated": "Dodano zadanie „{{text}}” na {{date}} (rozmiar {{size}}).",
     "taskProblem": {
       "textRequired": "Opisz zadanie.",
@@ -1250,6 +1249,8 @@
     "args": {
       "help": "[komenda]",
       "create-task": "<treść> <termin> [S/M/L]"
-    }
+    },
+    "paletteLabel": "Komendy pasujące do wpisu",
+    "tasksFailed": "Nie udało się wczytać zadań. Sprawdź połączenie i spróbuj ponownie."
   }
 }
