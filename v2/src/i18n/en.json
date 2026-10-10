@@ -1239,7 +1239,6 @@
       "tasks_many": "Tasks due today or overdue: {{count}}.",
       "tasks_other": "Tasks due today or overdue: {{count}}."
     },
-    "notReady": "One moment, loading the tasks. Try again shortly.",
     "taskCreated": "Added \"{{text}}\" for {{date}} (size {{size}}).",
     "taskProblem": {
       "textRequired": "Describe the task.",
@@ -1250,6 +1249,8 @@
     "args": {
       "help": "[command]",
       "create-task": "<text> <due date> [S/M/L]"
-    }
+    },
+    "paletteLabel": "Commands matching what is typed",
+    "tasksFailed": "Could not load the tasks. Check the connection and try again."
   }
 }

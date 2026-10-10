@@ -79,3 +79,22 @@ export function parseInput(input: string, today: string, commands: readonly Comm
   const args = fillSlots(tokenized.tokens, slots);
   return { kind: 'command', spec, args, missing: missingSlots(slots, args) };
 }
+
+export interface Palette {
+  /** Commands for the name being typed: names starting with it first, then names containing it. */
+  suggestions: CommandSpec[];
+  /** The command whose name is complete (a space follows it): its syntax shows under the field. */
+  current: CommandSpec | null;
+}
+
+/** The command palette for what is in the field (PLAN.md 6.3): only while it starts with "/". */
+export function palette(draft: string, commands: readonly CommandSpec[]): Palette {
+  const m = /^\s*\/(\S*)(\s?)/.exec(draft);
+  if (!m) return { suggestions: [], current: null };
+  if (m[2]) return { suggestions: [], current: findCommand(m[1]!, commands) };
+  const typed = fold(m[1]!);
+  const names = (c: CommandSpec) => [c.id, ...c.aliases].map(fold);
+  const starts = commands.filter((c) => names(c).some((n) => n.startsWith(typed)));
+  const contains = commands.filter((c) => !starts.includes(c) && names(c).some((n) => n.includes(typed)));
+  return { suggestions: [...starts, ...contains], current: null };
+}
